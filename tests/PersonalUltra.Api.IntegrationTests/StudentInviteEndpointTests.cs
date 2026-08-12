@@ -54,13 +54,14 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
         const string token = "invite-to-accept";
         await SeedInviteAsync(token, DateTimeOffset.UtcNow.AddDays(1), "ana@example.com");
 
-        var response = await client.PostAsJsonAsync($"/api/v1/invite/{token}/accept", new { firstName = "Ana", lastName = "Souza", email = "ana@example.com" });
+        var response = await client.PostAsJsonAsync($"/api/v1/invite/{token}/accept", new { firstName = "Ana", lastName = "Souza", email = "ana@example.com", phone = "(11) 99999-8888" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var acceptance = await response.Content.ReadFromJsonAsync<InviteAcceptanceResponse>();
         Assert.Equal("Ana", acceptance!.FirstName);
         Assert.Equal(DemoIds.TrainerId, acceptance.TrainerId);
         Assert.NotEmpty(acceptance.AccessToken);
+        Assert.Equal("+11999998888", acceptance.Phone);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         Assert.True(await db.TrainerStudents.AnyAsync(link => link.TrainerId == DemoIds.TrainerId && link.StudentId == acceptance.StudentId));
@@ -73,7 +74,7 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
     {
         const string token = "invite-for-anamnesis";
         await SeedInviteAsync(token, DateTimeOffset.UtcNow.AddDays(1), "beatriz@example.com");
-        var acceptanceResponse = await client.PostAsJsonAsync($"/api/v1/invite/{token}/accept", new { firstName = "Beatriz", lastName = "Lima", email = "beatriz@example.com" });
+        var acceptanceResponse = await client.PostAsJsonAsync($"/api/v1/invite/{token}/accept", new { firstName = "Beatriz", lastName = "Lima", email = "beatriz@example.com", phone = "11988887777" });
         var acceptance = await acceptanceResponse.Content.ReadFromJsonAsync<InviteAcceptanceResponse>();
         client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", acceptance!.AccessToken);
         var answers = new { goal = "Ganhar força", experienceLevel = "Iniciante", trainingDaysPerWeek = 3, sessionDurationMinutes = 45, trainingLocation = "Academia", equipmentNotes = "Academia completa", heightCm = 165, weightKg = 62, healthConditions = "Nenhuma", movementRestrictions = "Nenhuma", currentPainDescription = "Sem dor", nutritionPreferences = "4 refeições", nutritionRestrictions = "Nenhuma" };
@@ -97,7 +98,7 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
     }
 
     private sealed record InviteResolutionResponse(string TrainerName, string? Email, DateTimeOffset ExpiresAt);
-    private sealed record InviteAcceptanceResponse(string AccessToken, string TokenType, Guid StudentId, string FirstName, string LastName, string Email, Guid TrainerId);
+    private sealed record InviteAcceptanceResponse(string AccessToken, string TokenType, Guid StudentId, string FirstName, string LastName, string Email, string Phone, Guid TrainerId);
     private sealed record AnamnesisResponse(string Goal, string ExperienceLevel, int TrainingDaysPerWeek, int SessionDurationMinutes, string TrainingLocation, string EquipmentNotes, decimal HeightCm, decimal WeightKg, string HealthConditions, string MovementRestrictions, string CurrentPainDescription, string NutritionPreferences, string NutritionRestrictions, bool IsCompleted);
 }
 

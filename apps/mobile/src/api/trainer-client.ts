@@ -13,6 +13,7 @@ export type TrainerDashboard = {
     firstName: string;
     lastName: string;
     email?: string;
+    phone?: string;
     anamnesisStatus: 'NotStarted' | 'InProgress' | 'Completed';
     startedAt: string;
   }>;

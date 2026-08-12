@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
-import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
@@ -32,7 +32,9 @@ export default function TrainerStudentDetailScreen() {
     <Card style={styles.card}>
       <Text style={styles.cardTitle}>Resumo</Text>
       <View style={styles.row}><Text style={styles.label}>E-mail</Text><Text style={styles.value}>{data.email ?? 'Não informado'}</Text></View>
+      <View style={styles.row}><Text style={styles.label}>Telefone</Text><Text style={styles.value}>{data.phone ?? 'Não informado'}</Text></View>
       <View style={styles.row}><Text style={styles.label}>Aluno desde</Text><Text style={styles.value}>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(data.startedAt))}</Text></View>
+      {data.phone && <Button variant="secondary" onPress={() => void Linking.openURL(`https://wa.me/${data.phone!.replace(/\D/g, '')}`)}>Abrir conversa no WhatsApp</Button>}
     </Card>
     <Card style={styles.card}>
       <Text style={styles.cardTitle}>Anamnese</Text>

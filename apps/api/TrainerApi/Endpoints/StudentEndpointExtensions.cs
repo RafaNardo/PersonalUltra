@@ -23,6 +23,7 @@ public static class StudentEndpointExtensions
                     link.Student.FirstName,
                     link.Student.LastName,
                     link.Student.Email,
+                    link.Student.Phone,
                     link.Student.Anamnesis == null
                         ? "NotStarted"
                         : link.Student.Anamnesis.CompletedAt == null ? "InProgress" : "Completed",
@@ -42,6 +43,7 @@ public static class StudentEndpointExtensions
                     link.Student.FirstName,
                     link.Student.LastName,
                     link.Student.Email,
+                    link.Student.Phone,
                     link.Student.Anamnesis == null
                         ? "NotStarted"
                         : link.Student.Anamnesis.CompletedAt == null ? "InProgress" : "Completed",

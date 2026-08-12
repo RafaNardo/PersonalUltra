@@ -155,7 +155,7 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
 
     private sealed record DashboardResponse(string TrainerName, int ActiveStudents, int PendingAnamneses, int CompletedAnamneses, IReadOnlyList<DashboardStudentSummary> RecentStudents, IReadOnlyList<DashboardActivity> RecentActivities);
     private sealed record DashboardActivity(Guid StudentId, string StudentName, string Type, DateTimeOffset OccurredAt);
-    private sealed record DashboardStudentSummary(Guid StudentId, string FirstName, string LastName, string? Email, string AnamnesisStatus, DateTimeOffset StartedAt);
+    private sealed record DashboardStudentSummary(Guid StudentId, string FirstName, string LastName, string? Email, string? Phone, string AnamnesisStatus, DateTimeOffset StartedAt);
     private sealed record StudentListResponse(IReadOnlyList<DashboardStudentSummary> Students);
     private sealed record ErrorResponse(string Code, string Message, object? Details, string TraceId);
     private sealed record TrainerMessageResponse(Guid Id, Guid StudentId, string Message, DateTimeOffset StartsAt, DateTimeOffset? ExpiresAt, DateTimeOffset CreatedAt);

@@ -29,20 +29,21 @@ public static class StudentInviteEndpointExtensions
             var lastName = Value(request.LastName, 100) ?? "";
             var suppliedEmail = NormalizeEmail(request.Email);
             var email = invite.Email ?? suppliedEmail;
-            if (firstName is null || email is null || (invite.Email is not null && suppliedEmail is not null && !string.Equals(invite.Email, suppliedEmail, StringComparison.OrdinalIgnoreCase)))
-                return ApiEndpointExtensions.ApiError("VALIDATION_ERROR", "Informe seu nome e o e-mail vinculado ao convite.", StatusCodes.Status400BadRequest);
+            var phone = NormalizePhone(request.Phone);
+            if (firstName is null || email is null || phone is null || (invite.Email is not null && suppliedEmail is not null && !string.Equals(invite.Email, suppliedEmail, StringComparison.OrdinalIgnoreCase)))
+                return ApiEndpointExtensions.ApiError("VALIDATION_ERROR", "Informe seu nome, telefone e o e-mail vinculado ao convite.", StatusCodes.Status400BadRequest);
 
             if (await db.Students.AnyAsync(student => student.Email == email, cancellationToken))
                 return ApiEndpointExtensions.ApiError("STUDENT_ALREADY_EXISTS", "Já existe um aluno com este e-mail.", StatusCodes.Status409Conflict);
 
             var now = clock.GetUtcNow();
-            var student = new Student { Id = Guid.NewGuid(), FirstName = firstName, LastName = lastName, Email = email, CreatedAt = now };
+            var student = new Student { Id = Guid.NewGuid(), FirstName = firstName, LastName = lastName, Email = email, Phone = phone, CreatedAt = now };
             db.Students.Add(student);
             db.TrainerStudents.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = invite.TrainerId, StudentId = student.Id, StartedAt = now });
             invite.AcceptedAt = now;
             await db.SaveChangesAsync(cancellationToken);
 
-            return Results.Ok(new InviteAcceptanceResponse(sessions.CreateStudent(student.Id), "Bearer", student.Id, student.FirstName, student.LastName, email, invite.TrainerId));
+            return Results.Ok(new InviteAcceptanceResponse(sessions.CreateStudent(student.Id), "Bearer", student.Id, student.FirstName, student.LastName, email, phone, invite.TrainerId));
         }).AllowAnonymous();
     }
 
@@ -62,5 +63,11 @@ public static class StudentInviteEndpointExtensions
             return string.Equals(parsed.Address, email, StringComparison.OrdinalIgnoreCase) ? email : null;
         }
         catch (FormatException) { return null; }
+    }
+
+    private static string? NormalizePhone(string? input)
+    {
+        var digits = new string((input ?? "").Where(char.IsDigit).ToArray());
+        return digits.Length is >= 8 and <= 15 ? $"+{digits}" : null;
     }
 }

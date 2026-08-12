@@ -7,6 +7,7 @@ public sealed record TrainerStudentSummary(
     string FirstName,
     string LastName,
     string? Email,
+    string? Phone,
     string AnamnesisStatus,
     DateTimeOffset StartedAt);
 
@@ -15,6 +16,7 @@ public sealed record StudentDetailResponse(
     string FirstName,
     string LastName,
     string? Email,
+    string? Phone,
     string AnamnesisStatus,
     DateTimeOffset StartedAt);
 

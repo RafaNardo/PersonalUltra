@@ -4,7 +4,7 @@ const baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'https://student-api-product
 const apiUrl = `${baseUrl}/api/v1`;
 
 export type Invite = { trainerName: string; email?: string; expiresAt: string };
-export type InviteSession = { accessToken: string; studentId: string; firstName: string; lastName: string; email: string; trainerId: string };
+export type InviteSession = { accessToken: string; studentId: string; firstName: string; lastName: string; email: string; phone: string; trainerId: string };
 export type AnamnesisAnswers = { goal: string; experienceLevel: string; trainingDaysPerWeek: number; sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number; weightKg: number; healthConditions: string; movementRestrictions: string; currentPainDescription: string; nutritionPreferences: string; nutritionRestrictions: string };
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
@@ -20,7 +20,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
 export const inviteApi = {
   resolve: (token: string) => request<Invite>(`/invite/${token}`),
-  accept: (token: string, input: { firstName: string; lastName: string; email?: string }) => request<InviteSession>(`/invite/${token}/accept`, { method: 'POST', body: JSON.stringify(input) }),
+  accept: (token: string, input: { firstName: string; lastName: string; email?: string; phone: string }) => request<InviteSession>(`/invite/${token}/accept`, { method: 'POST', body: JSON.stringify(input) }),
   saveAnamnesis: (token: string, answers: AnamnesisAnswers) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis', { method: 'PUT', body: JSON.stringify(answers) }, token),
   completeAnamnesis: (token: string) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis/complete', { method: 'POST' }, token),
 };
