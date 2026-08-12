@@ -28,7 +28,7 @@ export type TrainerDashboard = {
 export type TrainerStudent = TrainerDashboard['recentStudents'][number];
 export type TrainerMessage = { id: string; studentId: string; message: string; startsAt: string; expiresAt?: string; createdAt: string };
 export type TrainerAnamnesis = { goal: string; experienceLevel: string; trainingDaysPerWeek: number; sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number; weightKg: number; healthConditions: string; movementRestrictions: string; currentPainDescription: string; nutritionPreferences: string; nutritionRestrictions: string; completedAt: string };
-export type StudentInvite = { id: string; token: string; inviteUrl: string; email?: string; expiresAt: string };
+export type StudentInvite = { id: string; token: string; inviteCode: string; inviteUrl: string; email?: string; expiresAt: string };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;

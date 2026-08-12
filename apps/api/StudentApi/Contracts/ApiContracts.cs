@@ -4,6 +4,8 @@ public sealed record ErrorResponse(string Code, string Message, object? Details,
 public sealed record DevLoginRequest(string? Email);
 public sealed record DevLoginResponse(string AccessToken, string TokenType, MemberDto Member, bool IsNewMember);
 public sealed record InviteResolutionResponse(string TrainerName, string? Email, DateTimeOffset ExpiresAt);
+public sealed record StudentEmailLoginRequest(string? Email);
+public sealed record StudentEmailLoginResponse(string AccessToken, string TokenType, Guid StudentId, string FirstName, string LastName, string Email, string? Phone, Guid TrainerId);
 public sealed record AcceptInviteRequest(string FirstName, string? LastName, string? Email, string? Phone);
 public sealed record InviteAcceptanceResponse(string AccessToken, string TokenType, Guid StudentId, string FirstName, string LastName, string Email, string Phone, Guid TrainerId);
 public sealed record ActiveTrainerMessageResponse(Guid Id, string Message, DateTimeOffset StartsAt, DateTimeOffset? ExpiresAt);

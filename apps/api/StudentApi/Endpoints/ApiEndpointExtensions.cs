@@ -23,6 +23,17 @@ public static class ApiEndpointExtensions
 
         if (app.Environment.IsDevelopment())
         {
+            app.MapPost("/api/v1/auth/student-login", async (StudentEmailLoginRequest request, PersonalUltraDbContext db, DemoSessionTokenService sessions, HttpContext context, CancellationToken cancellationToken) =>
+            {
+                var email = NormalizeEmail(request.Email);
+                if (email is null) return ApiError(context, "VALIDATION_ERROR", "Informe um e-mail válido.", StatusCodes.Status400BadRequest);
+                var student = await db.Students.AsNoTracking().Include(item => item.Trainers).SingleOrDefaultAsync(item => item.Email == email, cancellationToken);
+                if (student is null) return ApiError(context, "STUDENT_NOT_FOUND", "Não encontramos um aluno com este e-mail. Use o código enviado pelo seu personal.", StatusCodes.Status404NotFound);
+                var trainerId = student.Trainers.SingleOrDefault(link => link.EndedAt is null)?.TrainerId;
+                if (trainerId is null) return ApiError(context, "STUDENT_NOT_FOUND", "Não encontramos um acompanhamento ativo para este aluno.", StatusCodes.Status404NotFound);
+                return Results.Ok(new StudentEmailLoginResponse(sessions.CreateStudent(student.Id), "Bearer", student.Id, student.FirstName, student.LastName, student.Email!, student.Phone, trainerId.Value));
+            }).AllowAnonymous();
+
             app.MapPost("/api/v1/auth/dev-login", async (DevLoginRequest request, PersonalUltraDbContext db, DemoSessionTokenService sessions, TimeProvider clock, HttpContext context, CancellationToken cancellationToken) =>
             {
                 // Empty is retained only as a compatibility path for the existing

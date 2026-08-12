@@ -37,7 +37,7 @@
 - `PU-M2-010`: capturar e persistir telefone de contato do Student vinculado.
 - `PU-M2-011`: WhatsApp deep link do Trainer para o telefone real do Student.
 - `PU-M2-012`: expor a TrainerMessage ativa na Student API e Home, usando o vínculo real Trainer/Student.
-- `PU-M2-013`: distribuir convite pelo Trainer: copiar link e mensagem de WhatsApp com links configuráveis de instalação, sem landing page.
+- `PU-M2-013`: distribuir convite pelo Trainer: código humano de seis dígitos, cópia e mensagem de WhatsApp com links configuráveis de instalação, sem landing page.
 
 **DoD M2:** Trainer convida; Student preenche; Trainer vê, contata via WhatsApp e recebe a mensagem in-app do Trainer.
 

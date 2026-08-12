@@ -1,6 +1,7 @@
 using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.WebUtilities;
 using PersonalUltra.Domain;
 using PersonalUltra.Infrastructure;
@@ -26,6 +27,7 @@ public static class StudentInviteEndpointExtensions
                 Id = Guid.NewGuid(),
                 TrainerId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!),
                 Token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32)),
+                InviteCode = await CreateInviteCodeAsync(db, cancellationToken),
                 Email = email,
                 CreatedAt = now,
                 ExpiresAt = now.AddDays(7),
@@ -35,8 +37,18 @@ public static class StudentInviteEndpointExtensions
 
             var linkBase = (configuration["StudentInvite:LinkBaseUrl"] ?? "personalultra://invite").TrimEnd('/');
             return Results.Created($"/api/v1/student-invites/{invite.Id}", new StudentInviteResponse(
-                invite.Id, invite.Token, $"{linkBase}/{invite.Token}", invite.Email, invite.ExpiresAt));
+                invite.Id, invite.Token, invite.InviteCode, $"{linkBase}/{invite.Token}", invite.Email, invite.ExpiresAt));
         });
+    }
+
+    private static async Task<string> CreateInviteCodeAsync(PersonalUltraDbContext db, CancellationToken cancellationToken)
+    {
+        for (var attempt = 0; attempt < 20; attempt++)
+        {
+            var code = RandomNumberGenerator.GetInt32(0, 1_000_000).ToString("D6");
+            if (!await db.StudentInvites.AnyAsync(invite => invite.InviteCode == code, cancellationToken)) return code;
+        }
+        throw new InvalidOperationException("Não foi possível gerar um código de convite único.");
     }
 
     private static string? NormalizeEmail(string? input)

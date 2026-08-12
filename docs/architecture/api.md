@@ -26,6 +26,9 @@ associados ao `Student`; o endpoint não inventa esses dados durante a transiç�
 - `GET /bootstrap`
 - `GET /home`
 - `GET /invite/{token}`
+- `GET /invite/code/{code}`
+- `POST /invite/code/{code}/accept`
+- `POST /auth/student-login` (somente demo; verifica um `Student` já cadastrado)
 - `PUT /anamnesis`
 - `POST /anamnesis/complete`
 - `GET /home/trainer-message`

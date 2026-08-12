@@ -49,6 +49,32 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
     }
 
     [Fact]
+    public async Task Invite_code_resolves_and_accepts_an_active_invite()
+    {
+        const string token = "invite-by-code";
+        const string code = "234567";
+        await SeedInviteAsync(token, DateTimeOffset.UtcNow.AddDays(1), "code@example.com", code);
+
+        var resolution = await client.GetAsync($"/api/v1/invite/code/{code[..3]}-{code[3..]}");
+        var accepted = await client.PostAsJsonAsync($"/api/v1/invite/code/{code}/accept", new { firstName = "Código", email = "code@example.com", phone = "11999990000" });
+
+        Assert.Equal(HttpStatusCode.OK, resolution.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, accepted.StatusCode);
+    }
+
+    [Fact]
+    public async Task Student_email_login_only_accepts_an_existing_core_student()
+    {
+        var known = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var unknown = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "unknown@example.com" });
+
+        Assert.Equal(HttpStatusCode.OK, known.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, unknown.StatusCode);
+        var session = await known.Content.ReadFromJsonAsync<InviteAcceptanceResponse>();
+        Assert.Equal(DemoIds.StudentId, session!.StudentId);
+    }
+
+    [Fact]
     public async Task Invite_acceptance_creates_a_student_linked_to_the_inviting_trainer_and_a_student_session()
     {
         const string token = "invite-to-accept";
@@ -111,11 +137,11 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
         Assert.Equal("Bem-vinda, Carla!", message!.Message);
     }
 
-    private async Task SeedInviteAsync(string token, DateTimeOffset expiresAt, string email = "aluna@example.com")
+    private async Task SeedInviteAsync(string token, DateTimeOffset expiresAt, string email = "aluna@example.com", string? inviteCode = null)
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
-        db.StudentInvites.Add(new StudentInvite { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, Token = token, Email = email, CreatedAt = DateTimeOffset.UtcNow, ExpiresAt = expiresAt });
+        db.StudentInvites.Add(new StudentInvite { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, Token = token, InviteCode = inviteCode, Email = email, CreatedAt = DateTimeOffset.UtcNow, ExpiresAt = expiresAt });
         await db.SaveChangesAsync();
     }
 

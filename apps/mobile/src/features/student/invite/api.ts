@@ -21,7 +21,10 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 
 export const inviteApi = {
   resolve: (token: string) => request<Invite>(`/invite/${token}`),
+  resolveCode: (code: string) => request<Invite>(`/invite/code/${code.replace(/\D/g, '')}`),
   accept: (token: string, input: { firstName: string; lastName: string; email?: string; phone: string }) => request<InviteSession>(`/invite/${token}/accept`, { method: 'POST', body: JSON.stringify(input) }),
+  acceptCode: (code: string, input: { firstName: string; lastName: string; email?: string; phone: string }) => request<InviteSession>(`/invite/code/${code.replace(/\D/g, '')}/accept`, { method: 'POST', body: JSON.stringify(input) }),
+  studentLogin: (email: string) => request<InviteSession>('/auth/student-login', { method: 'POST', body: JSON.stringify({ email }) }),
   saveAnamnesis: (token: string, answers: AnamnesisAnswers) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis', { method: 'PUT', body: JSON.stringify(answers) }, token),
   completeAnamnesis: (token: string) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis/complete', { method: 'POST' }, token),
   activeTrainerMessage: (token: string) => request<ActiveTrainerMessage | null>('/home/trainer-message', {}, token),

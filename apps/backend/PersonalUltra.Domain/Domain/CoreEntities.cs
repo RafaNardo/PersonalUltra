@@ -50,6 +50,7 @@ public sealed class StudentInvite
     public Guid Id { get; set; }
     public Guid TrainerId { get; set; }
     public string Token { get; set; } = null!;
+    public string? InviteCode { get; set; }
     public string? Email { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset ExpiresAt { get; set; }
