@@ -21,10 +21,8 @@
 - `PU-M1-007`: detalhe mobile do aluno com Resumo real (identidade, vínculo e estado da anamnese).
 - `PU-M1-008`: TrainerMessage domain/API.
 - `PU-M1-009`: composer de mensagem.
-- `PU-M1-010`: WhatsApp deep link.
-- `PU-M1-012`: mensagem do Trainer na Student Home.
 
-**DoD M1:** Trainer acompanha alunos e Student Home reflete a mensagem do Trainer. O tema Personal Ultra temporário permanece estático.
+**DoD M1:** Trainer acompanha alunos, consulta o resumo e cria mensagens in-app. O tema Personal Ultra temporário permanece estático.
 
 ## M2 — Invitations & Anamnesis
 - `PU-M2-001`: gerar convite/link.
@@ -36,8 +34,11 @@
 - `PU-M2-007`: visualização Trainer.
 - `PU-M2-008`: atividade de anamnese no dashboard.
 - `PU-M2-009`: integrar a anamnese concluída ao detalhe do aluno no Trainer.
+- `PU-M2-010`: capturar e persistir telefone de contato do Student vinculado.
+- `PU-M2-011`: WhatsApp deep link do Trainer para o telefone real do Student.
+- `PU-M2-012`: expor a TrainerMessage ativa na Student API e Home, usando o vínculo real Trainer/Student.
 
-**DoD M2:** Trainer convida; Student preenche; Trainer vê.
+**DoD M2:** Trainer convida; Student preenche; Trainer vê, contata via WhatsApp e recebe a mensagem in-app do Trainer.
 
 ## M3 — Training Prescription
 - `PU-M3-001`: workout template domain.
