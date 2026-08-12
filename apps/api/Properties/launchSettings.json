@@ -1,6 +1,6 @@
 {
   "profiles": {
-    "SvrMethod.Api": {
+    "PersonalUltra.Api": {
       "commandName": "Project",
       "launchBrowser": true,
       "environmentVariables": {

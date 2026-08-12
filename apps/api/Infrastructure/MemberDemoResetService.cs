@@ -1,13 +1,13 @@
 using Microsoft.EntityFrameworkCore;
-using SvrMethod.Api.Domain;
+using PersonalUltra.Api.Domain;
 
-namespace SvrMethod.Api.Infrastructure;
+namespace PersonalUltra.Api.Infrastructure;
 
 /// <summary>
 /// Deletes the complete demonstration footprint for one member only. Catalog,
 /// methodology and the original demo account are deliberately never touched.
 /// </summary>
-public sealed class MemberDemoResetService(SvrDbContext db)
+public sealed class MemberDemoResetService(PersonalUltraDbContext db)
 {
     public async Task<MemberDemoResetResult> ResetAsync(Guid memberId, CancellationToken cancellationToken)
     {

@@ -1,9 +1,9 @@
-﻿using System;
+using System;
 using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace SvrMethod.Api.Infrastructure.Migrations
+namespace PersonalUltra.Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class M1DemoFeatures : Migration

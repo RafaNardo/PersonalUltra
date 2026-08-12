@@ -1,16 +1,16 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
-using SvrMethod.Api.Application.Nutrition;
-using SvrMethod.Api.Application.Training;
-using SvrMethod.Api.Application.Safety;
-using SvrMethod.Api.Endpoints;
-using SvrMethod.Api.Application.Coach;
-using SvrMethod.Api.Application.Plans;
-using SvrMethod.Api.Infrastructure;
+using PersonalUltra.Api.Application.Nutrition;
+using PersonalUltra.Api.Application.Training;
+using PersonalUltra.Api.Application.Safety;
+using PersonalUltra.Api.Endpoints;
+using PersonalUltra.Api.Application.Coach;
+using PersonalUltra.Api.Application.Plans;
+using PersonalUltra.Api.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
-builder.Services.AddDbContext<SvrDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("SvrDatabase")));
+builder.Services.AddDbContext<PersonalUltraDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("PersonalUltraDatabase")));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<DemoSessionTokenService>();
 builder.Services.AddScoped<DemoDataSeeder>();
@@ -41,7 +41,7 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("DemoData:SeedOnStartup"))
 {
     using var scope = app.Services.CreateScope();
-    var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+    var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
     if (db.Database.IsRelational())
     {
         await db.Database.MigrateAsync();
@@ -69,7 +69,7 @@ if (app.Environment.IsDevelopment())
     });
 }
 
-app.MapSvrApi();
+app.MapPersonalUltraApi();
 app.MapOnboardingApi();
 app.MapInitialPlanApi();
 app.MapM1Api();

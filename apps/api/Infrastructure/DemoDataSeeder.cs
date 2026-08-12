@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using SvrMethod.Api.Domain;
+using PersonalUltra.Api.Domain;
 
-namespace SvrMethod.Api.Infrastructure;
+namespace PersonalUltra.Api.Infrastructure;
 
-public sealed class DemoDataSeeder(SvrDbContext dbContext, TimeProvider timeProvider)
+public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvider timeProvider)
 {
     public async Task<bool> IsSafeToResetAsync(CancellationToken cancellationToken)
     {

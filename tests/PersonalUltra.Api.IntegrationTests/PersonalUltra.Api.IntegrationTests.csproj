@@ -16,6 +16,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\apps\api\SvrMethod.Api.csproj" />
+    <ProjectReference Include="..\..\apps\api\PersonalUltra.Api.csproj" />
   </ItemGroup>
 </Project>

@@ -1,7 +1,7 @@
 using System.Text.Json;
 using System.Text.RegularExpressions;
 
-namespace SvrMethod.Api.Application.Coach;
+namespace PersonalUltra.Api.Application.Coach;
 
 public static class CoachMessageKinds
 {

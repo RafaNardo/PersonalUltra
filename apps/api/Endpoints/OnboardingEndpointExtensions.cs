@@ -1,10 +1,10 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using SvrMethod.Api.Contracts;
-using SvrMethod.Api.Domain;
-using SvrMethod.Api.Infrastructure;
+using PersonalUltra.Api.Contracts;
+using PersonalUltra.Api.Domain;
+using PersonalUltra.Api.Infrastructure;
 
-namespace SvrMethod.Api.Endpoints;
+namespace PersonalUltra.Api.Endpoints;
 
 public static class OnboardingEndpointExtensions
 {
@@ -12,13 +12,13 @@ public static class OnboardingEndpointExtensions
     {
         var api = app.MapGroup("/api/v1/onboarding").RequireAuthorization();
 
-        api.MapGet("/profile", async (SvrDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
+        api.MapGet("/profile", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
         {
             var member = await Member(db, user, cancellationToken);
             return Results.Ok(ToDto(member, member.Profile));
         });
 
-        api.MapPut("/profile", async (SaveOnboardingProfileRequest request, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
+        api.MapPut("/profile", async (SaveOnboardingProfileRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
         {
             if (request.CurrentStep is < 1 or > 8)
                 return ApiEndpointExtensions.ApiError("VALIDATION_ERROR", "A etapa do onboarding é inválida.", StatusCodes.Status400BadRequest);
@@ -54,7 +54,7 @@ public static class OnboardingEndpointExtensions
             return Results.Ok(ToDto(member, profile));
         });
 
-        api.MapPost("/complete", async (SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
+        api.MapPost("/complete", async (PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
         {
             var member = await Member(db, user, cancellationToken);
             if (member.OnboardingCompletedAt is not null) return Results.Ok(ToDto(member, member.Profile));
@@ -69,7 +69,7 @@ public static class OnboardingEndpointExtensions
         });
     }
 
-    private static async Task<Member> Member(SvrDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
+    private static async Task<Member> Member(PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
         await db.Members.Include(x => x.Profile).SingleAsync(x => x.Id == Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!), cancellationToken);
 
     private static OnboardingProfileDto ToDto(Member member, MemberProfile? profile) => new(

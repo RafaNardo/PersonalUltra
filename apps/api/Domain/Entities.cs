@@ -1,4 +1,4 @@
-namespace SvrMethod.Api.Domain;
+namespace PersonalUltra.Api.Domain;
 
 public static class DemoIds
 {

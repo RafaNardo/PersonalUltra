@@ -1,9 +1,9 @@
 using Microsoft.EntityFrameworkCore;
-using SvrMethod.Api.Domain;
+using PersonalUltra.Api.Domain;
 
-namespace SvrMethod.Api.Infrastructure;
+namespace PersonalUltra.Api.Infrastructure;
 
-public sealed class SvrDbContext(DbContextOptions<SvrDbContext> options) : DbContext(options)
+public sealed class PersonalUltraDbContext(DbContextOptions<PersonalUltraDbContext> options) : DbContext(options)
 {
     public DbSet<AuthUser> AuthUsers => Set<AuthUser>();
     public DbSet<Member> Members => Set<Member>();

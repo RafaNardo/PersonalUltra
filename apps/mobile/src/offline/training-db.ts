@@ -4,7 +4,7 @@ import type { CompleteSetInput } from '@/src/api/types';
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
 
 async function database() {
-  databasePromise ??= SQLite.openDatabaseAsync('svr-method.db');
+  databasePromise ??= SQLite.openDatabaseAsync('personal-ultra.db');
   return databasePromise;
 }
 

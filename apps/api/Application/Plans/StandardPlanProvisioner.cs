@@ -1,16 +1,16 @@
 using Microsoft.EntityFrameworkCore;
-using SvrMethod.Api.Contracts;
-using SvrMethod.Api.Domain;
-using SvrMethod.Api.Infrastructure;
+using PersonalUltra.Api.Contracts;
+using PersonalUltra.Api.Domain;
+using PersonalUltra.Api.Infrastructure;
 
-namespace SvrMethod.Api.Application.Plans;
+namespace PersonalUltra.Api.Application.Plans;
 
 /// <summary>
 /// Creates the first, versioned SVR plan for a member. This is deliberately a
 /// deterministic catalog copy: future generators may replace its decisions,
 /// but must preserve its member ownership and idempotency guarantees.
 /// </summary>
-public sealed class StandardPlanProvisioner(SvrDbContext db, TimeProvider clock)
+public sealed class StandardPlanProvisioner(PersonalUltraDbContext db, TimeProvider clock)
 {
     private const string ActiveStatus = "Active";
     private const string MethodologyCode = "SVR";

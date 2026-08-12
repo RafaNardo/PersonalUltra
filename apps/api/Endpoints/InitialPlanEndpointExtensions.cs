@@ -1,9 +1,9 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
-using SvrMethod.Api.Application.Plans;
-using SvrMethod.Api.Infrastructure;
+using PersonalUltra.Api.Application.Plans;
+using PersonalUltra.Api.Infrastructure;
 
-namespace SvrMethod.Api.Endpoints;
+namespace PersonalUltra.Api.Endpoints;
 
 public static class InitialPlanEndpointExtensions
 {
@@ -11,7 +11,7 @@ public static class InitialPlanEndpointExtensions
     {
         var api = app.MapGroup("/api/v1/plans/initial").RequireAuthorization();
 
-        api.MapGet("", async (SvrDbContext db, StandardPlanProvisioner provisioner, ClaimsPrincipal user, CancellationToken cancellationToken) =>
+        api.MapGet("", async (PersonalUltraDbContext db, StandardPlanProvisioner provisioner, ClaimsPrincipal user, CancellationToken cancellationToken) =>
         {
             var memberId = MemberId(user);
             if (!await HasCompletedOnboardingAsync(db, memberId, cancellationToken))
@@ -19,7 +19,7 @@ public static class InitialPlanEndpointExtensions
             return Results.Ok(await provisioner.GetAsync(memberId, cancellationToken));
         });
 
-        api.MapPost("", async (SvrDbContext db, StandardPlanProvisioner provisioner, ClaimsPrincipal user, CancellationToken cancellationToken) =>
+        api.MapPost("", async (PersonalUltraDbContext db, StandardPlanProvisioner provisioner, ClaimsPrincipal user, CancellationToken cancellationToken) =>
         {
             var memberId = MemberId(user);
             if (!await HasCompletedOnboardingAsync(db, memberId, cancellationToken))
@@ -31,6 +31,6 @@ public static class InitialPlanEndpointExtensions
     }
 
     private static Guid MemberId(ClaimsPrincipal user) => Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    private static Task<bool> HasCompletedOnboardingAsync(SvrDbContext db, Guid memberId, CancellationToken cancellationToken) =>
+    private static Task<bool> HasCompletedOnboardingAsync(PersonalUltraDbContext db, Guid memberId, CancellationToken cancellationToken) =>
         db.Members.AsNoTracking().AnyAsync(x => x.Id == memberId && x.OnboardingCompletedAt != null, cancellationToken);
 }

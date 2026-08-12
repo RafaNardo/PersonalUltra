@@ -1,6 +1,6 @@
-using SvrMethod.Api.Domain;
+using PersonalUltra.Api.Domain;
 
-namespace SvrMethod.Api.Application.Nutrition;
+namespace PersonalUltra.Api.Application.Nutrition;
 
 /// <summary>
 /// Produces only food substitutions approved by the v0 nutrition rule: the

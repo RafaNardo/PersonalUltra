@@ -1,8 +1,8 @@
-﻿using Microsoft.EntityFrameworkCore.Migrations;
+using Microsoft.EntityFrameworkCore.Migrations;
 
 #nullable disable
 
-namespace SvrMethod.Api.Infrastructure.Migrations
+namespace PersonalUltra.Api.Infrastructure.Migrations
 {
     /// <inheritdoc />
     public partial class M1012CoachConversationIntegrity : Migration

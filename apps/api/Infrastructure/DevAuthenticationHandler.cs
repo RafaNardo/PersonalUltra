@@ -3,9 +3,9 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using SvrMethod.Api.Domain;
+using PersonalUltra.Api.Domain;
 
-namespace SvrMethod.Api.Infrastructure;
+namespace PersonalUltra.Api.Infrastructure;
 
 public sealed class DevAuthenticationHandler(
     IOptionsMonitor<AuthenticationSchemeOptions> options,
@@ -14,7 +14,7 @@ public sealed class DevAuthenticationHandler(
     IConfiguration configuration,
     IHostEnvironment environment,
     DemoSessionTokenService sessions,
-    SvrDbContext db) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
+    PersonalUltraDbContext db) : AuthenticationHandler<AuthenticationSchemeOptions>(options, logger, encoder)
 {
     public const string SchemeName = "DevBearer";
 

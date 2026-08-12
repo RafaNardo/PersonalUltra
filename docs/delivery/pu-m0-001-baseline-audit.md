@@ -42,8 +42,10 @@ databases.
 
 ## Inherited product assumptions deliberately left for later work
 
-- SVR names in solution/package/namespace/database identifiers, compose names,
-  app metadata, assets and persisted SQLite/auth-store keys (`PU-M0-002`).
+- SVR visual names and product copy in the inherited screens/assets
+  (`PU-M0-008`). Technical solution/package/namespace/database identifiers,
+  compose names, app identifiers and persisted SQLite/auth-store keys were
+  renamed in `PU-M0-002`.
 - A single member-oriented API and mobile navigation tree (`PU-M0-003`,
   `PU-M0-004`).
 - SVR visual assets and product copy (`PU-M0-008`).
@@ -53,11 +55,11 @@ databases.
 - The current Coach UI/API can perform inherited mutation flows; Coach V1 must
   become read-only in `PU-M0-006`/M4 work.
 
-## Ambiguities to resolve before PU-M0-002
+## Resolved follow-up decisions
 
-1. Confirm whether the existing PostgreSQL volume/data should be retained or
-   reset when the database and connection-string names are renamed. A reset is
-   appropriate for a product demo, but it is a data-destructive decision.
-2. Confirm whether the existing exercise imagery is licensed for continued use
-   as donor assets. It is technically reusable, but should not imply SVR
-   branding or content ownership.
+- The PostgreSQL data/volume may be reset for the new Personal Ultra
+  infrastructure. `PU-M0-002` therefore uses new database, credential and
+  compose-volume identifiers without deleting local Docker data.
+- The inherited exercise assets are licensed for continued use. Their existing
+  SVR file names and visual treatment remain product/branding work for
+  `PU-M0-008`.

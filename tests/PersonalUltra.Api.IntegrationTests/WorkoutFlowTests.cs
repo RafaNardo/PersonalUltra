@@ -11,19 +11,19 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
-using SvrMethod.Api.Contracts;
-using SvrMethod.Api.Application.Coach;
-using SvrMethod.Api.Domain;
-using SvrMethod.Api.Infrastructure;
+using PersonalUltra.Api.Contracts;
+using PersonalUltra.Api.Application.Coach;
+using PersonalUltra.Api.Domain;
+using PersonalUltra.Api.Infrastructure;
 
-namespace SvrMethod.Api.IntegrationTests;
+namespace PersonalUltra.Api.IntegrationTests;
 
-public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
+public sealed class WorkoutFlowTests : IClassFixture<PersonalUltraApiFactory>
 {
     private readonly HttpClient _client;
-    private readonly SvrApiFactory _factory;
+    private readonly PersonalUltraApiFactory _factory;
 
-    public WorkoutFlowTests(SvrApiFactory factory)
+    public WorkoutFlowTests(PersonalUltraApiFactory factory)
     {
         _factory = factory;
         factory.Seed();
@@ -72,7 +72,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Completed_member_receives_an_owned_complete_standard_plan_idempotently()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         var member = await AuthenticateNewCompletedMemberAsync(client);
@@ -95,7 +95,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
         Assert.Equal(first.PlanId, replay.PlanId);
 
         await using var scope = isolatedFactory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         var plan = await db.Plans.Include(x => x.TrainingPlan).ThenInclude(x => x.WorkoutTemplates).ThenInclude(x => x.Exercises)
             .Include(x => x.TrainingPlan).ThenInclude(x => x.WorkoutTemplates).ThenInclude(x => x.WorkoutSessions)
             .Include(x => x.Member).SingleAsync(x => x.Id == first.PlanId);
@@ -116,7 +116,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Initial_plan_is_blocked_until_onboarding_is_completed_and_is_member_scoped()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var firstClient = isolatedFactory.CreateClient();
         var firstLogin = await firstClient.PostAsJsonAsync("/api/v1/auth/dev-login", new DevLoginRequest($"plan-first-{Guid.NewGuid():N}@example.test"));
@@ -143,7 +143,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Member_demo_reset_deletes_only_the_authenticated_member_and_allows_a_fresh_login()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var memberClient = isolatedFactory.CreateClient();
         const string email = "restartable-member@example.test";
@@ -160,7 +160,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
 
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             Assert.False(await db.Members.AnyAsync(x => x.Id == member.Id));
             Assert.False(await db.AuthUsers.AnyAsync(x => x.Email == email));
             Assert.False(await db.Plans.AnyAsync(x => x.MemberId == member.Id));
@@ -185,7 +185,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     public async Task Demo_seed_creates_a_valid_nutrition_plan_and_catalog()
     {
         await using var scope = _factory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
 
         var nutrition = await db.NutritionPlans
             .Include(x => x.Meals)
@@ -210,7 +210,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     public void Nutrition_model_enforces_plan_and_meal_template_uniqueness()
     {
         using var scope = _factory.Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
 
         var model = db.GetInfrastructure().GetRequiredService<IDesignTimeModel>().Model;
         var nutritionPlan = model.FindEntityType(typeof(NutritionPlan));
@@ -283,7 +283,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Development_email_identity_creates_or_recovers_an_isolated_member_and_bootstraps_lifecycle()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         const string email = "nova.aluna@svr.method";
@@ -310,7 +310,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
 
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var member = await db.Members.SingleAsync(member => member.Id == created.Member.Id);
             member.OnboardingCompletedAt = DateTimeOffset.UtcNow;
             await db.SaveChangesAsync();
@@ -333,7 +333,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Demo_user_can_read_the_complete_training_plan_and_prescriptions()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
@@ -430,14 +430,14 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Coach_conversation_is_created_once_scoped_to_member_and_returns_messages_in_order()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
 
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var demoConversation = await db.Conversations.SingleAsync(x => x.MemberId == DemoIds.MemberId);
             db.CoachMessages.RemoveRange(db.CoachMessages.Where(x => x.ConversationId == demoConversation.Id));
             db.Conversations.Remove(demoConversation);
@@ -455,7 +455,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
         var secondMessageId = Guid.Parse("00000000-0000-0000-0000-000000000002");
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var timestamp = DateTimeOffset.UtcNow.AddMinutes(-1);
             db.CoachMessages.AddRange(
                 new CoachMessage { Id = secondMessageId, ConversationId = created.Id, Role = "Assistant", Kind = "Text", Content = "Segunda mensagem", CreatedAt = timestamp },
@@ -476,7 +476,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
         Assert.DoesNotContain(conversation.Messages, message => message.Content == "Mensagem de outra pessoa");
 
         await using var modelScope = isolatedFactory.Services.CreateAsyncScope();
-        var modelDb = modelScope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var modelDb = modelScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         var model = modelDb.GetInfrastructure().GetRequiredService<IDesignTimeModel>().Model;
         var conversationEntity = model.FindEntityType(typeof(Conversation));
         var messageEntity = model.FindEntityType(typeof(CoachMessage));
@@ -487,11 +487,11 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Coach_context_contains_only_member_scoped_safe_summaries()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
 
         await using var scope = isolatedFactory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         var builder = scope.ServiceProvider.GetRequiredService<CoachContextBuilder>();
 
         var context = await builder.BuildAsync(DemoIds.MemberId, CancellationToken.None);
@@ -537,7 +537,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Coach_base_chat_validates_persists_and_returns_the_complete_ordered_conversation()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
@@ -579,7 +579,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Exercise_substitution_tool_persists_only_an_approved_confirmation_required_proposal()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
@@ -592,7 +592,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
         Guid originalExerciseId;
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             originalExerciseId = (await db.WorkoutSessionExercises.SingleAsync(exercise => exercise.Id == current.Id)).ExerciseId;
             db.Exercises.AddRange(
                 new Exercise { Id = replacementId, Name = "Variação aprovada", PrimaryMuscleGroup = current.PrimaryMuscleGroup },
@@ -631,7 +631,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
         Assert.Equal("INVALID_EXERCISE_SUBSTITUTION", invalidError!.Code);
 
         await using var verificationScope = isolatedFactory.Services.CreateAsyncScope();
-        var verificationDb = verificationScope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var verificationDb = verificationScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         var unchanged = await verificationDb.WorkoutSessionExercises.SingleAsync(exercise => exercise.Id == current.Id);
         Assert.Equal(originalExerciseId, unchanged.ExerciseId);
         Assert.Equal(1, await verificationDb.CoachActions.CountAsync(item => item.MemberId == DemoIds.MemberId && item.Status == "Proposed"));
@@ -640,7 +640,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Coach_action_confirmation_is_idempotent_and_revalidates_safety_before_changing_the_workout()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
@@ -651,7 +651,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
         var replacementId = Guid.NewGuid();
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             db.Exercises.Add(new Exercise { Id = replacementId, Name = "Alternativa segura", PrimaryMuscleGroup = current.PrimaryMuscleGroup });
             await db.SaveChangesAsync();
         }
@@ -674,14 +674,14 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
 
         await using (var verificationScope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = verificationScope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = verificationScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             Assert.Equal(replacementId, (await db.WorkoutSessionExercises.SingleAsync(exercise => exercise.Id == current.Id)).ExerciseId);
         }
 
         var rejectedActionId = Guid.NewGuid();
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             db.CoachActions.Add(new CoachAction { Id = rejectedActionId, MemberId = DemoIds.MemberId, Type = "ExerciseSubstitution", Status = "Proposed", SafetyLevel = "Yellow", PayloadJson = "{}", CreatedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
         }
@@ -696,7 +696,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Fatigue_message_persists_confirmation_required_rest_and_reschedule_options_without_automatic_change()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
@@ -705,7 +705,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
 
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             db.WorkoutSessions.RemoveRange(await db.WorkoutSessions.Where(session => session.MemberId == DemoIds.MemberId && session.ScheduledFor == today!.ScheduledFor.AddDays(1)).ToListAsync());
             await db.SaveChangesAsync();
         }
@@ -724,14 +724,14 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
         var confirmed = await client.PostAsync($"/api/v1/coach/actions/{reschedule.Id}/confirm", null);
         Assert.Equal(HttpStatusCode.OK, confirmed.StatusCode);
         await using var verificationScope = isolatedFactory.Services.CreateAsyncScope();
-        var verificationDb = verificationScope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var verificationDb = verificationScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         Assert.Equal(today.ScheduledFor.AddDays(1), (await verificationDb.WorkoutSessions.SingleAsync(session => session.Id == today.Id)).ScheduledFor);
     }
 
     [Fact]
     public async Task Demo_reset_is_available_only_for_an_isolated_demo_database()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
@@ -742,7 +742,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
 
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var user = new AuthUser { Id = Guid.NewGuid(), Email = "outside-demo@example.test", CreatedAt = DateTimeOffset.UtcNow };
             db.Members.Add(new Member { Id = Guid.NewGuid(), AuthUser = user, FirstName = "Outro", LastName = "Membro", CreatedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
@@ -757,7 +757,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Pain_reporting_validates_required_fields_and_persists_a_member_scoped_report()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
@@ -790,7 +790,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
         Assert.False(metadata.RequiresConfirmation);
 
         await using var scope = isolatedFactory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         var report = await db.PainReports.SingleAsync(item => item.Id == response.Id);
         Assert.Equal(DemoIds.MemberId, report.MemberId);
         Assert.Equal("Joelho", report.Area);
@@ -804,14 +804,14 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Nutrition_today_returns_the_active_plan_in_meal_order_with_daily_completion_status()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
 
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var nutrition = await db.NutritionPlans.Include(x => x.Meals)
                 .SingleAsync(x => x.Plan.MemberId == DemoIds.MemberId);
             var dinner = nutrition.Meals.Single(x => x.Name == "Jantar");
@@ -849,14 +849,14 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Nutrition_today_returns_the_documented_error_when_the_member_has_no_active_plan()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
 
         await using (var scope = isolatedFactory.Services.CreateAsyncScope())
         {
-            var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var plan = await db.Plans.SingleAsync(x => x.MemberId == DemoIds.MemberId && x.Status == "Active");
             plan.Status = "Inactive";
             await db.SaveChangesAsync();
@@ -874,7 +874,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Demo_user_can_substitute_a_food_with_a_no_content_response()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
@@ -900,7 +900,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     [Fact]
     public async Task Food_alternatives_are_scoped_to_the_member_meal_and_preserve_calories()
     {
-        using var isolatedFactory = new SvrApiFactory();
+        using var isolatedFactory = new PersonalUltraApiFactory();
         isolatedFactory.Seed();
         using var client = isolatedFactory.CreateClient();
         await AuthenticateAsync(client);
@@ -919,7 +919,7 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
         Assert.InRange(replacement.SuggestedQuantityGrams * 219m / 100m, 296m, 298m);
 
         await using var scope = isolatedFactory.Services.CreateAsyncScope();
-        var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         var replacementFood = await db.Foods.SingleAsync(food => food.Id == replacement.FoodId);
         var chickenFood = await db.Foods.SingleAsync(food => food.Id == chicken.FoodId);
         Assert.Equal(chickenFood.Category, replacementFood.Category);
@@ -969,14 +969,14 @@ public sealed class WorkoutFlowTests : IClassFixture<SvrApiFactory>
     }
 }
 
-public sealed class SvrApiFactory : WebApplicationFactory<Program>
+public sealed class PersonalUltraApiFactory : WebApplicationFactory<Program>
 {
-    private readonly string _databaseName = $"svr-api-tests-{Guid.NewGuid()}";
+    private readonly string _databaseName = $"personal-ultra-api-tests-{Guid.NewGuid()}";
 
     public void Seed()
     {
         using var scope = Services.CreateScope();
-        var db = scope.ServiceProvider.GetRequiredService<SvrDbContext>();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         db.Database.EnsureCreated();
         scope.ServiceProvider.GetRequiredService<DemoDataSeeder>().SeedAsync(CancellationToken.None).GetAwaiter().GetResult();
     }
@@ -991,9 +991,9 @@ public sealed class SvrApiFactory : WebApplicationFactory<Program>
         }));
         builder.ConfigureServices(services =>
         {
-            services.RemoveAll<DbContextOptions<SvrDbContext>>();
-            services.RemoveAll<SvrDbContext>();
-            services.AddDbContext<SvrDbContext>(options => options.UseInMemoryDatabase(_databaseName));
+            services.RemoveAll<DbContextOptions<PersonalUltraDbContext>>();
+            services.RemoveAll<PersonalUltraDbContext>();
+            services.AddDbContext<PersonalUltraDbContext>(options => options.UseInMemoryDatabase(_databaseName));
         });
     }
 }

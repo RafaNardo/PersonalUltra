@@ -3,10 +3,10 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using SvrMethod.Api.Application.Coach;
+using PersonalUltra.Api.Application.Coach;
 using Xunit;
 
-namespace SvrMethod.Api.IntegrationTests;
+namespace PersonalUltra.Api.IntegrationTests;
 
 public sealed class OpenAiCoachResponderTests
 {

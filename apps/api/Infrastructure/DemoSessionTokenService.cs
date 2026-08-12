@@ -2,7 +2,7 @@ using System.Globalization;
 using System.Security.Cryptography;
 using System.Text;
 
-namespace SvrMethod.Api.Infrastructure;
+namespace PersonalUltra.Api.Infrastructure;
 
 /// <summary>
 /// Development-only, signed bearer sessions. This is deliberately not an

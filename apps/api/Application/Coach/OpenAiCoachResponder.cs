@@ -3,7 +3,7 @@ using System.Net.Http.Json;
 using System.Text.Json;
 using Microsoft.Extensions.Options;
 
-namespace SvrMethod.Api.Application.Coach;
+namespace PersonalUltra.Api.Application.Coach;
 
 public sealed class OpenAiCoachOptions
 {

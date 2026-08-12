@@ -1,13 +1,13 @@
 {
   "expo": {
     "name": "SVR Method",
-    "slug": "svr-method",
+    "slug": "personal-ultra",
     "version": "0.1.0",
     "orientation": "portrait",
-    "scheme": "svrmethod",
+    "scheme": "personalultra",
     "icon": "./assets/brand/app-icon.png",
     "ios": {
-      "bundleIdentifier": "com.svrmethod.demo",
+      "bundleIdentifier": "com.personalultra.demo",
       "buildNumber": "1",
       "supportsTablet": false,
       "infoPlist": {
@@ -16,7 +16,7 @@
       }
     },
     "android": {
-      "package": "com.svrmethod.demo",
+      "package": "com.personalultra.demo",
       "versionCode": 1,
       "adaptiveIcon": {
         "foregroundImage": "./assets/brand/app-icon.png",

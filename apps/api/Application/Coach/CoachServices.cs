@@ -1,7 +1,7 @@
 using Microsoft.EntityFrameworkCore;
-using SvrMethod.Api.Infrastructure;
+using PersonalUltra.Api.Infrastructure;
 
-namespace SvrMethod.Api.Application.Coach;
+namespace PersonalUltra.Api.Application.Coach;
 
 public sealed record CoachMemberContext(string FirstName);
 public sealed record CoachPlanContext(string Name, int SessionsPerWeek, DateOnly StartsOn);
@@ -69,7 +69,7 @@ public sealed class DeterministicCoachResponder : ICoachResponder
         message.Contains("café") || message.Contains("cafe") || message.Contains("arroz") || message.Contains("alimento") || message.Contains("comida");
 }
 
-public sealed class CoachContextBuilder(SvrDbContext db, TimeProvider clock)
+public sealed class CoachContextBuilder(PersonalUltraDbContext db, TimeProvider clock)
 {
     public async Task<CoachContext> BuildAsync(Guid memberId, CancellationToken cancellationToken)
     {

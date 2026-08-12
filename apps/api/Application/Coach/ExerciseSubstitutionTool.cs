@@ -1,7 +1,7 @@
-using SvrMethod.Api.Application.Training;
-using SvrMethod.Api.Domain;
+using PersonalUltra.Api.Application.Training;
+using PersonalUltra.Api.Domain;
 
-namespace SvrMethod.Api.Application.Coach;
+namespace PersonalUltra.Api.Application.Coach;
 
 /// <summary>
 /// Creates a safe, confirmation-required substitution proposal. It never

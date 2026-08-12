@@ -1,6 +1,6 @@
-using SvrMethod.Api.Domain;
+using PersonalUltra.Api.Domain;
 
-namespace SvrMethod.Api.Application.Training;
+namespace PersonalUltra.Api.Application.Training;
 
 /// <summary>
 /// Applies the v0 exercise-substitution rule. An alternative must be a distinct,

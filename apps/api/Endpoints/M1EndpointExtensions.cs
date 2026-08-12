@@ -1,15 +1,15 @@
 using System.Security.Claims;
 using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
-using SvrMethod.Api.Contracts;
-using SvrMethod.Api.Application.Coach;
-using SvrMethod.Api.Application.Nutrition;
-using SvrMethod.Api.Application.Training;
-using SvrMethod.Api.Application.Safety;
-using SvrMethod.Api.Domain;
-using SvrMethod.Api.Infrastructure;
+using PersonalUltra.Api.Contracts;
+using PersonalUltra.Api.Application.Coach;
+using PersonalUltra.Api.Application.Nutrition;
+using PersonalUltra.Api.Application.Training;
+using PersonalUltra.Api.Application.Safety;
+using PersonalUltra.Api.Domain;
+using PersonalUltra.Api.Infrastructure;
 
-namespace SvrMethod.Api.Endpoints;
+namespace PersonalUltra.Api.Endpoints;
 
 public static class M1EndpointExtensions
 {
@@ -19,7 +19,7 @@ public static class M1EndpointExtensions
     public static void MapM1Api(this WebApplication app)
     {
         var api = app.MapGroup("/api/v1").RequireAuthorization();
-        api.MapGet("/progress/summary", async (SvrDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
+        api.MapGet("/progress/summary", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         {
             var id = MemberId(user); var weights = await db.WeightEntries.Where(x => x.MemberId == id).OrderBy(x => x.RecordedAt).ToListAsync(ct);
             var sessions = await db.WorkoutSessions.CountAsync(x => x.MemberId == id && x.Status == "Completed", ct);
@@ -39,13 +39,13 @@ public static class M1EndpointExtensions
             var daysOnMethod = planStart == default ? 0 : Math.Max(1, DateOnly.FromDateTime(DateTime.UtcNow).DayNumber - planStart.DayNumber + 1);
             return Results.Ok(new ProgressSummaryDto(current, change, sessions, consistency, daysOnMethod, strength, "Força e consistência em evolução."));
         });
-        api.MapGet("/progress/weight", async (SvrDbContext db, ClaimsPrincipal user, CancellationToken ct) => Results.Ok((await db.WeightEntries.Where(x => x.MemberId == MemberId(user)).OrderBy(x => x.RecordedAt).ToListAsync(ct)).Select(x => new WeightDto(x.Id, x.WeightKg, x.RecordedAt))));
-        api.MapPost("/progress/weight", async (CreateWeightRequest request, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
+        api.MapGet("/progress/weight", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) => Results.Ok((await db.WeightEntries.Where(x => x.MemberId == MemberId(user)).OrderBy(x => x.RecordedAt).ToListAsync(ct)).Select(x => new WeightDto(x.Id, x.WeightKg, x.RecordedAt))));
+        api.MapPost("/progress/weight", async (CreateWeightRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
         {
             if (request.WeightKg is < 25 or > 400) return Results.BadRequest(new { code = "VALIDATION_ERROR", message = "Peso inválido." });
             var entry = new WeightEntry { Id = Guid.NewGuid(), MemberId = MemberId(user), WeightKg = request.WeightKg, RecordedAt = request.RecordedAt ?? clock.GetUtcNow() }; db.WeightEntries.Add(entry); await db.SaveChangesAsync(ct); return Results.Created($"/api/v1/progress/weight/{entry.Id}", new WeightDto(entry.Id, entry.WeightKg, entry.RecordedAt));
         });
-        api.MapGet("/nutrition/today", async (SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
+        api.MapGet("/nutrition/today", async (PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
         {
             var memberId = MemberId(user);
             var plan = await db.Plans.Where(x => x.MemberId == memberId && x.Status == "Active").Select(x => x.Id).SingleOrDefaultAsync(ct);
@@ -58,15 +58,15 @@ public static class M1EndpointExtensions
             var logs = await db.DailyLogs.Where(x => x.MemberId == memberId && x.Date == today).ToListAsync(ct);
             return Results.Ok(new NutritionTodayDto(nutrition.CaloriesTarget, nutrition.ProteinGramsTarget, nutrition.CarbsGramsTarget, nutrition.FatGramsTarget, nutrition.Meals.OrderBy(x => x.Sequence).Select(m => Meal(m, logs.Any(l => l.MealTemplateId == m.Id && l.Completed))).ToList()));
         });
-        api.MapGet("/nutrition/meals/{mealId:guid}", async (Guid mealId, SvrDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
+        api.MapGet("/nutrition/meals/{mealId:guid}", async (Guid mealId, PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         {
             var memberId = MemberId(user); var meal = await MealForMember(db, mealId, memberId, ct); if (meal is null) return Results.NotFound();
             var completed = await db.DailyLogs.AnyAsync(x => x.MemberId == memberId && x.MealTemplateId == mealId && x.Date == DateOnly.FromDateTime(DateTime.UtcNow) && x.Completed, ct);
             return Results.Ok(Meal(meal, completed));
         });
-        api.MapPost("/nutrition/meals/{mealId:guid}/complete", async (Guid mealId, SvrDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
+        api.MapPost("/nutrition/meals/{mealId:guid}/complete", async (Guid mealId, PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         { var id = MemberId(user); if (await MealForMember(db, mealId, id, ct) is null) return Results.NotFound(); var date = DateOnly.FromDateTime(DateTime.UtcNow); var log = await db.DailyLogs.SingleOrDefaultAsync(x => x.MemberId == id && x.Date == date && x.MealTemplateId == mealId, ct); if (log is null) db.DailyLogs.Add(new DailyLog { Id = Guid.NewGuid(), MemberId = id, Date = date, MealTemplateId = mealId, Completed = true }); else log.Completed = true; await db.SaveChangesAsync(ct); return Results.NoContent(); });
-        api.MapGet("/nutrition/meals/{mealId:guid}/foods/{foodId:guid}/alternatives", async (Guid mealId, Guid foodId, SvrDbContext db, ClaimsPrincipal user, FoodAlternativesEngine alternativesEngine, CancellationToken ct) =>
+        api.MapGet("/nutrition/meals/{mealId:guid}/foods/{foodId:guid}/alternatives", async (Guid mealId, Guid foodId, PersonalUltraDbContext db, ClaimsPrincipal user, FoodAlternativesEngine alternativesEngine, CancellationToken ct) =>
         {
             var meal = await MealForMember(db, mealId, MemberId(user), ct);
             var original = meal?.Foods.SingleOrDefault(x => x.FoodId == foodId);
@@ -77,7 +77,7 @@ public static class M1EndpointExtensions
                 .Select(candidate => new FoodAlternativeDto(candidate.FoodId, candidate.Name, candidate.SuggestedQuantityGrams, candidate.ReasonCode));
             return Results.Ok(alternatives);
         });
-        api.MapPost("/nutrition/meals/{mealId:guid}/foods/{foodId:guid}/substitute", async (Guid mealId, Guid foodId, SubstituteFoodRequest request, SvrDbContext db, ClaimsPrincipal user, FoodAlternativesEngine alternativesEngine, CancellationToken ct) =>
+        api.MapPost("/nutrition/meals/{mealId:guid}/foods/{foodId:guid}/substitute", async (Guid mealId, Guid foodId, SubstituteFoodRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, FoodAlternativesEngine alternativesEngine, CancellationToken ct) =>
         {
             var meal = await MealForMember(db, mealId, MemberId(user), ct);
             var item = meal?.Foods.SingleOrDefault(x => x.FoodId == foodId);
@@ -90,7 +90,7 @@ public static class M1EndpointExtensions
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         });
-        api.MapPost("/health/pain-reports", async (PainReportRequest request, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, PainSafetyEngine painSafetyEngine, CoachOutputValidator outputValidator, CancellationToken ct) =>
+        api.MapPost("/health/pain-reports", async (PainReportRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, PainSafetyEngine painSafetyEngine, CoachOutputValidator outputValidator, CancellationToken ct) =>
         {
             var area = request.Area?.Trim();
             var side = request.Side?.Trim();
@@ -122,12 +122,12 @@ public static class M1EndpointExtensions
             await db.SaveChangesAsync(ct);
             return Results.Ok(new PainReportDto(report.Id, decision.SafetyLevel, decision.ReasonCode, decision.Message, decision.RequiresConfirmation));
         });
-        api.MapGet("/coach/conversation", async (SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
+        api.MapGet("/coach/conversation", async (PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
         {
             var conversation = await GetOrCreateCoachConversationAsync(db, MemberId(user), clock, ct);
             return Results.Ok(ToCoachConversation(conversation));
         });
-        api.MapPost("/coach/messages", async (SendCoachMessageRequest request, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CoachContextBuilder contextBuilder, ICoachResponder responder, CoachOutputValidator outputValidator, CancellationToken ct) =>
+        api.MapPost("/coach/messages", async (SendCoachMessageRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CoachContextBuilder contextBuilder, ICoachResponder responder, CoachOutputValidator outputValidator, CancellationToken ct) =>
         {
             var content = request.Content?.Trim();
             if (string.IsNullOrWhiteSpace(content))
@@ -175,7 +175,7 @@ public static class M1EndpointExtensions
             await db.SaveChangesAsync(ct);
             return Results.Ok(ToCoachConversation(conversation));
         });
-        api.MapGet("/training/sessions/{sessionId:guid}/exercises/{exerciseId:guid}/alternatives", async (Guid sessionId, Guid exerciseId, SvrDbContext db, ClaimsPrincipal user, ExerciseAlternativesEngine alternativesEngine, CancellationToken ct) =>
+        api.MapGet("/training/sessions/{sessionId:guid}/exercises/{exerciseId:guid}/alternatives", async (Guid sessionId, Guid exerciseId, PersonalUltraDbContext db, ClaimsPrincipal user, ExerciseAlternativesEngine alternativesEngine, CancellationToken ct) =>
         {
             var current = await db.WorkoutSessionExercises.Include(x => x.Exercise).Include(x => x.WorkoutSession)
                 .SingleOrDefaultAsync(x => x.Id == exerciseId && x.WorkoutSessionId == sessionId && x.WorkoutSession.MemberId == MemberId(user), ct);
@@ -186,7 +186,7 @@ public static class M1EndpointExtensions
                 .Select(candidate => new ExerciseAlternativeDto(candidate.ExerciseId, candidate.Name, candidate.ReasonCode));
             return Results.Ok(alternatives);
         });
-        api.MapPost("/training/sessions/{sessionId:guid}/exercises/{exerciseId:guid}/substitution-proposals", async (Guid sessionId, Guid exerciseId, CreateExerciseSubstitutionProposalRequest request, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, ExerciseSubstitutionTool substitutionTool, CancellationToken ct) =>
+        api.MapPost("/training/sessions/{sessionId:guid}/exercises/{exerciseId:guid}/substitution-proposals", async (Guid sessionId, Guid exerciseId, CreateExerciseSubstitutionProposalRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, ExerciseSubstitutionTool substitutionTool, CancellationToken ct) =>
         {
             var memberId = MemberId(user);
             var current = await db.WorkoutSessionExercises.Include(x => x.Exercise).Include(x => x.WorkoutSession).SingleOrDefaultAsync(x => x.Id == exerciseId && x.WorkoutSessionId == sessionId && x.WorkoutSession.MemberId == memberId, ct);
@@ -229,8 +229,8 @@ public static class M1EndpointExtensions
             await db.SaveChangesAsync(ct);
             return Results.Created($"/api/v1/coach/actions/{action.Id}", Action(action));
         });
-        api.MapGet("/coach/actions", async (SvrDbContext db, ClaimsPrincipal user, CancellationToken ct) => Results.Ok((await db.CoachActions.Where(x => x.MemberId == MemberId(user) && x.Status == "Proposed").OrderByDescending(x => x.CreatedAt).ToListAsync(ct)).Select(Action)));
-        api.MapPost("/coach/actions/{actionId:guid}/confirm", async (Guid actionId, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, ExerciseSubstitutionTool substitutionTool, CancellationToken ct) =>
+        api.MapGet("/coach/actions", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) => Results.Ok((await db.CoachActions.Where(x => x.MemberId == MemberId(user) && x.Status == "Proposed").OrderByDescending(x => x.CreatedAt).ToListAsync(ct)).Select(Action)));
+        api.MapPost("/coach/actions/{actionId:guid}/confirm", async (Guid actionId, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, ExerciseSubstitutionTool substitutionTool, CancellationToken ct) =>
         {
             var action = await db.CoachActions.SingleOrDefaultAsync(x => x.Id == actionId && x.MemberId == MemberId(user), ct);
             if (action is null) return Results.NotFound();
@@ -272,7 +272,7 @@ public static class M1EndpointExtensions
             action.Status = "Confirmed"; action.ResolvedAt = clock.GetUtcNow(); await db.SaveChangesAsync(ct);
             return Results.Ok(new ResolveCoachActionDto(action.Id, action.Status, "Alteração aplicada após sua confirmação."));
         });
-        api.MapPost("/coach/actions/{actionId:guid}/reject", async (Guid actionId, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
+        api.MapPost("/coach/actions/{actionId:guid}/reject", async (Guid actionId, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
         {
             var action = await db.CoachActions.SingleOrDefaultAsync(x => x.Id == actionId && x.MemberId == MemberId(user), ct);
             if (action is null) return Results.NotFound();
@@ -303,7 +303,7 @@ public static class M1EndpointExtensions
     }
 
     private static Guid MemberId(ClaimsPrincipal user) => Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
-    private static async Task<Conversation> GetOrCreateCoachConversationAsync(SvrDbContext db, Guid memberId, TimeProvider clock, CancellationToken cancellationToken)
+    private static async Task<Conversation> GetOrCreateCoachConversationAsync(PersonalUltraDbContext db, Guid memberId, TimeProvider clock, CancellationToken cancellationToken)
     {
         var conversation = await db.Conversations.Include(x => x.Messages).SingleOrDefaultAsync(x => x.MemberId == memberId, cancellationToken);
         if (conversation is not null) return conversation;
@@ -313,7 +313,7 @@ public static class M1EndpointExtensions
         await db.SaveChangesAsync(cancellationToken);
         return conversation;
     }
-    private static async Task<MealTemplate?> MealForMember(SvrDbContext db, Guid mealId, Guid memberId, CancellationToken ct) => await db.MealTemplates.Include(x => x.Foods).ThenInclude(x => x.Food).Include(x => x.NutritionPlan).ThenInclude(x => x.Plan).SingleOrDefaultAsync(x => x.Id == mealId && x.NutritionPlan.Plan.MemberId == memberId, ct);
+    private static async Task<MealTemplate?> MealForMember(PersonalUltraDbContext db, Guid mealId, Guid memberId, CancellationToken ct) => await db.MealTemplates.Include(x => x.Foods).ThenInclude(x => x.Food).Include(x => x.NutritionPlan).ThenInclude(x => x.Plan).SingleOrDefaultAsync(x => x.Id == mealId && x.NutritionPlan.Plan.MemberId == memberId, ct);
     private static MealDto Meal(MealTemplate meal, bool completed) => new(meal.Id, meal.Name, completed, meal.Foods.Select(x => new MealFoodDto(x.Id, x.FoodId, x.Food.Name, x.QuantityGrams, Math.Round(x.QuantityGrams * x.Food.CaloriesPer100g / 100, 0), Math.Round(x.QuantityGrams * x.Food.ProteinPer100g / 100, 1), Math.Round(x.QuantityGrams * x.Food.CarbsPer100g / 100, 1), Math.Round(x.QuantityGrams * x.Food.FatPer100g / 100, 1))).ToList());
     private static CoachMessageDto Message(CoachMessage message) => new(message.Id, message.Role, message.Kind, message.Content, message.MetadataJson, message.CreatedAt);
     private static CoachConversationDto ToCoachConversation(Conversation conversation) => new(conversation.Id, conversation.Messages.OrderBy(x => x.CreatedAt).ThenBy(x => x.Id).Select(Message).ToList());
@@ -328,7 +328,7 @@ public static class M1EndpointExtensions
         return new CoachReply(CoachMessageKinds.Text, content, decision.ReasonCode);
     }
     private static bool IsFatigueMessage(string content) => content.Contains("cansad", StringComparison.OrdinalIgnoreCase) || content.Contains("fadig", StringComparison.OrdinalIgnoreCase);
-    private static async Task PersistFatigueOptionsAsync(SvrDbContext db, Conversation conversation, CoachMessage input, Guid memberId, TimeProvider clock, CancellationToken ct)
+    private static async Task PersistFatigueOptionsAsync(PersonalUltraDbContext db, Conversation conversation, CoachMessage input, Guid memberId, TimeProvider clock, CancellationToken ct)
     {
         var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
         var session = await db.WorkoutSessions.SingleOrDefaultAsync(x => x.MemberId == memberId && x.ScheduledFor == today && x.Status == "Planned", ct);

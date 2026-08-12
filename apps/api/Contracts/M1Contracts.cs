@@ -1,4 +1,4 @@
-namespace SvrMethod.Api.Contracts;
+namespace PersonalUltra.Api.Contracts;
 
 public sealed record StrengthProgressDto(string ExerciseName, decimal CurrentLoadKg, decimal ChangePercent);
 public sealed record ProgressSummaryDto(decimal CurrentWeightKg, decimal WeightChangeKg, int CompletedWorkouts, int ConsistencyPercent, int DaysOnMethod, StrengthProgressDto? Strength, string StrengthInsight);

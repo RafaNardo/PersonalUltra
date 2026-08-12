@@ -1,8 +1,8 @@
 using System.Text.Json;
-using SvrMethod.Api.Application.Coach;
+using PersonalUltra.Api.Application.Coach;
 using Xunit;
 
-namespace SvrMethod.Api.IntegrationTests;
+namespace PersonalUltra.Api.IntegrationTests;
 
 public sealed class CoachOutputValidatorTests
 {

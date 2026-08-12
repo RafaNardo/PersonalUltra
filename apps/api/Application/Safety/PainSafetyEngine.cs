@@ -1,4 +1,4 @@
-namespace SvrMethod.Api.Application.Safety;
+namespace PersonalUltra.Api.Application.Safety;
 
 /// <summary>
 /// Conservative, deterministic classification for a reported pain. It does not

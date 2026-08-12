@@ -1,4 +1,4 @@
-﻿
+
 Microsoft Visual Studio Solution File, Format Version 12.00
 # Visual Studio Version 17
 VisualStudioVersion = 17.0.31903.59
@@ -7,11 +7,11 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "apps", "apps", "{1787FE1D-0
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "api", "api", "{BC2D172B-13BC-136C-CDB1-4B1A687208C4}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SvrMethod.Api", "apps\api\SvrMethod.Api.csproj", "{E76C6D78-0DA7-4FBF-83EE-303F446F446B}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersonalUltra.Api", "apps\api\PersonalUltra.Api.csproj", "{E76C6D78-0DA7-4FBF-83EE-303F446F446B}"
 EndProject
 Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{0AB3BF05-4346-4AA6-1389-037BE0695223}"
 EndProject
-Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "SvrMethod.Api.IntegrationTests", "tests\SvrMethod.Api.IntegrationTests\SvrMethod.Api.IntegrationTests.csproj", "{3C86FA03-E7FE-469D-BA4B-6E5D751191BC}"
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "PersonalUltra.Api.IntegrationTests", "tests\PersonalUltra.Api.IntegrationTests\PersonalUltra.Api.IntegrationTests.csproj", "{3C86FA03-E7FE-469D-BA4B-6E5D751191BC}"
 EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution

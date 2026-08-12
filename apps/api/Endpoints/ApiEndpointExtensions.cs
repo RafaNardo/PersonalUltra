@@ -1,17 +1,17 @@
 using System.Security.Claims;
 using System.Net.Mail;
 using Microsoft.EntityFrameworkCore;
-using SvrMethod.Api.Contracts;
-using SvrMethod.Api.Domain;
-using SvrMethod.Api.Infrastructure;
+using PersonalUltra.Api.Contracts;
+using PersonalUltra.Api.Domain;
+using PersonalUltra.Api.Infrastructure;
 
-namespace SvrMethod.Api.Endpoints;
+namespace PersonalUltra.Api.Endpoints;
 
 public static class ApiEndpointExtensions
 {
-    public static void MapSvrApi(this WebApplication app)
+    public static void MapPersonalUltraApi(this WebApplication app)
     {
-        app.MapGet("/health", async (SvrDbContext db, HttpContext context, CancellationToken cancellationToken) =>
+        app.MapGet("/health", async (PersonalUltraDbContext db, HttpContext context, CancellationToken cancellationToken) =>
         {
             if (!await db.Database.CanConnectAsync(cancellationToken))
             {
@@ -23,7 +23,7 @@ public static class ApiEndpointExtensions
 
         if (app.Environment.IsDevelopment())
         {
-            app.MapPost("/api/v1/auth/dev-login", async (DevLoginRequest request, SvrDbContext db, DemoSessionTokenService sessions, TimeProvider clock, HttpContext context, CancellationToken cancellationToken) =>
+            app.MapPost("/api/v1/auth/dev-login", async (DevLoginRequest request, PersonalUltraDbContext db, DemoSessionTokenService sessions, TimeProvider clock, HttpContext context, CancellationToken cancellationToken) =>
             {
                 // Empty is retained only as a compatibility path for the existing
                 // installed demo; the M2-A login screen always submits an email.
@@ -55,7 +55,7 @@ public static class ApiEndpointExtensions
 
         var api = app.MapGroup("/api/v1").RequireAuthorization();
 
-        api.MapGet("/bootstrap", async (SvrDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
+        api.MapGet("/bootstrap", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
         {
             var memberId = MemberId(user);
             var member = await db.Members.Include(x => x.AuthUser).SingleAsync(x => x.Id == memberId, cancellationToken);
@@ -64,7 +64,7 @@ public static class ApiEndpointExtensions
             return Results.Ok(new BootstrapResponse(ToMember(member), plan is null ? null : ToPlan(plan), nextRoute));
         });
 
-        api.MapGet("/home", async (SvrDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
+        api.MapGet("/home", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
         {
             var memberId = MemberId(user);
             var plan = await ActivePlan(db, memberId, cancellationToken);
@@ -79,7 +79,7 @@ public static class ApiEndpointExtensions
                 session is null ? null : new TodayWorkoutSummaryDto(session.Id, session.WorkoutTemplate.Name, session.Status, session.Exercises.Count), completed));
         });
 
-        api.MapGet("/training/today", async (SvrDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
+        api.MapGet("/training/today", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
         {
             var memberId = MemberId(user);
             var today = DateOnly.FromDateTime(DateTime.UtcNow);
@@ -91,7 +91,7 @@ public static class ApiEndpointExtensions
                 : Results.Ok(ToTrainingToday(session));
         });
 
-        api.MapGet("/training/plan", async (SvrDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
+        api.MapGet("/training/plan", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken cancellationToken) =>
         {
             var plan = await db.Plans.AsNoTracking()
                 .Include(x => x.TrainingPlan).ThenInclude(x => x.WorkoutTemplates).ThenInclude(x => x.Exercises).ThenInclude(x => x.Exercise)
@@ -106,7 +106,7 @@ public static class ApiEndpointExtensions
                     .ToArray()));
         });
 
-        api.MapPost("/training/sessions/{id:guid}/start", async (Guid id, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
+        api.MapPost("/training/sessions/{id:guid}/start", async (Guid id, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
         {
             var session = await db.WorkoutSessions.SingleOrDefaultAsync(x => x.Id == id && x.MemberId == MemberId(user), cancellationToken);
             if (session is null) return ApiError("VALIDATION_ERROR", "Workout session was not found.", StatusCodes.Status404NotFound);
@@ -119,7 +119,7 @@ public static class ApiEndpointExtensions
             return Results.Ok(new StartWorkoutResponse(session.Id, session.Status, session.StartedAt.Value, false));
         });
 
-        api.MapPost("/training/sessions/{sessionId:guid}/exercises/{sessionExerciseId:guid}/sets", async (Guid sessionId, Guid sessionExerciseId, CompleteSetRequest request, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
+        api.MapPost("/training/sessions/{sessionId:guid}/exercises/{sessionExerciseId:guid}/sets", async (Guid sessionId, Guid sessionExerciseId, CompleteSetRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
         {
             if (request.ClientOperationId == Guid.Empty || request.SetNumber < 1 || request.WeightKg < 0 || request.Repetitions < 1 || request.RepsInReserve is < 0 or > 10)
                 return ApiError("VALIDATION_ERROR", "Set data is invalid.", StatusCodes.Status400BadRequest);
@@ -145,7 +145,7 @@ public static class ApiEndpointExtensions
             return Results.Created($"/api/v1/training/sessions/{sessionId}/exercises/{sessionExerciseId}/sets/{performance.Id}", ToSet(performance, false));
         });
 
-        api.MapPost("/training/sessions/{id:guid}/complete", async (Guid id, SvrDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
+        api.MapPost("/training/sessions/{id:guid}/complete", async (Guid id, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken cancellationToken) =>
         {
             var session = await db.WorkoutSessions.Include(x => x.Exercises).ThenInclude(x => x.SetPerformances)
                 .SingleOrDefaultAsync(x => x.Id == id && x.MemberId == MemberId(user), cancellationToken);
@@ -160,7 +160,7 @@ public static class ApiEndpointExtensions
         });
     }
 
-    private static async Task<Plan?> ActivePlan(SvrDbContext db, Guid memberId, CancellationToken cancellationToken) =>
+    private static async Task<Plan?> ActivePlan(PersonalUltraDbContext db, Guid memberId, CancellationToken cancellationToken) =>
         await db.Plans.Include(x => x.Member).Include(x => x.TrainingPlan)
             .SingleOrDefaultAsync(x => x.MemberId == memberId && x.Status == "Active", cancellationToken);
 

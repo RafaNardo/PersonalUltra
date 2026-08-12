@@ -2,15 +2,15 @@ services:
   postgres:
     image: docker.io/library/postgres:16-alpine
     environment:
-      POSTGRES_DB: svr_method
-      POSTGRES_USER: svr
-      POSTGRES_PASSWORD: svr
+      POSTGRES_DB: personal_ultra
+      POSTGRES_USER: personal_ultra
+      POSTGRES_PASSWORD: personal_ultra
     ports:
       - "5432:5432"
     volumes:
-      - svr-postgres-data:/var/lib/postgresql/data
+      - personal-ultra-postgres-data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U svr -d svr_method"]
+      test: ["CMD-SHELL", "pg_isready -U personal_ultra -d personal_ultra"]
       interval: 5s
       timeout: 5s
       retries: 12
@@ -21,7 +21,7 @@ services:
       dockerfile: Containerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
-      ConnectionStrings__SvrDatabase: Host=postgres;Port=5432;Database=svr_method;Username=svr;Password=svr
+      ConnectionStrings__PersonalUltraDatabase: Host=postgres;Port=5432;Database=personal_ultra;Username=personal_ultra;Password=personal_ultra
     ports:
       - "8080:8080"
     depends_on:
@@ -29,4 +29,4 @@ services:
         condition: service_healthy
 
 volumes:
-  svr-postgres-data:
+  personal-ultra-postgres-data:

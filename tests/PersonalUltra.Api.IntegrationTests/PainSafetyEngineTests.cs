@@ -1,7 +1,7 @@
-using SvrMethod.Api.Application.Safety;
+using PersonalUltra.Api.Application.Safety;
 using Xunit;
 
-namespace SvrMethod.Api.IntegrationTests;
+namespace PersonalUltra.Api.IntegrationTests;
 
 public sealed class PainSafetyEngineTests
 {

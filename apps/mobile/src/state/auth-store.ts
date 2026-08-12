@@ -12,7 +12,7 @@ export const useAuthStore = create<AuthState>()(persist((set) => ({
   signIn: (accessToken, memberName) => set({ accessToken, memberName }),
   signOut: () => set({ accessToken: undefined, memberName: undefined }),
 }), {
-  name: 'svr-method-auth',
+  name: 'personal-ultra-auth',
   storage: createJSONStorage(() => Storage),
   onRehydrateStorage: () => (state) => state?.markHydrated(),
 }));

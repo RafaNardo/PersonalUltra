@@ -1,9 +1,9 @@
-using SvrMethod.Api.Application.Coach;
-using SvrMethod.Api.Application.Training;
-using SvrMethod.Api.Domain;
+using PersonalUltra.Api.Application.Coach;
+using PersonalUltra.Api.Application.Training;
+using PersonalUltra.Api.Domain;
 using Xunit;
 
-namespace SvrMethod.Api.IntegrationTests;
+namespace PersonalUltra.Api.IntegrationTests;
 
 public sealed class ExerciseSubstitutionToolTests
 {
