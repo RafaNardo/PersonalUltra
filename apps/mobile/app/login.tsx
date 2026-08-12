@@ -21,7 +21,7 @@ export default function LoginScreen() {
     feedback.success();
     telemetry.event('demo_login_completed');
     saveSession(session);
-    router.replace('/student/access');
+    router.replace('/student-access');
   };
 
   return <Screen style={styles.screen}>

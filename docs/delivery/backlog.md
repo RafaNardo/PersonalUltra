@@ -78,7 +78,7 @@
 - `PU-M4-015`: configuração de branding do Trainer (modelo/API/UI), usando as cores semânticas compartilhadas.
 - `PU-M4-016`: aplicar branding dinâmico e validado na experiência Student.
 - `PU-M4-017`: integrar alimentação e progresso ao detalhe do aluno no Trainer, consolidando as seções disponíveis.
-- `PU-M4-018`: retirar o fluxo legado SVR baseado em `Member`: consolidar entrada e Home em `Student`, remover o cadastro automático legado por e-mail e desativar endpoints/telas sem uso. A autenticação demo por e-mail permanece até a fundação de autenticação real na M5.
+- `PU-M4-018`: concluída antecipadamente por decisão de produto: o fluxo legado SVR baseado em `Member` foi retirado, e a entrada do aluno permanece apoiada apenas em `Student`. A autenticação demo por e-mail permanece até a fundação de autenticação real na M5.
 
 **DoD M4:** demo comercial completa, incluindo branding dinâmico por Trainer.
 

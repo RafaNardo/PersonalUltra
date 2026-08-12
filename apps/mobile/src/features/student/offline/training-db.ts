@@ -1,5 +1,6 @@
 import * as SQLite from 'expo-sqlite';
-import type { CompleteSetInput } from '../api/types';
+// Kept actor-local so offline persistence can outlive the first workout API.
+export type CompleteSetInput = { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number; repsInReserve?: number | null };
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
 

@@ -3,7 +3,6 @@ using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
-using PersonalUltra.Domain;
 
 namespace PersonalUltra.Infrastructure;
 
@@ -30,20 +29,6 @@ public sealed class DevAuthenticationHandler(
         }
 
         var token = authorization["Bearer ".Length..];
-        // Keep the original demo token valid so existing installed demo clients can
-        // migrate naturally to an email-based session.
-        var memberId = string.Equals(token, expected, StringComparison.Ordinal)
-            ? DemoIds.MemberId
-            : sessions.TryValidate(token, out var sessionMemberId) ? sessionMemberId : Guid.Empty;
-        if (memberId != Guid.Empty && await db.Members.AsNoTracking().AnyAsync(member => member.Id == memberId, Context.RequestAborted))
-        {
-            var memberIdentity = new ClaimsIdentity(
-            [
-                new Claim(ClaimTypes.NameIdentifier, memberId.ToString()), new Claim("subject", "member")
-            ], SchemeName);
-            return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(memberIdentity), SchemeName));
-        }
-
         if (!sessions.TryValidateStudent(token, out var studentId) || !await db.Students.AsNoTracking().AnyAsync(student => student.Id == studentId, Context.RequestAborted))
             return AuthenticateResult.NoResult();
 

@@ -1,10 +1,7 @@
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
-using PersonalUltra.Application.Nutrition;
-using PersonalUltra.Application.Safety;
 using PersonalUltra.StudentApi.Endpoints;
-using PersonalUltra.Application.Coach;
 using PersonalUltra.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -12,16 +9,6 @@ builder.Services.AddDbContext<PersonalUltraDbContext>(options => options.UseNpgs
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<DemoSessionTokenService>();
 builder.Services.AddScoped<DemoDataSeeder>();
-builder.Services.AddScoped<MemberDemoResetService>();
-builder.Services.AddSingleton<FoodAlternativesEngine>();
-builder.Services.AddSingleton<PainSafetyEngine>();
-builder.Services.AddScoped<CoachContextBuilder>();
-builder.Services.AddSingleton<CoachOutputValidator>();
-builder.Services.Configure<OpenAiCoachOptions>(builder.Configuration.GetSection(OpenAiCoachOptions.SectionName));
-builder.Services.PostConfigure<OpenAiCoachOptions>(options => options.ApiKey ??= builder.Configuration["ai-api-key"]);
-builder.Services.AddHttpClient<OpenAiCoachResponder>(client => client.Timeout = TimeSpan.FromSeconds(12));
-builder.Services.AddSingleton<DeterministicCoachResponder>();
-builder.Services.AddScoped<ICoachResponder, ResilientCoachResponder>();
 builder.Services.AddAuthentication(DevAuthenticationHandler.SchemeName)
     .AddScheme<AuthenticationSchemeOptions, DevAuthenticationHandler>(DevAuthenticationHandler.SchemeName, _ => { })
     .AddScheme<AuthenticationSchemeOptions, DemoActorAuthenticationHandler>(DemoActorAuthenticationHandler.StudentScheme, _ => { });
@@ -66,8 +53,6 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapPersonalUltraApi();
-app.MapOnboardingApi();
-app.MapM1Api();
 app.MapStudentInviteApi();
 app.MapAnamnesisApi();
 app.MapStudentMessageApi();
