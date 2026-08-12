@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
-import { Alert, StyleSheet, Text, View } from 'react-native';
-import { Button, Card, Tag } from '@/src/components/ui';
-import { Screen, TopBar } from '@/src/components/layout';
+import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Button, Card } from '@/src/components/ui';
+import { Screen } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
 import { useResetCurrentMemberDemo } from '@/src/features/student/api/hooks';
 import { useAuthStore } from '@/src/features/student/state/auth-store';
@@ -25,13 +25,23 @@ export default function AwaitingProtocolScreen() {
     { text: 'Recomeçar', style: 'destructive', onPress: () => void reset() },
   ]);
   return <Screen style={styles.screen}>
-    <TopBar eyebrow="PRÓXIMO PASSO" title="Seu acompanhamento começa aqui." />
+    <View style={styles.hero}>
+      <Image source={require('../assets/brand/personal-ultra-logo-horizontal.png')} resizeMode="contain" style={styles.logo} />
+      <Text style={styles.eyebrow}>SEU CADASTRO FOI ENVIADO</Text>
+      <Text style={styles.title}>Agora é com o{`\n`}seu personal.</Text>
+      <Text style={styles.copy}>Ele vai transformar suas respostas em um protocolo pensado para a sua rotina e seus objetivos.</Text>
+    </View>
     <View style={styles.content}>
-      <View style={styles.mark}><Text style={styles.markText}>PU</Text></View>
-      <Tag tone="primary">AGUARDANDO PROTOCOLO</Tag>
-      <Text style={styles.title}>Seu personal está preparando seu protocolo.</Text>
-      <Text style={styles.copy}>Em breve, você verá aqui seus treinos, sua alimentação e as orientações definidas especialmente para o seu acompanhamento.</Text>
-      <Card style={styles.card}><Text style={styles.cardTitle}>Enquanto isso</Text><Text style={styles.cardCopy}>Seu cadastro foi recebido. Quando o personal disponibilizar seu protocolo, ele aparecerá neste espaço.</Text></Card>
+      <Card style={styles.card}>
+        <Text style={styles.cardTitle}>O que acontece agora</Text>
+        <Text style={styles.cardCopy}>Seu personal revisa seu cadastro, organiza o protocolo e libera tudo neste espaço.</Text>
+      </Card>
+      <View style={styles.includes}>
+        <Text style={styles.includesTitle}>Quando estiver pronto, você terá acesso a</Text>
+        <Text style={styles.include}>• Seus treinos e registros</Text>
+        <Text style={styles.include}>• Sua estratégia alimentar</Text>
+        <Text style={styles.include}>• Orientações para evoluir</Text>
+      </View>
       <View style={styles.actions}>
         <Button variant="secondary" loading={resetDemo.isPending} onPress={confirmReset}>Recomeçar cadastro</Button>
         <Button variant="ghost" disabled={resetDemo.isPending} onPress={() => { signOut(); router.replace('/login'); }}>Sair</Button>
@@ -41,8 +51,8 @@ export default function AwaitingProtocolScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { justifyContent: 'center' }, content: { alignItems: 'center', gap: spacing.lg },
-  mark: { width: 88, height: 88, borderRadius: 44, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary }, markText: { ...typography.headingLG, color: colors.background },
-  title: { ...typography.displayLG, color: colors.textPrimary, textAlign: 'center' }, copy: { ...typography.bodyLG, color: colors.textSecondary, textAlign: 'center', lineHeight: 24 },
-  card: { width: '100%', gap: spacing.xs, backgroundColor: colors.surfaceElevated, borderColor: colors.border }, cardTitle: { ...typography.headingMD, color: colors.textPrimary }, cardCopy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, actions: { width: '100%', gap: spacing.sm },
+  screen: { paddingVertical: spacing.xl, gap: spacing.xxl }, hero: { alignItems: 'center', gap: spacing.md, paddingTop: spacing.sm }, logo: { width: 156, height: 54, marginBottom: spacing.md },
+  eyebrow: { ...typography.caption, color: colors.signalGreen, letterSpacing: 1.1 }, title: { ...typography.displayLG, color: colors.textPrimary, textAlign: 'center' }, copy: { ...typography.bodyLG, color: colors.textSecondary, textAlign: 'center', lineHeight: 24, maxWidth: 320 },
+  content: { gap: spacing.xl }, card: { gap: spacing.xs, backgroundColor: colors.surfaceElevated, borderColor: colors.border }, cardTitle: { ...typography.headingMD, color: colors.textPrimary }, cardCopy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 },
+  includes: { gap: spacing.sm, paddingHorizontal: spacing.xs }, includesTitle: { ...typography.headingMD, color: colors.textPrimary }, include: { ...typography.bodyMD, color: colors.textSecondary }, actions: { gap: spacing.sm, marginTop: spacing.sm },
 });
