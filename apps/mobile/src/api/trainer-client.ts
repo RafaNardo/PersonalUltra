@@ -1,6 +1,6 @@
 import { ApiError } from './shared-http';
 
-const baseUrl = (process.env.EXPO_PUBLIC_TRAINER_API_URL ?? 'http://localhost:8081').replace(/\/$/, '');
+const baseUrl = (process.env.EXPO_PUBLIC_TRAINER_API_URL ?? 'https://trainer-api-production-b0f7.up.railway.app').replace(/\/$/, '');
 
 export const trainerClient = {
   demoIdentity: async () => {

@@ -1,9 +1,9 @@
 import type { CoachConversation, CompleteSet, CompleteSetInput, CompleteWorkout, DevLogin, ExerciseAlternative, FoodAlternative, Home, InitialPlan, Meal, NutritionToday, OnboardingProfile, PainReport, ProgressSummary, SaveOnboardingProfile, TrainingPlan, TrainingToday, WeightEntry } from './types';
 import { ApiError } from '@/src/api/shared-http';
 
-// Keep the baseline self-contained: a checked-out project talks to its local
-// API unless a developer explicitly supplies another endpoint.
-const baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
+// Public demo is the default for Expo Go. Local development can override this
+// with EXPO_PUBLIC_API_URL (use a LAN address on a physical device).
+const baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'https://student-api-production-a4fe.up.railway.app').replace(/\/$/, '');
 const apiUrl = `${baseUrl}/api/v1`;
 
 export { ApiError };
