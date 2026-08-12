@@ -8,12 +8,11 @@
 - `PU-M0-005`: criar Trainer, TrainerBranding, Student, TrainerStudent, StudentInvite e Anamnesis.
 - `PU-M0-006`: remover MethodologyVersion/Rule, StandardPlanProvisioner, RecommendedLoad, Coach mutations e progress photos.
 - `PU-M0-007`: identidades demo Trainer e Student.
-- `PU-M0-008`: aplicar design tokens Ultra e suporte a TrainerBranding.PrimaryColor. Usar como branding temporário os assets licenciados em `docs/assets/brand/` (`personal-ultra-app-icon.png`, logos e brand guide), substituindo os assets SVR no app. O branding dinâmico por Trainer continua em M1.
+- `PU-M0-008`: aplicar design tokens Ultra e suporte a TrainerBranding.PrimaryColor. Usar como branding temporário os assets licenciados em `docs/assets/brand/` (`personal-ultra-app-icon.png`, logos e brand guide), substituindo os assets SVR no app. O branding dinâmico por Trainer fica para o fechamento do M4.
 
 **DoD M0:** mobile abre em Trainer ou Student; duas APIs sobem; separação preparada para futuro split em dois apps.
 
 ## M1 — Trainer Core
-- `PU-M1-001`: branding model/API.
 - `PU-M1-002`: dashboard API.
 - `PU-M1-003`: dashboard mobile.
 - `PU-M1-004`: students list API.
@@ -23,10 +22,9 @@
 - `PU-M1-008`: TrainerMessage domain/API.
 - `PU-M1-009`: composer de mensagem.
 - `PU-M1-010`: WhatsApp deep link.
-- `PU-M1-011`: branding dinâmico na Student Home.
 - `PU-M1-012`: mensagem do Trainer na Student Home.
 
-**DoD M1:** Trainer acompanha alunos e Student Home reflete branding/mensagem.
+**DoD M1:** Trainer acompanha alunos e Student Home reflete a mensagem do Trainer. O tema Personal Ultra temporário permanece estático.
 
 ## M2 — Invitations & Anamnesis
 - `PU-M2-001`: gerar convite/link.
@@ -73,8 +71,10 @@
 - `PU-M4-012`: demo reset.
 - `PU-M4-013`: polish de loading/error/empty/haptics.
 - `PU-M4-014`: verificar demo end-to-end.
+- `PU-M4-015`: configuração de branding do Trainer (modelo/API/UI), usando as cores semânticas compartilhadas.
+- `PU-M4-016`: aplicar branding dinâmico e validado na experiência Student.
 
-**DoD M4:** demo comercial completa.
+**DoD M4:** demo comercial completa, incluindo branding dinâmico por Trainer.
 
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.

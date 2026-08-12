@@ -4,7 +4,7 @@
 Criar Personal Ultra como produto novo reutilizando a base técnica do SVR Method, com duas APIs e um único app demo preparado para split futuro.
 
 ## M1 — Trainer Core
-Dashboard, alunos, branding, mensagens in-app e WhatsApp deep link.
+Dashboard, alunos, mensagens in-app e WhatsApp deep link. O app usa o tema Personal Ultra temporário e estático nesta etapa.
 
 ## M2 — Invitations & Anamnesis
 Fluxo Trainer -> convite -> cadastro -> anamnese -> acompanhamento.
@@ -13,7 +13,7 @@ Fluxo Trainer -> convite -> cadastro -> anamnese -> acompanhamento.
 Templates, editor, aplicação ao aluno, grade recomendada e liberdade de escolha de treino.
 
 ## M4 — Nutrition, Progress, Coach & Demo Polish
-Alimentação, progresso somente de peso, Coach read-only, seed e demo comercial completa.
+Alimentação, progresso somente de peso, Coach read-only, seed, demo comercial completa e, por último, branding dinâmico do Trainer aplicado ao Student.
 
 ## M5 — Production Foundation
 Somente após validação:
