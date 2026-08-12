@@ -1,14 +1,14 @@
 import { useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useAddWeight, useProgress, useResetCurrentMemberDemo, useWeights } from '@/src/api/hooks';
-import type { WeightEntry } from '@/src/api/types';
+import { useAddWeight, useProgress, useResetCurrentMemberDemo, useWeights } from '@/src/features/student/api/hooks';
+import type { WeightEntry } from '@/src/features/student/api/types';
 import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { feedback } from '@/src/platform/feedback';
 import { telemetry } from '@/src/platform/telemetry';
 import { router } from 'expo-router';
-import { useAuthStore } from '@/src/state/auth-store';
+import { useAuthStore } from '@/src/features/student/state/auth-store';
 
 const chartHeight = 156;
 export default function ProgressScreen() {

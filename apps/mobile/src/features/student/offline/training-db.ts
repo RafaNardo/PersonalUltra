@@ -1,5 +1,5 @@
 import * as SQLite from 'expo-sqlite';
-import type { CompleteSetInput } from '@/src/api/types';
+import type { CompleteSetInput } from '../api/types';
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
 

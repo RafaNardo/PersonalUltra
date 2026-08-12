@@ -1,11 +1,11 @@
 import { router } from 'expo-router';
 import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useState } from 'react';
-import { useDevLogin } from '@/src/api/hooks';
+import { useDevLogin } from '@/src/features/student/api/hooks';
 import { Button, Card } from '@/src/components/ui';
 import { Screen } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
-import { useAuthStore } from '@/src/state/auth-store';
+import { useAuthStore } from '@/src/features/student/state/auth-store';
 import { feedback } from '@/src/platform/feedback';
 import { telemetry } from '@/src/platform/telemetry';
 

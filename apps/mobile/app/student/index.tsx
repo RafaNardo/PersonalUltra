@@ -1,8 +1,8 @@
 import { router } from 'expo-router';
 import { useEffect, useRef } from 'react';
 import { Animated, Image, StyleSheet, Text, View } from 'react-native';
-import { useBootstrap } from '@/src/api/hooks';
-import { useAuthStore } from '@/src/state/auth-store';
+import { useBootstrap } from '@/src/features/student/api/hooks';
+import { useAuthStore } from '@/src/features/student/state/auth-store';
 import { colors, typography } from '@/src/design/tokens';
 import { useDemoRoleStore } from '@/src/state/demo-role-store';
 

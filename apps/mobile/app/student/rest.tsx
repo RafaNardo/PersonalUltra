@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 import { Button, ProgressBar, Tag } from '@/src/components/ui';
 import { Screen } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
-import { useTrainingStore } from '@/src/state/training-store';
+import { useTrainingStore } from '@/src/features/student/state/training-store';
 
 export default function RestScreen() {
   const { sessionId, exerciseId, seconds, queued } = useLocalSearchParams<{ sessionId: string; exerciseId: string; seconds: string; queued?: string }>();

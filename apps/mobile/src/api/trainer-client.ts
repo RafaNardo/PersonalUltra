@@ -1,4 +1,4 @@
-import { ApiError } from './student-client';
+import { ApiError } from './shared-http';
 
 const baseUrl = (process.env.EXPO_PUBLIC_TRAINER_API_URL ?? 'http://localhost:8081').replace(/\/$/, '');
 

@@ -1,8 +1,8 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import type { CoachMessage } from '@/src/api/types';
-import { useCoachConversation, useSendCoachMessage } from '@/src/api/hooks';
+import type { CoachMessage } from '@/src/features/student/api/types';
+import { useCoachConversation, useSendCoachMessage } from '@/src/features/student/api/hooks';
 import { Card, ErrorView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';

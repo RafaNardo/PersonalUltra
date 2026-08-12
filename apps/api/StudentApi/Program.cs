@@ -60,7 +60,7 @@ if (app.Environment.IsDevelopment())
     app.UseSwagger();
     app.MapScalarApiReference(options =>
     {
-        options.Title = "SVR Method API";
+        options.Title = "Personal Ultra Student API";
         options.OpenApiRoutePattern = "/swagger/{documentName}/swagger.json";
     });
 }

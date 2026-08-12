@@ -1,8 +1,8 @@
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
-import { api, ApiError } from '@/src/api/client';
-import type { CompleteSetInput, SaveOnboardingProfile, TrainingToday } from '@/src/api/types';
-import { cachedWorkout, cacheWorkout, clearTrainingData, pendingSets, queueSet, removePendingSet } from '@/src/offline/training-db';
-import { useAuthStore } from '@/src/state/auth-store';
+import { api, ApiError } from './client';
+import type { CompleteSetInput, SaveOnboardingProfile, TrainingToday } from './types';
+import { cachedWorkout, cacheWorkout, clearTrainingData, pendingSets, queueSet, removePendingSet } from '../offline/training-db';
+import { useAuthStore } from '../state/auth-store';
 
 const keys = { bootstrap: ['bootstrap'] as const, onboarding: ['onboarding'] as const, initialPlan: ['plans', 'initial'] as const, home: ['home'] as const, today: ['training', 'today'] as const, trainingPlan: ['training', 'plan'] as const, progress: ['progress'] as const, weights: ['weights'] as const, nutrition: ['nutrition', 'today'] as const, coach: ['coach'] as const };
 

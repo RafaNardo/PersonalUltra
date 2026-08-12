@@ -1,13 +1,13 @@
 import { router } from 'expo-router';
 import { useEffect } from 'react';
 import { Image, Pressable, StyleSheet, Text, View } from 'react-native';
-import { useHome, useNutritionToday, useTrainingPlan, useTrainingToday, syncPendingSetOperations } from '@/src/api/hooks';
-import type { TrainingPlanWorkout } from '@/src/api/types';
+import { useHome, useNutritionToday, useTrainingPlan, useTrainingToday, syncPendingSetOperations } from '@/src/features/student/api/hooks';
+import type { TrainingPlanWorkout } from '@/src/features/student/api/types';
 import { Card, ErrorView, LoadingView, ProgressBar, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { exerciseImage } from '@/src/design/exercise-media';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
-import { useAuthStore } from '@/src/state/auth-store';
+import { useAuthStore } from '@/src/features/student/state/auth-store';
 
 export default function HomeScreen() {
   const home = useHome(); const today = useTrainingToday(); const nutrition = useNutritionToday(); const trainingPlan = useTrainingPlan();

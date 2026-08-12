@@ -4,7 +4,7 @@ import { useEffect, useState } from 'react';
 import { StatusBar } from 'react-native';
 import { useFonts } from 'expo-font';
 import * as SplashScreen from 'expo-splash-screen';
-import { initializeTrainingDatabase } from '@/src/offline/training-db';
+import { initializeTrainingDatabase } from '@/src/features/student/offline/training-db';
 import { telemetry } from '@/src/platform/telemetry';
 import { AppErrorBoundary } from '@/src/components/app-error-boundary';
 

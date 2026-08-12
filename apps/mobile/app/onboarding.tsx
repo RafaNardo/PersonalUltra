@@ -1,12 +1,12 @@
 import { router } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, Keyboard, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { useCompleteOnboarding, useOnboardingProfile, useSaveOnboardingProfile } from '@/src/api/hooks';
-import type { OnboardingProfile, SaveOnboardingProfile } from '@/src/api/types';
+import { useCompleteOnboarding, useOnboardingProfile, useSaveOnboardingProfile } from '@/src/features/student/api/hooks';
+import type { OnboardingProfile, SaveOnboardingProfile } from '@/src/features/student/api/types';
 import { Button, Card, ErrorView, LoadingView, ProgressBar } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
-import { useAuthStore } from '@/src/state/auth-store';
+import { useAuthStore } from '@/src/features/student/state/auth-store';
 
 const stepCount = 8;
 const goals = ['Ganhar massa muscular', 'Reduzir gordura', 'Fortalecer glúteos e pernas', 'Voltar à rotina', 'Melhorar condicionamento'];

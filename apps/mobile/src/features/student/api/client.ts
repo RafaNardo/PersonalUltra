@@ -1,13 +1,12 @@
-import type { CoachConversation, CompleteSet, CompleteSetInput, CompleteWorkout, DevLogin, ExerciseAlternative, FoodAlternative, Home, InitialPlan, Meal, NutritionToday, OnboardingProfile, PainReport, ProgressSummary, SaveOnboardingProfile, TrainingPlan, TrainingToday, WeightEntry } from '@/src/api/types';
+import type { CoachConversation, CompleteSet, CompleteSetInput, CompleteWorkout, DevLogin, ExerciseAlternative, FoodAlternative, Home, InitialPlan, Meal, NutritionToday, OnboardingProfile, PainReport, ProgressSummary, SaveOnboardingProfile, TrainingPlan, TrainingToday, WeightEntry } from './types';
+import { ApiError } from '@/src/api/shared-http';
 
 // Keep the baseline self-contained: a checked-out project talks to its local
 // API unless a developer explicitly supplies another endpoint.
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'http://localhost:8080').replace(/\/$/, '');
 const apiUrl = `${baseUrl}/api/v1`;
 
-export class ApiError extends Error {
-  constructor(public readonly status: number, message: string, public readonly code?: string) { super(message); }
-}
+export { ApiError };
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   let response: Response;

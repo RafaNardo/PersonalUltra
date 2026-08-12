@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { useTrainingPlan, useTrainingToday } from '@/src/api/hooks';
+import { useTrainingPlan, useTrainingToday } from '@/src/features/student/api/hooks';
 import { Card, EmptyState, ErrorView, LoadingView, ProgressBar, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';

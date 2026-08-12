@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
 import { ActivityIndicator, Animated, StyleSheet, Text, View } from 'react-native';
-import { usePrepareInitialPlan } from '@/src/api/hooks';
+import { usePrepareInitialPlan } from '@/src/features/student/api/hooks';
 import { Button, Card, ErrorView, ProgressBar, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
