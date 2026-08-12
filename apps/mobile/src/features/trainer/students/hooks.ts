@@ -12,3 +12,7 @@ export function useTrainerStudent(studentId: string) {
 export function useCreateTrainerMessage(studentId: string) {
   return useMutation({ mutationFn: (message: string) => trainerClient.createMessage(studentId, message) });
 }
+
+export function useTrainerAnamnesis(studentId: string, enabled: boolean) {
+  return useQuery({ queryKey: ['trainer', 'students', studentId, 'anamnesis'], queryFn: () => trainerClient.anamnesis(studentId), enabled });
+}

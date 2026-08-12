@@ -3,6 +3,7 @@ extern alias trainerapi;
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.AspNetCore.Hosting;
 using Microsoft.AspNetCore.Mvc.Testing;
 using Microsoft.EntityFrameworkCore;
@@ -18,8 +19,13 @@ namespace PersonalUltra.Api.IntegrationTests;
 public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFactory>
 {
     private readonly HttpClient client;
+    private readonly TrainerApiFactory factory;
 
-    public TrainerDashboardEndpointTests(TrainerApiFactory factory) => client = factory.CreateClient();
+    public TrainerDashboardEndpointTests(TrainerApiFactory factory)
+    {
+        this.factory = factory;
+        client = factory.CreateClient();
+    }
 
     [Fact]
     public async Task Dashboard_returns_only_the_authenticated_trainers_active_students()
@@ -92,6 +98,41 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
     }
 
     [Fact]
+    public async Task Trainer_can_read_a_completed_anamnesis_for_an_owned_student()
+    {
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.TrainerToken);
+        var studentId = Guid.NewGuid();
+        var now = DateTimeOffset.UtcNow;
+        var answers = new AnamnesisAnswers("Hipertrofia", "Intermediário", 4, 60, "Academia", "Halteres e máquinas", 180, 82, "Nenhuma", "Nenhuma", "Sem dor", "Sem restrições", "Nenhuma");
+
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        db.Students.Add(new Student { Id = studentId, FirstName = "Ana", LastName = "Teste", Email = "ana.teste@example.com", CreatedAt = now });
+        db.TrainerStudents.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = studentId, StartedAt = now });
+        db.Anamneses.Add(new Anamnesis { Id = Guid.NewGuid(), StudentId = studentId, CreatedAt = now, UpdatedAt = now, CompletedAt = now, AnswersJson = JsonSerializer.Serialize(answers) });
+        await db.SaveChangesAsync();
+
+        try
+        {
+            var response = await client.GetAsync($"/api/v1/students/{studentId}/anamnesis");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var anamnesis = await response.Content.ReadFromJsonAsync<TrainerAnamnesisResponse>();
+            Assert.NotNull(anamnesis);
+            Assert.Equal("Hipertrofia", anamnesis!.Goal);
+            Assert.Equal(4, anamnesis.TrainingDaysPerWeek);
+            Assert.Equal(180, anamnesis.HeightCm);
+        }
+        finally
+        {
+            db.Anamneses.RemoveRange(db.Anamneses.Where(item => item.StudentId == studentId));
+            db.TrainerStudents.RemoveRange(db.TrainerStudents.Where(item => item.StudentId == studentId));
+            db.Students.RemoveRange(db.Students.Where(item => item.Id == studentId));
+            await db.SaveChangesAsync();
+        }
+    }
+
+    [Fact]
     public async Task Trainer_can_create_a_secure_expiring_student_invite_link()
     {
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.TrainerToken);
@@ -112,6 +153,7 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
     private sealed record ErrorResponse(string Code, string Message, object? Details, string TraceId);
     private sealed record TrainerMessageResponse(Guid Id, Guid StudentId, string Message, DateTimeOffset StartsAt, DateTimeOffset? ExpiresAt, DateTimeOffset CreatedAt);
     private sealed record StudentInviteResponse(Guid Id, string Token, string InviteUrl, string? Email, DateTimeOffset ExpiresAt);
+    private sealed record TrainerAnamnesisResponse(string Goal, string ExperienceLevel, int TrainingDaysPerWeek, int SessionDurationMinutes, string TrainingLocation, string EquipmentNotes, decimal HeightCm, decimal WeightKg, string HealthConditions, string MovementRestrictions, string CurrentPainDescription, string NutritionPreferences, string NutritionRestrictions, DateTimeOffset CompletedAt);
 }
 
 public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Program>

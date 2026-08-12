@@ -17,3 +17,19 @@ public sealed record StudentDetailResponse(
     string? Email,
     string AnamnesisStatus,
     DateTimeOffset StartedAt);
+
+public sealed record TrainerAnamnesisResponse(
+    string Goal,
+    string ExperienceLevel,
+    int TrainingDaysPerWeek,
+    int SessionDurationMinutes,
+    string TrainingLocation,
+    string EquipmentNotes,
+    decimal HeightCm,
+    decimal WeightKg,
+    string HealthConditions,
+    string MovementRestrictions,
+    string CurrentPainDescription,
+    string NutritionPreferences,
+    string NutritionRestrictions,
+    DateTimeOffset CompletedAt);

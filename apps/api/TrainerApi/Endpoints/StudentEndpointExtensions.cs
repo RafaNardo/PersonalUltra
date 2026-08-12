@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PersonalUltra.Infrastructure;
 using PersonalUltra.TrainerApi.Contracts;
@@ -77,6 +78,18 @@ public static class StudentEndpointExtensions
             await db.SaveChangesAsync(cancellationToken);
             return Results.Created($"/api/v1/students/{studentId}/messages/{trainerMessage.Id}", new TrainerMessageResponse(
                 trainerMessage.Id, trainerMessage.StudentId, trainerMessage.Message, trainerMessage.StartsAt, trainerMessage.ExpiresAt, trainerMessage.CreatedAt));
+        });
+
+        api.MapGet("/{studentId:guid}/anamnesis", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken cancellationToken) =>
+        {
+            var trainerId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var anamnesis = await db.Anamneses.AsNoTracking()
+                .Where(item => item.StudentId == studentId && item.CompletedAt != null && item.Student.Trainers.Any(link => link.TrainerId == trainerId && link.EndedAt == null))
+                .SingleOrDefaultAsync(cancellationToken);
+            if (anamnesis is null) return context.ApiError("ANAMNESIS_NOT_FOUND", "A anamnese deste aluno ainda não foi concluída.", StatusCodes.Status404NotFound);
+            var answers = JsonSerializer.Deserialize<PersonalUltra.Domain.AnamnesisAnswers>(anamnesis.AnswersJson, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+            if (answers is null) return context.ApiError("ANAMNESIS_NOT_FOUND", "A anamnese deste aluno ainda não está disponível.", StatusCodes.Status404NotFound);
+            return Results.Ok(new TrainerAnamnesisResponse(answers.Goal, answers.ExperienceLevel, answers.TrainingDaysPerWeek, answers.SessionDurationMinutes, answers.TrainingLocation, answers.EquipmentNotes, answers.HeightCm, answers.WeightKg, answers.HealthConditions, answers.MovementRestrictions, answers.CurrentPainDescription, answers.NutritionPreferences, answers.NutritionRestrictions, anamnesis.CompletedAt!.Value));
         });
     }
 }
