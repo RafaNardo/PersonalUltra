@@ -21,7 +21,7 @@ public static class ApiEndpointExtensions
             return Results.Ok(new { status = "Healthy" });
         }).AllowAnonymous();
 
-        if (app.Environment.IsDevelopment())
+        if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("DemoAuth:Enabled"))
         {
             app.MapPost("/api/v1/auth/student-login", async (StudentEmailLoginRequest request, PersonalUltraDbContext db, DemoSessionTokenService sessions, HttpContext context, CancellationToken cancellationToken) =>
             {

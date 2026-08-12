@@ -7,6 +7,7 @@ import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
 import { useCreateStudentInvite } from '@/src/features/trainer/students/hooks';
 import type { StudentInvite } from '@/src/api/trainer-client';
+import { PhoneInput } from '@/src/shared/forms/phone-input';
 
 export default function TrainerInviteScreen() {
   const createInvite = useCreateStudentInvite();
@@ -45,7 +46,7 @@ export default function TrainerInviteScreen() {
       <Text style={styles.label}>E-mail do aluno <Text style={styles.optional}>(opcional)</Text></Text>
       <TextInput value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" placeholder="aluno@email.com" placeholderTextColor={colors.textMuted} accessibilityLabel="E-mail do aluno" style={styles.input} />
       <Text style={styles.label}>Telefone para WhatsApp <Text style={styles.optional}>(opcional)</Text></Text>
-      <TextInput value={phone} onChangeText={setPhone} keyboardType="phone-pad" placeholder="(11) 99999-9999" placeholderTextColor={colors.textMuted} accessibilityLabel="Telefone para WhatsApp do aluno" style={styles.input} />
+      <PhoneInput value={phone} onChangeText={setPhone} placeholder="(11) 99999-9999" placeholderTextColor={colors.textMuted} accessibilityLabel="Telefone para WhatsApp do aluno" style={styles.input} />
       <Button loading={createInvite.isPending} onPress={() => void create()}>Gerar link de convite</Button>
     </Card>
     {inviteCode && <Card style={styles.result}><Text style={styles.resultTitle}>Convite pronto</Text><Text style={styles.copy}>O aluno instala o app, escolhe “Tenho um convite” e informa este código.</Text><TextInput value={inviteCode} editable={false} selectTextOnFocus accessibilityLabel="Código de convite" style={styles.code} /><Button variant="secondary" onPress={() => void copyInvite()}>Copiar convite</Button><Button variant="secondary" disabled={!canSendWhatsApp} onPress={() => void sendWhatsApp()}>Enviar pelo WhatsApp</Button>{!canSendWhatsApp && <Text style={styles.hint}>Informe um telefone válido com DDD para enviar pelo WhatsApp.</Text>}</Card>}

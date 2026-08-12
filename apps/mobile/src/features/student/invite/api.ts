@@ -12,11 +12,15 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   let response: Response;
   try { response = await fetch(`${apiUrl}${path}`, { ...options, headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } }); }
   catch { throw new ApiError(0, 'Sem conexão com o servidor.'); }
+  const payload = await response.text();
+  let body: unknown;
+  try { body = payload ? JSON.parse(payload) : undefined; }
+  catch { throw new ApiError(response.status, 'A API retornou uma resposta inválida. Tente novamente.'); }
   if (!response.ok) {
-    const error = await response.json().catch(() => null) as { message?: string } | null;
+    const error = body as { message?: string } | undefined;
     throw new ApiError(response.status, error?.message ?? 'Não foi possível concluir a solicitação.');
   }
-  return response.json() as Promise<T>;
+  return body as T;
 }
 
 export const inviteApi = {

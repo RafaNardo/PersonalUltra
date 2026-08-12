@@ -20,7 +20,7 @@ public sealed class DevAuthenticationHandler(
 
     protected override async Task<AuthenticateResult> HandleAuthenticateAsync()
     {
-        if (!environment.IsDevelopment()) return AuthenticateResult.NoResult();
+        if (!environment.IsDevelopment() && !configuration.GetValue<bool>("DemoAuth:Enabled")) return AuthenticateResult.NoResult();
 
         var authorization = Request.Headers.Authorization.ToString();
         var expected = configuration["DevAuth:Token"];
