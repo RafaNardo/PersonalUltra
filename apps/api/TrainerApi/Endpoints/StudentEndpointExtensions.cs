@@ -30,5 +30,26 @@ public static class StudentEndpointExtensions
 
             return Results.Ok(new StudentListResponse(students));
         });
+
+        api.MapGet("/{studentId:guid}", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken cancellationToken) =>
+        {
+            var trainerId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var student = await db.TrainerStudents.AsNoTracking()
+                .Where(link => link.TrainerId == trainerId && link.StudentId == studentId && link.EndedAt == null)
+                .Select(link => new StudentDetailResponse(
+                    link.StudentId,
+                    link.Student.FirstName,
+                    link.Student.LastName,
+                    link.Student.Email,
+                    link.Student.Anamnesis == null
+                        ? "NotStarted"
+                        : link.Student.Anamnesis.CompletedAt == null ? "InProgress" : "Completed",
+                    link.StartedAt))
+                .SingleOrDefaultAsync(cancellationToken);
+
+            return student is null
+                ? context.ApiError("STUDENT_NOT_FOUND", "O aluno não foi encontrado no seu acompanhamento.", StatusCodes.Status404NotFound)
+                : Results.Ok(student);
+        });
     }
 }

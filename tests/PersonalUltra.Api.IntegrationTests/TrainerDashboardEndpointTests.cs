@@ -9,6 +9,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
+using PersonalUltra.Domain;
 using PersonalUltra.Infrastructure;
 using Xunit;
 
@@ -61,9 +62,26 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
         Assert.Equal("Silva", student.LastName);
     }
 
+    [Fact]
+    public async Task Student_detail_is_limited_to_the_authenticated_trainers_active_link()
+    {
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.TrainerToken);
+
+        var response = await client.GetAsync($"/api/v1/students/{DemoIds.StudentId}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var student = await response.Content.ReadFromJsonAsync<DashboardStudentSummary>();
+        Assert.Equal(DemoIds.StudentId, student!.StudentId);
+        var missing = await client.GetAsync($"/api/v1/students/{Guid.NewGuid()}");
+        Assert.Equal(HttpStatusCode.NotFound, missing.StatusCode);
+        var error = await missing.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("STUDENT_NOT_FOUND", error!.Code);
+    }
+
     private sealed record DashboardResponse(string TrainerName, int ActiveStudents, int PendingAnamneses, int CompletedAnamneses, IReadOnlyList<DashboardStudentSummary> RecentStudents);
     private sealed record DashboardStudentSummary(Guid StudentId, string FirstName, string LastName, string? Email, string AnamnesisStatus, DateTimeOffset StartedAt);
     private sealed record StudentListResponse(IReadOnlyList<DashboardStudentSummary> Students);
+    private sealed record ErrorResponse(string Code, string Message, object? Details, string TraceId);
 }
 
 public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Program>

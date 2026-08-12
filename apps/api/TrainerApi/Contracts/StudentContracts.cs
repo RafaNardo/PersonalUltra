@@ -9,3 +9,11 @@ public sealed record TrainerStudentSummary(
     string? Email,
     string AnamnesisStatus,
     DateTimeOffset StartedAt);
+
+public sealed record StudentDetailResponse(
+    Guid StudentId,
+    string FirstName,
+    string LastName,
+    string? Email,
+    string AnamnesisStatus,
+    DateTimeOffset StartedAt);
