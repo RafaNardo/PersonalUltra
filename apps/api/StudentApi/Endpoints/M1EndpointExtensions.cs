@@ -175,9 +175,9 @@ public static class M1EndpointExtensions
                 return ApiEndpointExtensions.ApiError("DEMO_RESET_NOT_SAFE", "O reset só é permitido em uma base isolada de demonstração.", StatusCodes.Status409Conflict);
             await seeder.ResetAsync(ct); return Results.NoContent();
         });
-        api.MapPost("/demo/member-reset", async (IHostEnvironment environment, IConfiguration configuration, MemberDemoResetService resetService, ClaimsPrincipal user, CancellationToken ct) =>
+        api.MapPost("/demo/member-reset", async (IConfiguration configuration, MemberDemoResetService resetService, ClaimsPrincipal user, CancellationToken ct) =>
         {
-            if (!environment.IsDevelopment() || !configuration.GetValue<bool>("DemoData:AllowReset")) return Results.NotFound();
+            if (!configuration.GetValue<bool>("DemoData:AllowMemberReset")) return Results.NotFound();
 
             var result = await resetService.ResetAsync(MemberId(user), ct);
             return result switch
