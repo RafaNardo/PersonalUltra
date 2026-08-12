@@ -61,6 +61,7 @@ public sealed class Anamnesis
     public Guid Id { get; set; }
     public Guid StudentId { get; set; }
     public string AnswersJson { get; set; } = "{}";
+    public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset? CompletedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public Student Student { get; set; } = null!;
