@@ -58,6 +58,10 @@
 - `PU-M3-014`: histórico de sessões/séries no Trainer.
 - `PU-M3-015`: integrar treino e histórico ao detalhe do aluno no Trainer.
 
+Implementação concluída na demo: templates e editor inicial no Trainer, duplicação,
+aplicação por snapshot ao Student, grade recomendada, execução com registro de
+séries, histórico e persistência compatível com a fundação SQLite/offline.
+
 **DoD M3:** Trainer prescreve; Student escolhe/executa; Trainer vê resultado.
 
 ## M4 — Nutrition, Progress, Coach & Polish

@@ -29,6 +29,8 @@ export type TrainerStudent = TrainerDashboard['recentStudents'][number];
 export type TrainerMessage = { id: string; studentId: string; message: string; startsAt: string; expiresAt?: string; createdAt: string };
 export type TrainerAnamnesis = { goal: string; experienceLevel: string; trainingDaysPerWeek: number; sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number; weightKg: number; healthConditions: string; movementRestrictions: string; currentPainDescription: string; nutritionPreferences: string; nutritionRestrictions: string; completedAt: string };
 export type StudentInvite = { id: string; token: string; inviteCode: string; inviteUrl: string; email?: string; expiresAt: string; replacedPendingInvite: boolean };
+export type WorkoutTemplate = { id: string; name: string; notes: string; exerciseCount?: number; updatedAt?: string; exercises?: WorkoutExerciseInput[] };
+export type WorkoutExerciseInput = { name: string; sequence: number; sets: number; repetitions: number; restSeconds: number; notes?: string };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
@@ -58,4 +60,10 @@ export const trainerClient = {
   createMessage: (studentId: string, message: string) => request<TrainerMessage>(`/students/${studentId}/messages`, { method: 'POST', body: JSON.stringify({ message, startsAt: null, expiresAt: null }) }),
   anamnesis: (studentId: string) => request<TrainerAnamnesis>(`/students/${studentId}/anamnesis`),
   createStudentInvite: (email?: string) => request<StudentInvite>('/student-invites', { method: 'POST', body: JSON.stringify({ email: email?.trim() || null }) }),
+  templates: () => request<WorkoutTemplate[]>('/training/templates/'),
+  template: (id: string) => request<WorkoutTemplate>(`/training/templates/${id}`),
+  createTemplate: (input: { name: string; notes?: string; exercises: WorkoutExerciseInput[] }) => request<WorkoutTemplate>('/training/templates/', { method: 'POST', body: JSON.stringify(input) }),
+  duplicateTemplate: (id: string) => request<WorkoutTemplate>(`/training/templates/${id}/duplicate`, { method: 'POST' }),
+  applyTemplate: (id: string, studentId: string, recommendedDay = 1, isRecommended = false) => request(`/training/templates/${id}/apply`, { method: 'POST', body: JSON.stringify({ studentId, recommendedDay, isRecommended }) }),
+  trainingHistory: (studentId: string) => request<{ sessions: Array<{ sessionId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number }> }>(`/students/${studentId}/training-history`),
 };

@@ -1,17 +1,22 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import { Alert, Linking, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
 import { useCreateTrainerMessage, useTrainerAnamnesis, useTrainerStudent } from '@/src/features/trainer/students/hooks';
+import { useApplyTrainerTemplate, useTrainerTemplates } from '@/src/features/trainer/training/hooks';
 import { feedback } from '@/src/platform/feedback';
+import { trainerClient } from '@/src/api/trainer-client';
 
 export default function TrainerStudentDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const student = useTrainerStudent(id);
   const createMessage = useCreateTrainerMessage(id);
   const anamnesis = useTrainerAnamnesis(id, student.data?.anamnesisStatus === 'Completed');
+  const templates = useTrainerTemplates(); const applyTemplate = useApplyTrainerTemplate();
+  const history = useQuery({ queryKey: ['trainer', 'students', id, 'training-history'], queryFn: () => trainerClient.trainingHistory(id!), enabled: Boolean(id) });
   const [message, setMessage] = useState('');
   if (student.isLoading) return <LoadingView message="Carregando o aluno…" />;
   if (student.isError) return <ErrorView message={student.error.message} onRetry={() => student.refetch()} />;
@@ -29,6 +34,18 @@ export default function TrainerStudentDetailScreen() {
   };
   return <Screen style={styles.page}>
     <TopBar eyebrow="DETALHE DO ALUNO" title={`${data.firstName} ${data.lastName}`} onBack={() => router.back()} />
+    <Card style={styles.card}>
+      <Text style={styles.cardTitle}>Histórico de treinos</Text>
+      {history.isLoading && <Text style={styles.copy}>Carregando histórico…</Text>}
+      {!history.isLoading && !history.data?.sessions.length && <Text style={styles.copy}>Nenhuma sessão registrada ainda.</Text>}
+      {history.data?.sessions.slice(0, 5).map((item) => <Text key={item.sessionId} style={styles.copy}>{item.workoutName} · {item.status === 'Completed' ? 'Concluído' : 'Em andamento'} · {item.completedSets} séries</Text>)}
+    </Card>
+    <Card style={styles.card}>
+      <Text style={styles.cardTitle}>Treinos do aluno</Text>
+      <Text style={styles.copy}>Aplique um modelo para liberar uma cópia editável no acompanhamento.</Text>
+      {templates.data?.map((template) => <Button key={template.id} variant="secondary" loading={applyTemplate.isPending} onPress={() => applyTemplate.mutate({ templateId: template.id, studentId: id! })}>{`Liberar ${template.name}`}</Button>)}
+      {!templates.isLoading && !templates.data?.length && <Text style={styles.copy}>Crie um modelo de treino no menu Prescrição.</Text>}
+    </Card>
     <Card style={styles.card}>
       <Text style={styles.cardTitle}>Resumo</Text>
       <View style={styles.row}><Text style={styles.label}>E-mail</Text><Text style={styles.value}>{data.email ?? 'Não informado'}</Text></View>

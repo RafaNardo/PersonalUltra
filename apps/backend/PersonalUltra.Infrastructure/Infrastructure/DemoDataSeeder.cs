@@ -21,11 +21,22 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
             if (trainer.Branding is not null) trainer.Branding.DisplayName = "Severo";
         }
 
-        if (!await dbContext.Students.AnyAsync(x => x.Id == DemoIds.StudentId, cancellationToken))
-            dbContext.Add(new Student { Id = DemoIds.StudentId, FirstName = "Rafa", LastName = "Silva", Email = "demo@student.personalultra.local", CreatedAt = now });
+        var student = await dbContext.Students.SingleOrDefaultAsync(x => x.Id == DemoIds.StudentId, cancellationToken);
+        if (student is null)
+        {
+            student = new Student { Id = DemoIds.StudentId, FirstName = "Rafa", LastName = "Silva", Email = "demo@student.personalultra.local", CreatedAt = now };
+            dbContext.Add(student);
+        }
 
         if (!await dbContext.TrainerStudents.AnyAsync(x => x.TrainerId == DemoIds.TrainerId && x.StudentId == DemoIds.StudentId, cancellationToken))
             dbContext.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, StartedAt = now });
+
+        if (!await dbContext.StudentWorkouts.AnyAsync(x => x.StudentId == DemoIds.StudentId, cancellationToken))
+        {
+            var workout = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Força · Treino A", Notes = "Foco em execução consistente e progressão gradual.", RecommendedDay = 1, IsRecommended = true, CreatedAt = now };
+            workout.Exercises.AddRange(new[] { ("Agachamento livre", 4, 8, 90), ("Supino reto", 4, 10, 75), ("Remada baixa", 3, 10, 75) }.Select((x, i) => new StudentWorkoutExercise { Id = Guid.NewGuid(), StudentWorkoutId = workout.Id, Name = x.Item1, Sequence = i + 1, Sets = x.Item2, Repetitions = x.Item3, RestSeconds = x.Item4 }));
+            dbContext.Add(workout);
+        }
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }

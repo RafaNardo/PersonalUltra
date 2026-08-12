@@ -29,6 +29,7 @@ app.MapGet("/api/v1/demo/identity", async (PersonalUltraDbContext db, Cancellati
 app.MapDashboardApi();
 app.MapStudentApi();
 app.MapStudentInviteApi();
+app.MapTrainingApi();
 app.Run();
 
 public partial class Program;
