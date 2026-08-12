@@ -24,7 +24,7 @@ export default function BootstrapScreen() {
   }, [accessToken, bootstrap.data?.nextRoute, hasHydrated, role]);
   useEffect(() => { Animated.timing(opacity, { toValue: 1, duration: 280, useNativeDriver: true }).start(); }, [opacity]);
 
-  return <View style={styles.splash}><Animated.View style={[styles.brandGroup, { opacity }]}><Image source={require('../assets/brand/personal-ultra-logo-horizontal.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.tagline}>Performance com acompanhamento.</Text></Animated.View></View>;
+  return <View style={styles.splash}><Animated.View style={[styles.brandGroup, { opacity }]}><Image source={require('../../assets/brand/personal-ultra-logo-horizontal.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.tagline}>Performance com acompanhamento.</Text></Animated.View></View>;
 }
 
 const styles = StyleSheet.create({ splash: { flex: 1, justifyContent: 'center', alignItems: 'center', backgroundColor: colors.background }, brandGroup: { alignItems: 'center' }, logo: { width: 220, height: 100 }, tagline: { ...typography.bodyMD, color: colors.textMuted, marginTop: 24, textAlign: 'center' } });
