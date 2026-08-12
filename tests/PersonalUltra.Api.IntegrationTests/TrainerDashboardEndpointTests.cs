@@ -78,10 +78,24 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
         Assert.Equal("STUDENT_NOT_FOUND", error!.Code);
     }
 
+    [Fact]
+    public async Task Trainer_can_create_an_in_app_message_for_an_owned_student()
+    {
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.TrainerToken);
+
+        var response = await client.PostAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/messages", new { message = "Bora treinar hoje.", startsAt = (DateTimeOffset?)null, expiresAt = (DateTimeOffset?)null });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var message = await response.Content.ReadFromJsonAsync<TrainerMessageResponse>();
+        Assert.Equal(DemoIds.StudentId, message!.StudentId);
+        Assert.Equal("Bora treinar hoje.", message.Message);
+    }
+
     private sealed record DashboardResponse(string TrainerName, int ActiveStudents, int PendingAnamneses, int CompletedAnamneses, IReadOnlyList<DashboardStudentSummary> RecentStudents);
     private sealed record DashboardStudentSummary(Guid StudentId, string FirstName, string LastName, string? Email, string AnamnesisStatus, DateTimeOffset StartedAt);
     private sealed record StudentListResponse(IReadOnlyList<DashboardStudentSummary> Students);
     private sealed record ErrorResponse(string Code, string Message, object? Details, string TraceId);
+    private sealed record TrainerMessageResponse(Guid Id, Guid StudentId, string Message, DateTimeOffset StartsAt, DateTimeOffset? ExpiresAt, DateTimeOffset CreatedAt);
 }
 
 public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Program>

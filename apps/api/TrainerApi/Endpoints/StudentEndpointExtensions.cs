@@ -51,5 +51,32 @@ public static class StudentEndpointExtensions
                 ? context.ApiError("STUDENT_NOT_FOUND", "O aluno não foi encontrado no seu acompanhamento.", StatusCodes.Status404NotFound)
                 : Results.Ok(student);
         });
+
+        api.MapPost("/{studentId:guid}/messages", async (Guid studentId, CreateTrainerMessageRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, TimeProvider clock, CancellationToken cancellationToken) =>
+        {
+            var trainerId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var message = request.Message?.Trim();
+            if (string.IsNullOrWhiteSpace(message) || message.Length > 1000)
+                return context.ApiError("VALIDATION_ERROR", "A mensagem deve ter entre 1 e 1000 caracteres.", StatusCodes.Status400BadRequest);
+
+            var ownsStudent = await db.TrainerStudents.AnyAsync(link => link.TrainerId == trainerId && link.StudentId == studentId && link.EndedAt == null, cancellationToken);
+            if (!ownsStudent)
+                return context.ApiError("STUDENT_NOT_FOUND", "O aluno não foi encontrado no seu acompanhamento.", StatusCodes.Status404NotFound);
+
+            var now = clock.GetUtcNow();
+            var startsAt = request.StartsAt ?? now;
+            if (request.ExpiresAt is not null && request.ExpiresAt <= startsAt)
+                return context.ApiError("VALIDATION_ERROR", "O fim da mensagem deve ser posterior ao início.", StatusCodes.Status400BadRequest);
+
+            var trainerMessage = new PersonalUltra.Domain.TrainerMessage
+            {
+                Id = Guid.NewGuid(), TrainerId = trainerId, StudentId = studentId, Message = message,
+                StartsAt = startsAt, ExpiresAt = request.ExpiresAt, CreatedAt = now,
+            };
+            db.TrainerMessages.Add(trainerMessage);
+            await db.SaveChangesAsync(cancellationToken);
+            return Results.Created($"/api/v1/students/{studentId}/messages/{trainerMessage.Id}", new TrainerMessageResponse(
+                trainerMessage.Id, trainerMessage.StudentId, trainerMessage.Message, trainerMessage.StartsAt, trainerMessage.ExpiresAt, trainerMessage.CreatedAt));
+        });
     }
 }

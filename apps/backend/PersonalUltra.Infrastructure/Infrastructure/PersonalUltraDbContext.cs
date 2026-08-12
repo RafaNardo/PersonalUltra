@@ -12,6 +12,7 @@ public sealed class PersonalUltraDbContext(DbContextOptions<PersonalUltraDbConte
     public DbSet<TrainerStudent> TrainerStudents => Set<TrainerStudent>();
     public DbSet<StudentInvite> StudentInvites => Set<StudentInvite>();
     public DbSet<Anamnesis> Anamneses => Set<Anamnesis>();
+    public DbSet<TrainerMessage> TrainerMessages => Set<TrainerMessage>();
     public DbSet<Member> Members => Set<Member>();
     public DbSet<MemberProfile> MemberProfiles => Set<MemberProfile>();
     public DbSet<Plan> Plans => Set<Plan>();
@@ -41,6 +42,7 @@ public sealed class PersonalUltraDbContext(DbContextOptions<PersonalUltraDbConte
         modelBuilder.Entity<TrainerStudent>(entity => { entity.ToTable("trainer_students", "core"); entity.HasKey(x => x.Id); entity.HasIndex(x => new { x.TrainerId, x.StudentId }).IsUnique(); entity.HasOne(x => x.Trainer).WithMany(x => x.Students).HasForeignKey(x => x.TrainerId); entity.HasOne(x => x.Student).WithMany(x => x.Trainers).HasForeignKey(x => x.StudentId); });
         modelBuilder.Entity<StudentInvite>(entity => { entity.ToTable("student_invites", "core"); entity.HasKey(x => x.Id); entity.Property(x => x.Token).HasMaxLength(200); entity.Property(x => x.Email).HasMaxLength(320); entity.HasIndex(x => x.Token).IsUnique(); entity.HasOne(x => x.Trainer).WithMany(x => x.Invites).HasForeignKey(x => x.TrainerId); });
         modelBuilder.Entity<Anamnesis>(entity => { entity.ToTable("anamneses", "core"); entity.HasKey(x => x.Id); entity.Property(x => x.AnswersJson).HasColumnType("jsonb"); entity.HasIndex(x => x.StudentId).IsUnique(); entity.HasOne(x => x.Student).WithOne(x => x.Anamnesis).HasForeignKey<Anamnesis>(x => x.StudentId); });
+        modelBuilder.Entity<TrainerMessage>(entity => { entity.ToTable("trainer_messages", "engagement"); entity.HasKey(x => x.Id); entity.Property(x => x.Message).HasMaxLength(1000); entity.HasOne(x => x.Trainer).WithMany(x => x.Messages).HasForeignKey(x => x.TrainerId); entity.HasOne(x => x.Student).WithMany(x => x.Messages).HasForeignKey(x => x.StudentId); entity.HasIndex(x => new { x.StudentId, x.StartsAt }); });
         modelBuilder.Entity<AuthUser>(entity =>
         {
             entity.ToTable("users", "auth");
