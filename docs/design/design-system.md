@@ -1,28 +1,35 @@
-# Design System v0.1
+# Design System — Personal Ultra
 
-## Direção
-Escuro, forte, premium e esportivo. Preto/cinza/branco como base e vermelho SVR como ação. Consulte também `brand-guidelines.md` para assets, fontes e licença.
+Direção visual: premium, dark, técnica e esportiva, inspirada na sensação de performance da linha Apple Watch Ultra sem copiar identidade proprietária, assets ou layouts.
 
-## Tipografia
-- `display`: Montserrat ExtraBold para títulos, números, métricas e chamadas; os demais pesos da Montserrat são usados na interface. MonumentExtended-UltraBold é alternativa autorizada documentada em `brand-guidelines.md`
-- `interface`: corpo, formulários e chat
+## Base
+- background `#080808`
+- surface `#151515`
+- surfaceRaised `#222220`
+- titanium `#B8B3A9`
+- titaniumLight `#E8E3DA`
+- textPrimary `#F5F5F3`
+- textSecondary `#AAA8A1`
+- border `#353530`
+- ultraOrange `#FF6A13`
+- signalGreen `#B8F500`
 
-A fonte oficial será substituída por token: `fontFamily.display = SVR_FONT`.
+O verde é pontual.
 
-## Tokens
-Colors: Background, Surface, SurfaceElevated, Primary, PrimaryPressed, TextPrimary, TextSecondary, TextMuted, Success, Warning, Danger.
+## White-label Student
+`TrainerBranding.PrimaryColor` pode substituir o accent principal na experiência do aluno.
 
-Spacing: `4, 8, 12, 16, 20, 24, 32, 40, 48`.
+Customizável:
+- profile photo;
+- logo;
+- primary color;
+- cover image;
+- methodology name;
+- Coach avatar.
 
-Typography: displayXL, displayLG, headingLG, headingMD, bodyLG, bodyMD, caption, metricXL.
+Não permitir que branding substitua cores semânticas de erro/sucesso/acessibilidade.
 
-## Navegação
-Home, Treino, Coach, Nutrição, Progresso. Durante treino, fluxo full-screen.
+## Linguagem por actor
+Trainer UI: mais operacional, densa e orientada a dashboard/atividade.
 
-## Componentes
-PrimaryButton, SecondaryButton, GhostButton, MetricCard, WorkoutCard, ExerciseCard, MealCard, CoachInsightCard, ProgressCard, BottomNavigation, TopBar, ProgressBar, SetRow, NumericStepper, RestTimer, Tag, PainBadge, Modal, BottomSheet, HealthWarning, EmptyState, Skeleton, ActionProposal.
-
-`ActionProposal` apresenta tipo, motivo, nível de segurança e necessidade de confirmação. É informativo: não deve conter controles que executem, confirmem ou rejeitem alterações.
-
-## UX
-Durante treino: operacional, poucos dados, alvos grandes. Fora do treino: emocional, evolução, metodologia e coaching.
+Student UI: mais visual, emocional, com CTAs maiores e maior presença da marca do personal.
