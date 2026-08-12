@@ -3,6 +3,7 @@ namespace PersonalUltra.StudentApi.Contracts;
 public sealed record ErrorResponse(string Code, string Message, object? Details, string TraceId);
 public sealed record DevLoginRequest(string? Email);
 public sealed record DevLoginResponse(string AccessToken, string TokenType, MemberDto Member, bool IsNewMember);
+public sealed record InviteResolutionResponse(string TrainerName, string? Email, DateTimeOffset ExpiresAt);
 public sealed record MemberDto(Guid Id, string FirstName, string LastName, string Email);
 public sealed record BootstrapResponse(MemberDto Member, ActivePlanDto? ActivePlan, string NextRoute);
 public sealed record InitialPlanResponse(bool IsProvisioned, Guid? PlanId, string? Name, int? SessionsPerWeek,
