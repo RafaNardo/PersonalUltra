@@ -6,6 +6,8 @@ public sealed record DevLoginResponse(string AccessToken, string TokenType, Memb
 public sealed record InviteResolutionResponse(string TrainerName, string? Email, DateTimeOffset ExpiresAt);
 public sealed record AcceptInviteRequest(string FirstName, string? LastName, string? Email);
 public sealed record InviteAcceptanceResponse(string AccessToken, string TokenType, Guid StudentId, string FirstName, string LastName, string Email, Guid TrainerId);
+public sealed record SaveAnamnesisRequest(string Goal, string ExperienceLevel, int TrainingDaysPerWeek, int SessionDurationMinutes, string TrainingLocation, string EquipmentNotes, decimal HeightCm, decimal WeightKg, string HealthConditions, string MovementRestrictions, string CurrentPainDescription, string NutritionPreferences, string NutritionRestrictions);
+public sealed record AnamnesisResponse(string Goal, string ExperienceLevel, int TrainingDaysPerWeek, int SessionDurationMinutes, string TrainingLocation, string EquipmentNotes, decimal HeightCm, decimal WeightKg, string HealthConditions, string MovementRestrictions, string CurrentPainDescription, string NutritionPreferences, string NutritionRestrictions, bool IsCompleted);
 public sealed record MemberDto(Guid Id, string FirstName, string LastName, string Email);
 public sealed record BootstrapResponse(MemberDto Member, ActivePlanDto? ActivePlan, string NextRoute);
 public sealed record InitialPlanResponse(bool IsProvisioned, Guid? PlanId, string? Name, int? SessionsPerWeek,

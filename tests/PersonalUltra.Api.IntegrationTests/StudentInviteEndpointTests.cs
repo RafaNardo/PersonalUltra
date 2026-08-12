@@ -52,9 +52,9 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
     public async Task Invite_acceptance_creates_a_student_linked_to_the_inviting_trainer_and_a_student_session()
     {
         const string token = "invite-to-accept";
-        await SeedInviteAsync(token, DateTimeOffset.UtcNow.AddDays(1));
+        await SeedInviteAsync(token, DateTimeOffset.UtcNow.AddDays(1), "ana@example.com");
 
-        var response = await client.PostAsJsonAsync($"/api/v1/invite/{token}/accept", new { firstName = "Ana", lastName = "Souza", email = "aluna@example.com" });
+        var response = await client.PostAsJsonAsync($"/api/v1/invite/{token}/accept", new { firstName = "Ana", lastName = "Souza", email = "ana@example.com" });
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var acceptance = await response.Content.ReadFromJsonAsync<InviteAcceptanceResponse>();
@@ -68,16 +68,37 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
         Assert.NotNull(acceptedInvite.AcceptedAt);
     }
 
-    private async Task SeedInviteAsync(string token, DateTimeOffset expiresAt)
+    [Fact]
+    public async Task Invited_student_can_save_and_complete_a_typed_anamnesis()
+    {
+        const string token = "invite-for-anamnesis";
+        await SeedInviteAsync(token, DateTimeOffset.UtcNow.AddDays(1), "beatriz@example.com");
+        var acceptanceResponse = await client.PostAsJsonAsync($"/api/v1/invite/{token}/accept", new { firstName = "Beatriz", lastName = "Lima", email = "beatriz@example.com" });
+        var acceptance = await acceptanceResponse.Content.ReadFromJsonAsync<InviteAcceptanceResponse>();
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", acceptance!.AccessToken);
+        var answers = new { goal = "Ganhar força", experienceLevel = "Iniciante", trainingDaysPerWeek = 3, sessionDurationMinutes = 45, trainingLocation = "Academia", equipmentNotes = "Academia completa", heightCm = 165, weightKg = 62, healthConditions = "Nenhuma", movementRestrictions = "Nenhuma", currentPainDescription = "Sem dor", nutritionPreferences = "4 refeições", nutritionRestrictions = "Nenhuma" };
+
+        var save = await client.PutAsJsonAsync("/api/v1/anamnesis", answers);
+        var complete = await client.PostAsync("/api/v1/anamnesis/complete", null);
+
+        Assert.Equal(HttpStatusCode.OK, save.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, complete.StatusCode);
+        var result = await complete.Content.ReadFromJsonAsync<AnamnesisResponse>();
+        Assert.True(result!.IsCompleted);
+        Assert.Equal("Ganhar força", result.Goal);
+    }
+
+    private async Task SeedInviteAsync(string token, DateTimeOffset expiresAt, string email = "aluna@example.com")
     {
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
-        db.StudentInvites.Add(new StudentInvite { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, Token = token, Email = "aluna@example.com", CreatedAt = DateTimeOffset.UtcNow, ExpiresAt = expiresAt });
+        db.StudentInvites.Add(new StudentInvite { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, Token = token, Email = email, CreatedAt = DateTimeOffset.UtcNow, ExpiresAt = expiresAt });
         await db.SaveChangesAsync();
     }
 
     private sealed record InviteResolutionResponse(string TrainerName, string? Email, DateTimeOffset ExpiresAt);
     private sealed record InviteAcceptanceResponse(string AccessToken, string TokenType, Guid StudentId, string FirstName, string LastName, string Email, Guid TrainerId);
+    private sealed record AnamnesisResponse(string Goal, string ExperienceLevel, int TrainingDaysPerWeek, int SessionDurationMinutes, string TrainingLocation, string EquipmentNotes, decimal HeightCm, decimal WeightKg, string HealthConditions, string MovementRestrictions, string CurrentPainDescription, string NutritionPreferences, string NutritionRestrictions, bool IsCompleted);
 }
 
 public sealed class StudentApiFactory : WebApplicationFactory<Program>
