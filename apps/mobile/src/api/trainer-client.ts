@@ -16,6 +16,12 @@ export type TrainerDashboard = {
     anamnesisStatus: 'NotStarted' | 'InProgress' | 'Completed';
     startedAt: string;
   }>;
+  recentActivities: Array<{
+    studentId: string;
+    studentName: string;
+    type: 'AnamnesisCompleted';
+    occurredAt: string;
+  }>;
 };
 
 export type TrainerStudent = TrainerDashboard['recentStudents'][number];

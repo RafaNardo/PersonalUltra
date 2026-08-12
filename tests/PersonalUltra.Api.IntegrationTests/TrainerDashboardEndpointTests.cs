@@ -122,6 +122,12 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
             Assert.Equal("Hipertrofia", anamnesis!.Goal);
             Assert.Equal(4, anamnesis.TrainingDaysPerWeek);
             Assert.Equal(180, anamnesis.HeightCm);
+
+            var dashboardResponse = await client.GetAsync("/api/v1/dashboard");
+            var dashboard = await dashboardResponse.Content.ReadFromJsonAsync<DashboardResponse>();
+            var activity = Assert.Single(dashboard!.RecentActivities);
+            Assert.Equal(studentId, activity.StudentId);
+            Assert.Equal("AnamnesisCompleted", activity.Type);
         }
         finally
         {
@@ -147,7 +153,8 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
         Assert.True(invite.ExpiresAt > DateTimeOffset.UtcNow.AddDays(6));
     }
 
-    private sealed record DashboardResponse(string TrainerName, int ActiveStudents, int PendingAnamneses, int CompletedAnamneses, IReadOnlyList<DashboardStudentSummary> RecentStudents);
+    private sealed record DashboardResponse(string TrainerName, int ActiveStudents, int PendingAnamneses, int CompletedAnamneses, IReadOnlyList<DashboardStudentSummary> RecentStudents, IReadOnlyList<DashboardActivity> RecentActivities);
+    private sealed record DashboardActivity(Guid StudentId, string StudentName, string Type, DateTimeOffset OccurredAt);
     private sealed record DashboardStudentSummary(Guid StudentId, string FirstName, string LastName, string? Email, string AnamnesisStatus, DateTimeOffset StartedAt);
     private sealed record StudentListResponse(IReadOnlyList<DashboardStudentSummary> Students);
     private sealed record ErrorResponse(string Code, string Message, object? Details, string TraceId);

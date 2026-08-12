@@ -29,12 +29,24 @@ public static class DashboardEndpointExtensions
                     link.StartedAt))
                 .ToListAsync(cancellationToken);
 
+            var recentActivities = await db.Anamneses.AsNoTracking()
+                .Where(anamnesis => anamnesis.CompletedAt != null && anamnesis.Student.Trainers.Any(link => link.TrainerId == trainerId && link.EndedAt == null))
+                .OrderByDescending(anamnesis => anamnesis.CompletedAt)
+                .Take(5)
+                .Select(anamnesis => new DashboardActivity(
+                    anamnesis.StudentId,
+                    $"{anamnesis.Student.FirstName} {anamnesis.Student.LastName}",
+                    "AnamnesisCompleted",
+                    anamnesis.CompletedAt!.Value))
+                .ToListAsync(cancellationToken);
+
             return Results.Ok(new DashboardResponse(
                 trainer.Name,
                 students.Count,
                 students.Count(student => student.AnamnesisStatus is not "Completed"),
                 students.Count(student => student.AnamnesisStatus is "Completed"),
-                students.Take(5).ToArray()));
+                students.Take(5).ToArray(),
+                recentActivities));
         });
     }
 }
