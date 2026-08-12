@@ -21,7 +21,8 @@ var app = builder.Build();
 // A development deployment may intentionally disable the demo seed while
 // still needing the current schema (for example, when validating onboarding).
 // Keep schema migration independent from demo-data population.
-if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("DemoData:SeedOnStartup"))
+// The demo APIs share a database and must apply the current schema in every
+// environment; data population remains controlled independently by the seed flag.
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();

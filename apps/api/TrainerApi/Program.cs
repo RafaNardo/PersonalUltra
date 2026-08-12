@@ -11,7 +11,8 @@ builder.Services.AddAuthentication(DemoActorAuthenticationHandler.TrainerScheme)
     .AddScheme<AuthenticationSchemeOptions, DemoActorAuthenticationHandler>(DemoActorAuthenticationHandler.TrainerScheme, _ => { });
 builder.Services.AddAuthorization();
 var app = builder.Build();
-if (app.Environment.IsDevelopment() || app.Configuration.GetValue<bool>("DemoData:SeedOnStartup"))
+// The demo APIs share a database and must apply the current schema in every
+// environment; data population remains controlled independently by the seed flag.
 {
     using var scope = app.Services.CreateScope();
     var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
