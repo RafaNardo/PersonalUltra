@@ -61,3 +61,10 @@ export async function clearTrainingData() {
   const db = await database();
   await db.execAsync('DELETE FROM pending_operations; DELETE FROM local_sets; DELETE FROM cached_exercises; DELETE FROM cached_workout;');
 }
+
+export async function syncPendingSets(send: (pending: PendingSet) => Promise<void>) {
+  const pending = await pendingSets();
+  for (const item of pending) {
+    try { await send(item); await removePendingSet(item.input.clientOperationId); } catch { break; }
+  }
+}
