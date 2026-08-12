@@ -1,6 +1,6 @@
-using PersonalUltra.Api.Application.Coach;
-using PersonalUltra.Api.Application.Training;
-using PersonalUltra.Api.Domain;
+using PersonalUltra.Application.Coach;
+using PersonalUltra.Application.Training;
+using PersonalUltra.Domain;
 using Xunit;
 
 namespace PersonalUltra.Api.IntegrationTests;

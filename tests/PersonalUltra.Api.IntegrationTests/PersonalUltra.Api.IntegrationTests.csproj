@@ -16,6 +16,6 @@
     </PackageReference>
   </ItemGroup>
   <ItemGroup>
-    <ProjectReference Include="..\..\apps\api\PersonalUltra.Api.csproj" />
+    <ProjectReference Include="..\..\apps\api\StudentApi\StudentApi.csproj" />
   </ItemGroup>
 </Project>

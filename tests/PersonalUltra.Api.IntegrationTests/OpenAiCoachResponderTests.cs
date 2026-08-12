@@ -3,7 +3,7 @@ using System.Text;
 using System.Text.Json;
 using Microsoft.Extensions.Logging.Abstractions;
 using Microsoft.Extensions.Options;
-using PersonalUltra.Api.Application.Coach;
+using PersonalUltra.Application.Coach;
 using Xunit;
 
 namespace PersonalUltra.Api.IntegrationTests;

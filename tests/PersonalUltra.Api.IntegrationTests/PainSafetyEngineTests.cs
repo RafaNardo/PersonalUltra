@@ -1,4 +1,4 @@
-using PersonalUltra.Api.Application.Safety;
+using PersonalUltra.Application.Safety;
 using Xunit;
 
 namespace PersonalUltra.Api.IntegrationTests;

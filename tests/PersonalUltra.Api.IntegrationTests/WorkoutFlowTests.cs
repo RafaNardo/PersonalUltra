@@ -11,10 +11,10 @@ using Microsoft.EntityFrameworkCore.Metadata;
 using Microsoft.Extensions.DependencyInjection;
 using Microsoft.Extensions.DependencyInjection.Extensions;
 using Microsoft.Extensions.Configuration;
-using PersonalUltra.Api.Contracts;
-using PersonalUltra.Api.Application.Coach;
-using PersonalUltra.Api.Domain;
-using PersonalUltra.Api.Infrastructure;
+using PersonalUltra.StudentApi.Contracts;
+using PersonalUltra.Application.Coach;
+using PersonalUltra.Domain;
+using PersonalUltra.Infrastructure;
 
 namespace PersonalUltra.Api.IntegrationTests;
 

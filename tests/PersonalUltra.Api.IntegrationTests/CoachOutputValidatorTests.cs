@@ -1,5 +1,5 @@
 using System.Text.Json;
-using PersonalUltra.Api.Application.Coach;
+using PersonalUltra.Application.Coach;
 using Xunit;
 
 namespace PersonalUltra.Api.IntegrationTests;
