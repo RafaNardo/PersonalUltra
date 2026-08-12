@@ -7,12 +7,6 @@ export type TrainingPlanWorkout = { id: string; name: string; sequence: number; 
 export type TrainingPlan = { name: string; sessionsPerWeek: number; workouts: TrainingPlanWorkout[] };
 export type Home = { greeting: string; activePlan: ActivePlan; todayWorkout?: { id: string; name: string; status: string; exerciseCount: number } | null; completedWorkoutsThisWeek: number };
 export type DevLogin = { accessToken: string; tokenType: string; member: Member };
-export type InitialPlanWorkout = { id: string; name: string; sequence: number; exerciseCount: number };
-export type InitialPlanNutrition = { caloriesTarget: number; proteinGramsTarget: number; carbsGramsTarget: number; fatGramsTarget: number; meals: string[] };
-export type InitialPlan = {
-  isProvisioned: boolean; planId?: string | null; name?: string | null; sessionsPerWeek?: number | null;
-  startsOn?: string | null; reviewDueAt?: string | null; workouts: InitialPlanWorkout[]; nutrition?: InitialPlanNutrition | null; wasAlreadyProvisioned: boolean;
-};
 export type OnboardingProfile = {
   firstName: string; lastName: string; goal: string; experienceLevel: string; trainingDaysPerWeek: number;
   sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number;

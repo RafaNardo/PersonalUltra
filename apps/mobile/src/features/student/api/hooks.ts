@@ -4,7 +4,7 @@ import type { CompleteSetInput, SaveOnboardingProfile, TrainingToday } from './t
 import { cachedWorkout, cacheWorkout, clearTrainingData, pendingSets, queueSet, removePendingSet } from '../offline/training-db';
 import { useAuthStore } from '../state/auth-store';
 
-const keys = { bootstrap: ['bootstrap'] as const, onboarding: ['onboarding'] as const, initialPlan: ['plans', 'initial'] as const, home: ['home'] as const, today: ['training', 'today'] as const, trainingPlan: ['training', 'plan'] as const, progress: ['progress'] as const, weights: ['weights'] as const, nutrition: ['nutrition', 'today'] as const, coach: ['coach'] as const };
+const keys = { bootstrap: ['bootstrap'] as const, onboarding: ['onboarding'] as const, home: ['home'] as const, today: ['training', 'today'] as const, trainingPlan: ['training', 'plan'] as const, progress: ['progress'] as const, weights: ['weights'] as const, nutrition: ['nutrition', 'today'] as const, coach: ['coach'] as const };
 
 function token() {
   const accessToken = useAuthStore.getState().accessToken;
@@ -16,18 +16,6 @@ export function useBootstrap() { return useQuery({ queryKey: keys.bootstrap, que
 export function useOnboardingProfile() { return useQuery({ queryKey: keys.onboarding, queryFn: () => api.onboardingProfile(token()), enabled: Boolean(useAuthStore((state) => state.accessToken)) }); }
 export function useSaveOnboardingProfile() { const client = useQueryClient(); return useMutation({ mutationFn: (input: SaveOnboardingProfile) => api.saveOnboardingProfile(token(), input), onSuccess: (data) => client.setQueryData(keys.onboarding, data) }); }
 export function useCompleteOnboarding() { const client = useQueryClient(); return useMutation({ mutationFn: () => api.completeOnboarding(token()), onSuccess: (data) => { client.setQueryData(keys.onboarding, data); client.invalidateQueries({ queryKey: keys.bootstrap }); } }); }
-export function usePrepareInitialPlan() {
-  return useQuery({
-    queryKey: keys.initialPlan,
-    queryFn: async () => {
-      const existing = await api.initialPlan(token());
-      return existing.isProvisioned ? existing : api.provisionInitialPlan(token());
-    },
-    enabled: Boolean(useAuthStore((state) => state.accessToken)),
-    retry: 0,
-    staleTime: 0,
-  });
-}
 export function useHome() { return useQuery({ queryKey: keys.home, queryFn: () => api.home(token()), enabled: Boolean(useAuthStore((state) => state.accessToken)) }); }
 export function useTrainingToday() {
   return useQuery({ queryKey: keys.today, queryFn: async () => {

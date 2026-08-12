@@ -1,4 +1,4 @@
-import type { CoachConversation, CompleteSet, CompleteSetInput, CompleteWorkout, DevLogin, ExerciseAlternative, FoodAlternative, Home, InitialPlan, Meal, NutritionToday, OnboardingProfile, PainReport, ProgressSummary, SaveOnboardingProfile, TrainingPlan, TrainingToday, WeightEntry } from './types';
+import type { CoachConversation, CompleteSet, CompleteSetInput, CompleteWorkout, DevLogin, ExerciseAlternative, FoodAlternative, Home, Meal, NutritionToday, OnboardingProfile, PainReport, ProgressSummary, SaveOnboardingProfile, TrainingPlan, TrainingToday, WeightEntry } from './types';
 import { ApiError } from '@/src/api/shared-http';
 
 // Public demo is the default for Expo Go. Local development can override this
@@ -31,8 +31,6 @@ export const api = {
   onboardingProfile: (token: string) => request<OnboardingProfile>('/onboarding/profile', {}, token),
   saveOnboardingProfile: (token: string, input: SaveOnboardingProfile) => request<OnboardingProfile>('/onboarding/profile', { method: 'PUT', body: JSON.stringify(input) }, token),
   completeOnboarding: (token: string) => request<OnboardingProfile>('/onboarding/complete', { method: 'POST' }, token),
-  initialPlan: (token: string) => request<InitialPlan>('/plans/initial', {}, token),
-  provisionInitialPlan: (token: string) => request<InitialPlan>('/plans/initial', { method: 'POST' }, token),
   home: (token: string) => request<Home>('/home', {}, token),
   today: (token: string) => request<TrainingToday>('/training/today', {}, token),
   trainingPlan: (token: string) => request<TrainingPlan>('/training/plan', {}, token),

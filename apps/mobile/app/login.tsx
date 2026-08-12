@@ -30,6 +30,6 @@ export default function LoginScreen() {
 }
 
 const styles = StyleSheet.create({
-  screen: { justifyContent: 'space-between', paddingVertical: spacing.xxxl }, hero: { gap: spacing.lg }, logo: { width: 220, height: 124 }, title: { ...typography.displayXL, color: colors.textPrimary }, copy: { ...typography.bodyLG, color: colors.textSecondary, maxWidth: 310 },
+  screen: { justifyContent: 'space-between', paddingVertical: spacing.xxxl }, hero: { gap: spacing.lg }, logo: { width: 220, height: 124, alignSelf: 'center' }, title: { ...typography.displayXL, color: colors.textPrimary }, copy: { ...typography.bodyLG, color: colors.textSecondary, maxWidth: 310 },
   card: { gap: spacing.md }, cardTitle: { ...typography.headingMD, color: colors.textPrimary }, cardCopy: { ...typography.bodyMD, color: colors.textSecondary }, input: { ...typography.bodyMD, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: spacing.md }, error: { ...typography.bodyMD, color: colors.danger },
 });
