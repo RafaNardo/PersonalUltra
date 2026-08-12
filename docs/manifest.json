@@ -1,12 +1,28 @@
 {
-  "project": "SVR Method",
+  "project": "Personal Ultra",
   "version": "0.1",
-  "mockups": [
-    "svr-main-concept.png",
-    "svr-core-screens.png",
-    "svr-onboarding.png",
-    "svr-ui-panel.png",
-    "svr-app-board.png"
+  "status": "demo-planning",
+  "demo_mobile": "single app with role switching",
+  "future_mobile": [
+    "trainer-mobile",
+    "student-mobile"
   ],
-  "display_font": "replaceable later"
+  "backend": [
+    "trainer-api",
+    "student-api"
+  ],
+  "shared_backend": [
+    "Domain",
+    "Application",
+    "Infrastructure",
+    "PostgreSQL"
+  ],
+  "milestones": [
+    "M0",
+    "M1",
+    "M2",
+    "M3",
+    "M4",
+    "M5"
+  ]
 }
