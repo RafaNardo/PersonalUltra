@@ -16,3 +16,7 @@ export function useCreateTrainerMessage(studentId: string) {
 export function useTrainerAnamnesis(studentId: string, enabled: boolean) {
   return useQuery({ queryKey: ['trainer', 'students', studentId, 'anamnesis'], queryFn: () => trainerClient.anamnesis(studentId), enabled });
 }
+
+export function useCreateStudentInvite() {
+  return useMutation({ mutationFn: (email?: string) => trainerClient.createStudentInvite(email) });
+}

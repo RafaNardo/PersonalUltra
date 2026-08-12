@@ -27,6 +27,7 @@ export type TrainerDashboard = {
 export type TrainerStudent = TrainerDashboard['recentStudents'][number];
 export type TrainerMessage = { id: string; studentId: string; message: string; startsAt: string; expiresAt?: string; createdAt: string };
 export type TrainerAnamnesis = { goal: string; experienceLevel: string; trainingDaysPerWeek: number; sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number; weightKg: number; healthConditions: string; movementRestrictions: string; currentPainDescription: string; nutritionPreferences: string; nutritionRestrictions: string; completedAt: string };
+export type StudentInvite = { id: string; token: string; inviteUrl: string; email?: string; expiresAt: string };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
@@ -55,4 +56,5 @@ export const trainerClient = {
   student: (studentId: string) => request<TrainerStudent>(`/students/${studentId}`),
   createMessage: (studentId: string, message: string) => request<TrainerMessage>(`/students/${studentId}/messages`, { method: 'POST', body: JSON.stringify({ message, startsAt: null, expiresAt: null }) }),
   anamnesis: (studentId: string) => request<TrainerAnamnesis>(`/students/${studentId}/anamnesis`),
+  createStudentInvite: (email?: string) => request<StudentInvite>('/student-invites', { method: 'POST', body: JSON.stringify({ email: email?.trim() || null }) }),
 };
