@@ -18,7 +18,7 @@
 - `PU-M1-004`: students list API.
 - `PU-M1-005`: students list mobile.
 - `PU-M1-006`: student detail API.
-- `PU-M1-007`: student detail com Resumo/Anamnese/Treino/Alimentação/Progresso.
+- `PU-M1-007`: detalhe mobile do aluno com Resumo real (identidade, vínculo e estado da anamnese).
 - `PU-M1-008`: TrainerMessage domain/API.
 - `PU-M1-009`: composer de mensagem.
 - `PU-M1-010`: WhatsApp deep link.
@@ -35,6 +35,7 @@
 - `PU-M2-006`: persistência.
 - `PU-M2-007`: visualização Trainer.
 - `PU-M2-008`: atividade de anamnese no dashboard.
+- `PU-M2-009`: integrar a anamnese concluída ao detalhe do aluno no Trainer.
 
 **DoD M2:** Trainer convida; Student preenche; Trainer vê.
 
@@ -53,6 +54,7 @@
 - `PU-M3-012`: portar execução de treino.
 - `PU-M3-013`: portar SQLite/offline sync.
 - `PU-M3-014`: histórico de sessões/séries no Trainer.
+- `PU-M3-015`: integrar treino e histórico ao detalhe do aluno no Trainer.
 
 **DoD M3:** Trainer prescreve; Student escolhe/executa; Trainer vê resultado.
 
@@ -73,6 +75,7 @@
 - `PU-M4-014`: verificar demo end-to-end.
 - `PU-M4-015`: configuração de branding do Trainer (modelo/API/UI), usando as cores semânticas compartilhadas.
 - `PU-M4-016`: aplicar branding dinâmico e validado na experiência Student.
+- `PU-M4-017`: integrar alimentação e progresso ao detalhe do aluno no Trainer, consolidando as seções disponíveis.
 
 **DoD M4:** demo comercial completa, incluindo branding dinâmico por Trainer.
 
