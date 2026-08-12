@@ -24,12 +24,12 @@ export default function LoginScreen() {
   };
 
   return <Screen style={styles.screen}>
-    <View style={styles.hero}><Image source={require('../assets/brand/svr-logo-transparent.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.title}>Método aplicado.{`\n`}Evolução medida.</Text><Text style={styles.copy}>Seu treino de hoje, com a intensidade e a clareza que fazem a diferença.</Text></View>
+    <View style={styles.hero}><Image source={require('../assets/brand/personal-ultra-logo-horizontal.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.title}>Consultoria de alta{`\n`}performance.</Text><Text style={styles.copy}>Seu treino de hoje, com clareza para evoluir em cada sessão.</Text></View>
     <Card style={styles.card}><Text style={styles.cardTitle}>Comece pelo seu e-mail</Text><Text style={styles.cardCopy}>Se você já iniciou sua jornada, continuamos de onde parou. Novos alunos seguem para o onboarding.</Text><TextInput value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" placeholder="seuemail@exemplo.com" placeholderTextColor={colors.textMuted} accessibilityLabel="Seu e-mail" style={styles.input} />{login.error && <Text style={styles.error}>{login.error.message}</Text>}<Button onPress={handleLogin} loading={login.isPending} disabled={!email.trim()}>Continuar</Button></Card>
   </Screen>;
 }
 
 const styles = StyleSheet.create({
-  screen: { justifyContent: 'space-between', paddingVertical: spacing.xxxl }, hero: { gap: spacing.lg }, logo: { width: 132, height: 60 }, title: { ...typography.displayXL, color: colors.textPrimary }, copy: { ...typography.bodyLG, color: colors.textSecondary, maxWidth: 310 },
+  screen: { justifyContent: 'space-between', paddingVertical: spacing.xxxl }, hero: { gap: spacing.lg }, logo: { width: 220, height: 124 }, title: { ...typography.displayXL, color: colors.textPrimary }, copy: { ...typography.bodyLG, color: colors.textSecondary, maxWidth: 310 },
   card: { gap: spacing.md }, cardTitle: { ...typography.headingMD, color: colors.textPrimary }, cardCopy: { ...typography.bodyMD, color: colors.textSecondary }, input: { ...typography.bodyMD, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: spacing.md }, error: { ...typography.bodyMD, color: colors.danger },
 });

@@ -8,7 +8,7 @@ import { colors, radius, spacing, typography } from '@/src/design/tokens';
 
 const stages = [
   { label: 'DADOS REGISTRADOS', title: 'Seu ponto de partida está mapeado.', copy: 'Organizando sua rotina, disponibilidade e estrutura de treino.' },
-  { label: 'CICLO DE TREINO', title: 'Definindo a estrutura da sua semana.', copy: 'Preparando sessões, exercícios e prescrições iniciais do método SVR.' },
+  { label: 'CICLO DE TREINO', title: 'Definindo a estrutura da sua semana.', copy: 'Preparando sessões, exercícios e prescrições iniciais do Personal Ultra.' },
   { label: 'ACOMPANHAMENTO', title: 'Incluindo sua linha de evolução.', copy: 'Registrando o histórico demonstrativo de peso, consistência e força.' },
   { label: 'NUTRIÇÃO', title: 'Conectando treino e alimentação.', copy: 'Adicionando refeições e metas para acompanhar sua rotina.' },
   { label: 'PLANO PRONTO', title: 'Seu próximo ciclo está tomando forma.', copy: 'Conferindo tudo para apresentar sua experiência inicial.' },
@@ -57,7 +57,7 @@ export default function PreparePlanScreen() {
         <View style={styles.preparingHeadline}><Text style={styles.eyebrow}>{current.label}</Text><Text style={styles.preparingTitle}>{current.title}</Text><Text style={styles.preparingCopy}>{current.copy}</Text></View>
         <View style={styles.stageTrack}>{stages.map((item, index) => <View key={item.label} style={[styles.stageDot, index <= stage && styles.stageDotActive]} />)}</View>
         <ProgressBar value={(stage + 1) / stages.length} />
-        <Text style={styles.honesty}>Criando uma estrutura inicial padrão do método SVR. A geração individualizada por IA não é usada nesta demonstração.</Text>
+        <Text style={styles.honesty}>Criando uma estrutura inicial padrão do Personal Ultra. A geração individualizada por IA não é usada nesta demonstração.</Text>
       </View>
     </Screen>;
   }
@@ -69,7 +69,7 @@ export default function PreparePlanScreen() {
   if (!presentationVisible) {
     return <Screen scroll={false} style={styles.readyScreen}>
       <View accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.readyContent}>
-        <View style={styles.readyMark}><Text style={styles.readyMarkText}>SVR</Text></View>
+        <View style={styles.readyMark}><Text style={styles.readyMarkText}>PU</Text></View>
         <Text style={styles.eyebrow}>PLANO LIBERADO</Text>
         <Text style={styles.readyTitle}>Seu plano ficou pronto.</Text>
         <Text style={styles.readyCopy}>Pronto para transformar disciplina em resultado?</Text>
@@ -84,7 +84,7 @@ export default function PreparePlanScreen() {
   return <Screen>
     <TopBar eyebrow="PLANO INICIAL" title="Tudo pronto." />
     <Card style={styles.hero}>
-      <Tag tone="success">ESTRUTURA SVR</Tag>
+      <Tag tone="success">ESTRUTURA INICIAL</Tag>
       <Text style={styles.planName}>{plan.data.name}</Text>
       <Text style={styles.heroCopy}>Seu plano de demonstração está preparado com treino e alimentação para você explorar o método.</Text>
       <View style={styles.metrics}>
