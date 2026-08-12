@@ -1,31 +1,31 @@
-# SVR Method
+# Personal Ultra — Documentation
 
-Pacote de especificação do produto **SVR Method**.
+Esta documentação substitui a documentação herdada do SVR Method como fonte de verdade do produto.
 
-## Visão
-O SVR Method transforma a metodologia SVR em um acompanhamento fitness digital escalável. O usuário não compra apenas um app de treino: compra acesso a uma metodologia aplicada ao próprio objetivo, rotina, evolução e restrições.
+## Produto
+- `product/vision.md`
+- `product/prd.md`
+- `product/demo-flow.md`
+- `product/nutrition-note.md`
 
-> **A IA conversa. A metodologia decide.**
+## Arquitetura
+- `architecture/overview.md`
+- `architecture/domain.md`
+- `architecture/api.md`
+- `architecture/mobile.md`
 
-## Stack proposta
-- Mobile: React Native + Expo SDK 54 + TypeScript
-- Navegação: Expo Router
-- Server state: TanStack Query
-- Client state: Zustand
-- Offline crítico: Expo SQLite
-- Backend: ASP.NET Core
-- Banco: PostgreSQL + EF Core
-- Arquitetura: Modular Monolith
-- API: REST `/api/v1`
-- RAG futuro: PostgreSQL + pgvector
-- Jobs: Hangfire
-- Observabilidade: OpenTelemetry + logs estruturados
+## IA
+- `ai/coach-v1.md`
 
-## Estrutura
-- `product/` — visão, PRD, fluxos e MVP
-- `design/` — design system e telas
-- `architecture/` — técnica, frontend, banco e API
-- `ai/` — IA, Method Engine, Safety e Coach
-- `delivery/` — backlog e roadmap
-- `assets/mockups/` — referências visuais
-- `AGENTS.md` — instruções para agentes de código
+## Design
+- `design/design-system.md`
+
+## Entrega
+- `delivery/backlog.md`
+- `delivery/roadmap.md`
+- `delivery/reuse-map.md`
+
+## Regra importante
+Na demo existe um único app mobile com role switching. O código deve permanecer preparado para o split futuro em dois apps independentes: Trainer e Student.
+
+Os assets herdados podem permanecer como donor assets enquanto forem úteis, mas os documentos antigos do SVR não devem orientar novas decisões do produto.
