@@ -84,6 +84,10 @@ séries, histórico e persistência compatível com a fundação SQLite/offline.
 - `PU-M4-017`: integrar alimentação e progresso ao detalhe do aluno no Trainer, consolidando as seções disponíveis.
 - `PU-M4-018`: concluída antecipadamente por decisão de produto: o fluxo legado SVR baseado em `Member` foi retirado, e a entrada do aluno permanece apoiada apenas em `Student`. A autenticação demo por e-mail permanece até a fundação de autenticação real na M5.
 
+Implementação concluída na demo: alimentação Trainer/Student, registro e consulta
+de peso, Coach explicativo read-only, seed ampliado, reset demo, branding validado
+por Trainer e aplicado ao contexto Student, além da consolidação no detalhe do aluno.
+
 **DoD M4:** demo comercial completa, incluindo branding dinâmico por Trainer.
 
 ## M5 — Production Foundation (após validação)

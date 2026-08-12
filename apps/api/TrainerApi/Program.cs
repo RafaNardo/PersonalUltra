@@ -30,6 +30,9 @@ app.MapDashboardApi();
 app.MapStudentApi();
 app.MapStudentInviteApi();
 app.MapTrainingApi();
+app.MapNutritionProgressApi();
+app.MapDemoResetApi();
+app.MapBrandingApi();
 app.Run();
 
 public partial class Program;

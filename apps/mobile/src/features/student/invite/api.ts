@@ -10,6 +10,10 @@ export type ActiveTrainerMessage = { id: string; message: string; startsAt: stri
 export type StudentWorkout = { id: string; name: string; notes: string; recommendedDay: number; isRecommended: boolean; exerciseCount: number };
 export type StudentTraining = { recommended?: StudentWorkout; available: StudentWorkout[]; history: Array<{ sessionId: string; workoutId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number }> };
 export type StudentSession = { sessionId: string; workoutId: string; workoutName: string; status: string; exercises: Array<{ id: string; name: string; sequence: number; sets: number; repetitions: number; completedSets: number }> };
+export type StudentNutrition = { id: string; name: string; notes: string; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ foodName: string; quantityGrams: number }> }> };
+export type StudentWeight = { id: string; weightKg: number; recordedAt: string };
+export type CoachAnswer = { answer: string; sources: string[] };
+export type StudentBranding = { displayName: string; primaryColor: string; logoUrl?: string };
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
   let response: Response;
@@ -40,4 +44,9 @@ export const inviteApi = {
   startWorkout: (token: string, workoutId: string) => request<StudentSession>(`/training/${workoutId}/start`, { method: 'POST' }, token),
   completeSet: (token: string, sessionId: string, exerciseId: string, input: { setNumber: number; weightKg: number; repetitions: number }) => request<{ saved: boolean }>(`/training/sessions/${sessionId}/exercises/${exerciseId}/sets`, { method: 'POST', body: JSON.stringify(input) }, token),
   completeWorkout: (token: string, sessionId: string) => request(`/training/sessions/${sessionId}/complete`, { method: 'POST' }, token),
+  nutrition: (token: string) => request<StudentNutrition | null>('/nutrition', {}, token),
+  weight: (token: string) => request<StudentWeight[]>('/progress/weight', {}, token),
+  addWeight: (token: string, weightKg: number) => request<StudentWeight>('/progress/weight', { method: 'POST', body: JSON.stringify({ weightKg }) }, token),
+  coachAnswer: (token: string, question: string) => request<CoachAnswer>(`/coach/answer?question=${encodeURIComponent(question)}`, {}, token),
+  branding: (token: string) => request<StudentBranding | null>('/branding', {}, token),
 };

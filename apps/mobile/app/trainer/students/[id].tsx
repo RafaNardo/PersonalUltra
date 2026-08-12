@@ -17,6 +17,8 @@ export default function TrainerStudentDetailScreen() {
   const anamnesis = useTrainerAnamnesis(id, student.data?.anamnesisStatus === 'Completed');
   const templates = useTrainerTemplates(); const applyTemplate = useApplyTrainerTemplate();
   const history = useQuery({ queryKey: ['trainer', 'students', id, 'training-history'], queryFn: () => trainerClient.trainingHistory(id!), enabled: Boolean(id) });
+  const nutrition = useQuery({ queryKey: ['trainer', 'students', id, 'nutrition'], queryFn: () => trainerClient.nutrition(id!), enabled: Boolean(id) });
+  const weight = useQuery({ queryKey: ['trainer', 'students', id, 'weight'], queryFn: () => trainerClient.weight(id!), enabled: Boolean(id) });
   const [message, setMessage] = useState('');
   if (student.isLoading) return <LoadingView message="Carregando o aluno…" />;
   if (student.isError) return <ErrorView message={student.error.message} onRetry={() => student.refetch()} />;
@@ -34,6 +36,12 @@ export default function TrainerStudentDetailScreen() {
   };
   return <Screen style={styles.page}>
     <TopBar eyebrow="DETALHE DO ALUNO" title={`${data.firstName} ${data.lastName}`} onBack={() => router.back()} />
+    <Card style={styles.card}>
+      <Text style={styles.cardTitle}>Alimentação e progresso</Text>
+      <Text style={styles.copy}>{nutrition.data?.name ?? 'Nenhum plano alimentar cadastrado.'}</Text>
+      <Text style={styles.copy}>{weight.data?.length ? `Último peso: ${weight.data.at(-1)?.weightKg} kg · ${weight.data.length} registros` : 'Nenhum registro de peso ainda.'}</Text>
+      <Button variant="secondary" onPress={() => router.push({ pathname: '/trainer/students/nutrition/[id]', params: { id: id! } })}>Editar alimentação</Button>
+    </Card>
     <Card style={styles.card}>
       <Text style={styles.cardTitle}>Histórico de treinos</Text>
       {history.isLoading && <Text style={styles.copy}>Carregando histórico…</Text>}

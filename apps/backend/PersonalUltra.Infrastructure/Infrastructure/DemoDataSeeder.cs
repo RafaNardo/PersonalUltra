@@ -38,6 +38,28 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
             dbContext.Add(workout);
         }
 
+        if (!await dbContext.NutritionPlans.AnyAsync(x => x.StudentId == DemoIds.StudentId, cancellationToken))
+        {
+            var plan = new NutritionPlan { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Base de performance", Notes = "Plano demonstrativo cadastrado pelo personal.", UpdatedAt = now };
+            foreach (var (name, foods) in new[] { ("Café da manhã", new[] { ("Ovos", 150m), ("Fruta", 120m) }), ("Almoço", new[] { ("Arroz", 150m), ("Frango", 180m), ("Salada", 100m) }), ("Jantar", new[] { ("Batata", 180m), ("Carne magra", 160m) }) }.Select((x, i) => (x.Item1, x.Item2)))
+            {
+                var meal = new Meal { Id = Guid.NewGuid(), NutritionPlanId = plan.Id, Name = name, Sequence = plan.Meals.Count + 1 };
+                meal.Foods.AddRange(foods.Select(f => new MealFood { Id = Guid.NewGuid(), MealId = meal.Id, FoodName = f.Item1, QuantityGrams = f.Item2 })); plan.Meals.Add(meal);
+            }
+            dbContext.Add(plan);
+        }
+        if (!await dbContext.WeightEntries.AnyAsync(x => x.StudentId == DemoIds.StudentId, cancellationToken))
+            dbContext.WeightEntries.AddRange(new WeightEntry { Id = Guid.NewGuid(), StudentId = DemoIds.StudentId, WeightKg = 78.4m, RecordedAt = now.AddDays(-21) }, new WeightEntry { Id = Guid.NewGuid(), StudentId = DemoIds.StudentId, WeightKg = 77.8m, RecordedAt = now.AddDays(-7) }, new WeightEntry { Id = Guid.NewGuid(), StudentId = DemoIds.StudentId, WeightKg = 77.5m, RecordedAt = now });
+
+        var demoNames = new[] { ("Bruna", "Costa"), ("Caio", "Mendes"), ("Duda", "Alves"), ("Enzo", "Lima"), ("Fabi", "Rocha"), ("Gabi", "Nunes"), ("Hugo", "Dias"), ("Iara", "Moraes"), ("João", "Pires"), ("Karla", "Reis"), ("Leo", "Santos"), ("Mia", "Freitas") };
+        foreach (var (first, last) in demoNames)
+        {
+            var email = $"{first.ToLowerInvariant()}.{last.ToLowerInvariant()}@demo.personalultra.local";
+            var extra = await dbContext.Students.SingleOrDefaultAsync(x => x.Email == email, cancellationToken);
+            if (extra is null) { extra = new Student { Id = Guid.NewGuid(), FirstName = first, LastName = last, Email = email, CreatedAt = now }; dbContext.Add(extra); }
+            if (!await dbContext.TrainerStudents.AnyAsync(x => x.TrainerId == DemoIds.TrainerId && x.StudentId == extra.Id, cancellationToken)) dbContext.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = extra.Id, StartedAt = now });
+        }
+
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 }

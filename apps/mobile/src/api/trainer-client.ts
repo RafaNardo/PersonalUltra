@@ -31,6 +31,7 @@ export type TrainerAnamnesis = { goal: string; experienceLevel: string; training
 export type StudentInvite = { id: string; token: string; inviteCode: string; inviteUrl: string; email?: string; expiresAt: string; replacedPendingInvite: boolean };
 export type WorkoutTemplate = { id: string; name: string; notes: string; exerciseCount?: number; updatedAt?: string; exercises?: WorkoutExerciseInput[] };
 export type WorkoutExerciseInput = { name: string; sequence: number; sets: number; repetitions: number; restSeconds: number; notes?: string };
+export type TrainerNutrition = { id: string; name: string; notes: string; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ foodName: string; quantityGrams: number }> }> };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
@@ -66,4 +67,7 @@ export const trainerClient = {
   duplicateTemplate: (id: string) => request<WorkoutTemplate>(`/training/templates/${id}/duplicate`, { method: 'POST' }),
   applyTemplate: (id: string, studentId: string, recommendedDay = 1, isRecommended = false) => request(`/training/templates/${id}/apply`, { method: 'POST', body: JSON.stringify({ studentId, recommendedDay, isRecommended }) }),
   trainingHistory: (studentId: string) => request<{ sessions: Array<{ sessionId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number }> }>(`/students/${studentId}/training-history`),
+  nutrition: (studentId: string) => request<TrainerNutrition | null>(`/students/${studentId}/nutrition`),
+  saveNutrition: (studentId: string, input: { name: string; notes?: string; meals: Array<{ name: string; sequence: number; notes?: string; foods: Array<{ foodName: string; quantityGrams: number }> }> }) => request<TrainerNutrition>(`/students/${studentId}/nutrition`, { method: 'PUT', body: JSON.stringify(input) }),
+  weight: (studentId: string) => request<Array<{ id: string; weightKg: number; recordedAt: string }>>(`/students/${studentId}/progress/weight`),
 };

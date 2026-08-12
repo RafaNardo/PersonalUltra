@@ -19,6 +19,10 @@ public sealed class PersonalUltraDbContext(DbContextOptions<PersonalUltraDbConte
     public DbSet<WorkoutSession> WorkoutSessions => Set<WorkoutSession>();
     public DbSet<WorkoutSessionExercise> WorkoutSessionExercises => Set<WorkoutSessionExercise>();
     public DbSet<SetPerformance> SetPerformances => Set<SetPerformance>();
+    public DbSet<NutritionPlan> NutritionPlans => Set<NutritionPlan>();
+    public DbSet<Meal> Meals => Set<Meal>();
+    public DbSet<MealFood> MealFoods => Set<MealFood>();
+    public DbSet<WeightEntry> WeightEntries => Set<WeightEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -37,5 +41,9 @@ public sealed class PersonalUltraDbContext(DbContextOptions<PersonalUltraDbConte
         modelBuilder.Entity<WorkoutSession>(entity => { entity.ToTable("workout_sessions", "training"); entity.HasKey(x => x.Id); entity.Property(x => x.Status).HasMaxLength(32); entity.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId); entity.HasOne(x => x.StudentWorkout).WithMany(x => x.Sessions).HasForeignKey(x => x.StudentWorkoutId); });
         modelBuilder.Entity<WorkoutSessionExercise>(entity => { entity.ToTable("workout_session_exercises", "training"); entity.HasKey(x => x.Id); entity.Property(x => x.Name).HasMaxLength(200); entity.HasOne(x => x.WorkoutSession).WithMany(x => x.Exercises).HasForeignKey(x => x.WorkoutSessionId); });
         modelBuilder.Entity<SetPerformance>(entity => { entity.ToTable("set_performances", "training"); entity.HasKey(x => x.Id); entity.HasIndex(x => new { x.WorkoutSessionExerciseId, x.SetNumber }).IsUnique(); entity.HasOne(x => x.WorkoutSessionExercise).WithMany(x => x.Performances).HasForeignKey(x => x.WorkoutSessionExerciseId); });
+        modelBuilder.Entity<NutritionPlan>(entity => { entity.ToTable("nutrition_plans", "nutrition"); entity.HasKey(x => x.Id); entity.Property(x => x.Name).HasMaxLength(200); entity.Property(x => x.Notes).HasMaxLength(2000); entity.HasOne<Student>().WithMany().HasForeignKey(x => x.StudentId); entity.HasIndex(x => x.StudentId).IsUnique(); });
+        modelBuilder.Entity<Meal>(entity => { entity.ToTable("meals", "nutrition"); entity.HasKey(x => x.Id); entity.Property(x => x.Name).HasMaxLength(200); entity.Property(x => x.Notes).HasMaxLength(1000); entity.HasIndex(x => new { x.NutritionPlanId, x.Sequence }).IsUnique(); entity.HasOne(x => x.NutritionPlan).WithMany(x => x.Meals).HasForeignKey(x => x.NutritionPlanId); });
+        modelBuilder.Entity<MealFood>(entity => { entity.ToTable("meal_foods", "nutrition"); entity.HasKey(x => x.Id); entity.Property(x => x.FoodName).HasMaxLength(200); entity.HasOne(x => x.Meal).WithMany(x => x.Foods).HasForeignKey(x => x.MealId); });
+        modelBuilder.Entity<WeightEntry>(entity => { entity.ToTable("weight_entries", "progress"); entity.HasKey(x => x.Id); entity.Property(x => x.WeightKg).HasPrecision(6, 2); entity.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId); entity.HasIndex(x => new { x.StudentId, x.RecordedAt }); });
     }
 }
