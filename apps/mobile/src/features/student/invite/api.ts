@@ -31,5 +31,5 @@ export const inviteApi = {
   studentLogin: (email: string) => request<InviteSession>('/auth/student-login', { method: 'POST', body: JSON.stringify({ email }) }),
   saveAnamnesis: (token: string, answers: AnamnesisAnswers) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis', { method: 'PUT', body: JSON.stringify(answers) }, token),
   completeAnamnesis: (token: string) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis/complete', { method: 'POST' }, token),
-  activeTrainerMessage: (token: string) => request<ActiveTrainerMessage | null>('/home/trainer-message', {}, token),
+  activeTrainerMessage: async (token: string) => (await request<ActiveTrainerMessage | null>('/home/trainer-message', {}, token)) ?? null,
 };
