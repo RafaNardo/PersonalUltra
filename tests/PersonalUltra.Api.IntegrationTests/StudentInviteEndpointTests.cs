@@ -89,6 +89,28 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
         Assert.Equal("Ganhar força", result.Goal);
     }
 
+    [Fact]
+    public async Task Invited_student_can_read_their_active_trainer_message()
+    {
+        const string token = "invite-for-message";
+        await SeedInviteAsync(token, DateTimeOffset.UtcNow.AddDays(1), "carla@example.com");
+        var acceptanceResponse = await client.PostAsJsonAsync($"/api/v1/invite/{token}/accept", new { firstName = "Carla", email = "carla@example.com", phone = "11977776666" });
+        var acceptance = await acceptanceResponse.Content.ReadFromJsonAsync<InviteAcceptanceResponse>();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            db.TrainerMessages.Add(new TrainerMessage { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = acceptance!.StudentId, Message = "Bem-vinda, Carla!", StartsAt = DateTimeOffset.UtcNow.AddMinutes(-1), CreatedAt = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", acceptance!.AccessToken);
+
+        var response = await client.GetAsync("/api/v1/home/trainer-message");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var message = await response.Content.ReadFromJsonAsync<ActiveTrainerMessageResponse>();
+        Assert.Equal("Bem-vinda, Carla!", message!.Message);
+    }
+
     private async Task SeedInviteAsync(string token, DateTimeOffset expiresAt, string email = "aluna@example.com")
     {
         using var scope = factory.Services.CreateScope();
@@ -100,6 +122,7 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
     private sealed record InviteResolutionResponse(string TrainerName, string? Email, DateTimeOffset ExpiresAt);
     private sealed record InviteAcceptanceResponse(string AccessToken, string TokenType, Guid StudentId, string FirstName, string LastName, string Email, string Phone, Guid TrainerId);
     private sealed record AnamnesisResponse(string Goal, string ExperienceLevel, int TrainingDaysPerWeek, int SessionDurationMinutes, string TrainingLocation, string EquipmentNotes, decimal HeightCm, decimal WeightKg, string HealthConditions, string MovementRestrictions, string CurrentPainDescription, string NutritionPreferences, string NutritionRestrictions, bool IsCompleted);
+    private sealed record ActiveTrainerMessageResponse(Guid Id, string Message, DateTimeOffset StartsAt, DateTimeOffset? ExpiresAt);
 }
 
 public sealed class StudentApiFactory : WebApplicationFactory<Program>
