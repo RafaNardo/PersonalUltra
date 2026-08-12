@@ -19,11 +19,12 @@ export type TrainerDashboard = {
 };
 
 export type TrainerStudent = TrainerDashboard['recentStudents'][number];
+export type TrainerMessage = { id: string; studentId: string; message: string; startsAt: string; expiresAt?: string; createdAt: string };
 
-async function request<T>(path: string): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${apiUrl}${path}`, { headers: { Accept: 'application/json', Authorization: 'Bearer personal-ultra-demo-trainer' } });
+    response = await fetch(`${apiUrl}${path}`, { ...options, headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: 'Bearer personal-ultra-demo-trainer', ...options.headers } });
   } catch {
     throw new ApiError(0, 'Sem conexão com a API do Trainer.');
   }
@@ -45,4 +46,5 @@ export const trainerClient = {
   dashboard: () => request<TrainerDashboard>('/dashboard'),
   students: async () => (await request<{ students: TrainerStudent[] }>('/students')).students,
   student: (studentId: string) => request<TrainerStudent>(`/students/${studentId}`),
+  createMessage: (studentId: string, message: string) => request<TrainerMessage>(`/students/${studentId}/messages`, { method: 'POST', body: JSON.stringify({ message, startsAt: null, expiresAt: null }) }),
 };

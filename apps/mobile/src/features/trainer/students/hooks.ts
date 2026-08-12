@@ -1,4 +1,4 @@
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { trainerClient } from '@/src/api/trainer-client';
 
 export function useTrainerStudents() {
@@ -7,4 +7,8 @@ export function useTrainerStudents() {
 
 export function useTrainerStudent(studentId: string) {
   return useQuery({ queryKey: ['trainer', 'students', studentId], queryFn: () => trainerClient.student(studentId), enabled: Boolean(studentId) });
+}
+
+export function useCreateTrainerMessage(studentId: string) {
+  return useMutation({ mutationFn: (message: string) => trainerClient.createMessage(studentId, message) });
 }
