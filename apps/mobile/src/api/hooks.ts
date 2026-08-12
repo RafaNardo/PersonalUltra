@@ -4,7 +4,7 @@ import type { CompleteSetInput, SaveOnboardingProfile, TrainingToday } from '@/s
 import { cachedWorkout, cacheWorkout, clearTrainingData, pendingSets, queueSet, removePendingSet } from '@/src/offline/training-db';
 import { useAuthStore } from '@/src/state/auth-store';
 
-const keys = { bootstrap: ['bootstrap'] as const, onboarding: ['onboarding'] as const, initialPlan: ['plans', 'initial'] as const, home: ['home'] as const, today: ['training', 'today'] as const, trainingPlan: ['training', 'plan'] as const, progress: ['progress'] as const, weights: ['weights'] as const, nutrition: ['nutrition', 'today'] as const, coach: ['coach'] as const, coachActions: ['coach', 'actions'] as const };
+const keys = { bootstrap: ['bootstrap'] as const, onboarding: ['onboarding'] as const, initialPlan: ['plans', 'initial'] as const, home: ['home'] as const, today: ['training', 'today'] as const, trainingPlan: ['training', 'plan'] as const, progress: ['progress'] as const, weights: ['weights'] as const, nutrition: ['nutrition', 'today'] as const, coach: ['coach'] as const };
 
 function token() {
   const accessToken = useAuthStore.getState().accessToken;
@@ -70,14 +70,6 @@ export function useResetCurrentMemberDemo() {
 export function useNutritionToday() { return useQuery({ queryKey: keys.nutrition, queryFn: () => api.nutritionToday(token()), enabled: Boolean(useAuthStore((state) => state.accessToken)) }); }
 export function useCoachConversation() { return useQuery({ queryKey: keys.coach, queryFn: () => api.coachConversation(token()), enabled: Boolean(useAuthStore((state) => state.accessToken)) }); }
 export function useSendCoachMessage() { const client = useQueryClient(); return useMutation({ mutationFn: (content: string) => api.sendCoachMessage(token(), content), onSuccess: (data) => client.setQueryData(keys.coach, data) }); }
-export function useCoachActions() { return useQuery({ queryKey: keys.coachActions, queryFn: () => api.coachActions(token()), enabled: Boolean(useAuthStore((state) => state.accessToken)) }); }
-export function useResolveCoachAction() {
-  const client = useQueryClient();
-  return useMutation({
-    mutationFn: ({ actionId, resolution }: { actionId: string; resolution: 'confirm' | 'reject' }) => resolution === 'confirm' ? api.confirmCoachAction(token(), actionId) : api.rejectCoachAction(token(), actionId),
-    onSuccess: () => { client.invalidateQueries({ queryKey: keys.coachActions }); client.invalidateQueries({ queryKey: keys.today }); },
-  });
-}
 export function useStartWorkout() {
   const client = useQueryClient();
   return useMutation({ mutationFn: (sessionId: string) => api.startWorkout(token(), sessionId), onSuccess: () => client.invalidateQueries({ queryKey: keys.today }) });

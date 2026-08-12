@@ -1,10 +1,9 @@
 import { useState } from 'react';
 import { router } from 'expo-router';
 import { ActivityIndicator, Image, KeyboardAvoidingView, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import type { CoachAction, CoachMessage } from '@/src/api/types';
-import { useCoachActions, useCoachConversation, useResolveCoachAction, useSendCoachMessage } from '@/src/api/hooks';
+import type { CoachMessage } from '@/src/api/types';
+import { useCoachConversation, useSendCoachMessage } from '@/src/api/hooks';
 import { Card, ErrorView } from '@/src/components/ui';
-import { ActionProposal } from '@/src/components/action-proposal';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { feedback } from '@/src/platform/feedback';
@@ -14,9 +13,9 @@ const avatar = require('../../assets/avatar.png');
 const maxMessageLength = 2000;
 const actions = [
   { icon: '◔', label: 'Estou\ncansado', message: 'Estou cansado hoje' },
-  { icon: '↺', label: 'Trocar\nexercício', message: 'Quero trocar um exercício' },
+  { icon: '↺', label: 'Ver meu\ntreino', message: 'Qual treino está recomendado para hoje?' },
   { icon: '✈', label: 'Vou\nviajar', message: 'Vou viajar' },
-  { icon: '⌁', label: 'Trocar uma\nrefeição', message: 'Quero trocar uma refeição' },
+  { icon: '⌁', label: 'Ver minha\nalimentação', message: 'Quais são as refeições do meu plano?' },
 ];
 
 type CoachMetadata = { reasonCode?: string; messageType?: CoachMessage['kind']; requiresUserInput?: boolean; requiresConfirmation?: boolean; proposalType?: string; safetyLevel?: 'Green' | 'Yellow' | 'Red'; actionId?: string };
@@ -26,16 +25,8 @@ function metadataFor(message: CoachMessage): CoachMetadata | null {
   try { return JSON.parse(message.metadataJson) as CoachMetadata; } catch { return null; }
 }
 
-function AssistantMessage({ message, action, isResolving, isResolved, resolutionError, onResolve }: { message: CoachMessage; action?: CoachAction; isResolving: boolean; isResolved: boolean; resolutionError?: string | null; onResolve: (actionId: string, resolution: 'confirm' | 'reject') => void }) {
+function AssistantMessage({ message }: { message: CoachMessage }) {
   const metadata = metadataFor(message);
-  if (message.kind === 'ActionProposal') {
-    const actionId = metadata?.actionId;
-    if (!actionId) return <View accessible accessibilityRole="text" accessibilityLabel={`Orientação do Coach: ${message.content}`} style={styles.messageRow}>
-      <Image source={avatar} style={styles.messageAvatar} />
-      <View style={[styles.message, styles.assistant]}><Text style={styles.messageText}>{message.content}</Text><Text style={styles.note}>Nenhuma alteração está pendente de confirmação.</Text><MessageTime createdAt={message.createdAt} /></View>
-    </View>;
-    return <View style={styles.messageRow}><Image source={avatar} style={styles.messageAvatar} /><ActionProposal content={message.content} proposalType={metadata?.proposalType} reasonCode={metadata?.reasonCode} safetyLevel={metadata?.safetyLevel} requiresConfirmation={metadata?.requiresConfirmation} actionId={action?.id} isPending={isResolving && action?.id === actionId} isResolved={isResolved} error={action?.id === actionId ? resolutionError : null} onConfirm={actionId ? () => onResolve(actionId, 'confirm') : undefined} onReject={actionId ? () => onResolve(actionId, 'reject') : undefined} time={formatTime(message.createdAt)} /></View>;
-  }
   const label = message.kind === 'Choice' ? 'Pergunta do Coach' : message.kind === 'ProgressInsight' ? 'Insight de progresso' : 'Mensagem do Coach';
   const typeLabel = message.kind === 'Choice' ? 'SUA RESPOSTA' : message.kind === 'ProgressInsight' ? 'INSIGHT DE PROGRESSO' : null;
   const typeCopy = message.kind === 'Choice' && metadata?.requiresUserInput ? 'Responda para o Coach continuar o acompanhamento.' : null;
@@ -68,12 +59,9 @@ function formatTime(createdAt: string) {
 
 export default function CoachScreen() {
   const conversation = useCoachConversation();
-  const coachActions = useCoachActions();
   const send = useSendCoachMessage();
-  const resolveAction = useResolveCoachAction();
   const [content, setContent] = useState('');
   const [sendError, setSendError] = useState<string | null>(null);
-  const [actionError, setActionError] = useState<string | null>(null);
 
   async function submit(message = content, restoreOnFailure = message === content) {
     const text = message.trim();
@@ -90,26 +78,13 @@ export default function CoachScreen() {
     }
   }
 
-  async function resolve(actionId: string, resolution: 'confirm' | 'reject') {
-    if (resolveAction.isPending) return;
-    setActionError(null);
-    try {
-      const result = await resolveAction.mutateAsync({ actionId, resolution });
-      if (result.status === 'Confirmed') feedback.success();
-      else feedback.selection();
-      telemetry.event('coach_action_resolved', { resolution: result.status.toLowerCase() });
-    } catch (error) {
-      setActionError(error instanceof Error ? error.message : 'Não foi possível resolver esta proposta. Tente novamente.');
-    }
-  }
-
   if (conversation.isLoading) return <Screen><TopBar eyebrow="Hoje · SVR Method" title="SVR Coach" action={<Image source={avatar} style={styles.topAvatar} />} /><View accessibilityLiveRegion="polite" style={styles.loading}><ActivityIndicator color={colors.primary} size="large" /><Text style={styles.loadingText}>Preparando seu acompanhamento…</Text></View></Screen>;
   if (conversation.error || !conversation.data) return <Screen><TopBar eyebrow="Hoje · SVR Method" title="SVR Coach" action={<Image source={avatar} style={styles.topAvatar} />} /><ErrorView message="Não foi possível abrir o Coach." onRetry={() => void conversation.refetch()} /></Screen>;
 
   const messages = conversation.data.messages;
   return <KeyboardAvoidingView style={styles.flex} behavior={Platform.OS === 'ios' ? 'padding' : undefined}><Screen scroll><TopBar eyebrow="Hoje · SVR Method" title="SVR Coach" action={<Image source={avatar} style={styles.topAvatar} />} />
-    <View style={styles.coachIntro}><Image source={avatar} style={styles.introAvatar} /><View><Text style={styles.introName}>SEU COACH</Text><Text style={styles.introCopy}>Acompanhamento baseado na metodologia SVR.</Text></View></View>
-    {messages.length === 0 ? <Card style={styles.empty}><Text style={styles.emptyLabel}>SVR COACH</Text><Text style={styles.emptyTitle}>Como posso apoiar seu dia?</Text><Text style={styles.emptyCopy}>Envie uma mensagem ou escolha um atalho. O Coach conversa com você, mas mudanças no método sempre passam pelas regras e pela sua confirmação.</Text></Card> : <View accessibilityLiveRegion="polite" style={styles.messages}>{messages.map((message) => message.role === 'User' ? <UserMessage key={message.id} message={message} /> : <AssistantMessage key={message.id} message={message} action={coachActions.data?.find((action) => action.id === metadataFor(message)?.actionId)} isResolving={resolveAction.isPending} isResolved={Boolean(metadataFor(message)?.actionId) && coachActions.isSuccess && !coachActions.data?.some((action) => action.id === metadataFor(message)?.actionId)} resolutionError={actionError} onResolve={(actionId, resolution) => void resolve(actionId, resolution)} />)}</View>}
+    <View style={styles.coachIntro}><Image source={avatar} style={styles.introAvatar} /><View><Text style={styles.introName}>SEU COACH</Text><Text style={styles.introCopy}>Orientações baseadas no que já foi prescrito para você.</Text></View></View>
+    {messages.length === 0 ? <Card style={styles.empty}><Text style={styles.emptyLabel}>COACH</Text><Text style={styles.emptyTitle}>Como posso apoiar seu dia?</Text><Text style={styles.emptyCopy}>Envie uma mensagem ou escolha um atalho. O Coach explica seu plano, mas não faz alterações.</Text></Card> : <View accessibilityLiveRegion="polite" style={styles.messages}>{messages.map((message) => message.role === 'User' ? <UserMessage key={message.id} message={message} /> : <AssistantMessage key={message.id} message={message} />)}</View>}
     <View style={styles.quickHeader}><Text style={styles.quickTitle}>COMO POSSO AJUDAR?</Text><Pressable accessibilityRole="button" accessibilityLabel="Registrar dor" accessibilityHint="Abre o registro de dor" onPress={() => router.push('/student/pain')}><Text style={styles.painLink}>Registrar dor</Text></Pressable></View>
     <View style={styles.quick}>{actions.map((action) => <Pressable key={action.label} accessibilityRole="button" accessibilityLabel={action.label.replace('\n', ' ')} accessibilityHint="Envia esta mensagem ao Coach" accessibilityState={{ disabled: send.isPending }} disabled={send.isPending} onPress={() => void submit(action.message, false)} style={({ pressed }) => [styles.quickAction, pressed && !send.isPending && styles.pressed, send.isPending && styles.disabled]}><Text style={styles.quickIcon}>{action.icon}</Text><Text style={styles.quickText}>{action.label}</Text></Pressable>)}</View>
     {sendError && <View accessibilityLiveRegion="assertive" style={styles.sendError}><Text accessibilityRole="alert" style={styles.sendErrorText}>{sendError}</Text></View>}

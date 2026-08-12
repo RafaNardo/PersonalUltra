@@ -102,7 +102,7 @@ public static class ApiEndpointExtensions
                 plan.TrainingPlan.WorkoutTemplates.OrderBy(template => template.Sequence)
                     .Select(template => new TrainingPlanWorkoutDto(template.Id, template.Name, template.Sequence,
                         template.Exercises.OrderBy(exercise => exercise.Sequence)
-                            .Select(exercise => new TrainingPlanExerciseDto(exercise.Id, exercise.Exercise.Name, exercise.Exercise.PrimaryMuscleGroup, exercise.Sequence, exercise.PrescribedSets, exercise.MinimumRepetitions, exercise.MaximumRepetitions, exercise.RestSeconds, exercise.RecommendedLoadKg)).ToArray()))
+                            .Select(exercise => new TrainingPlanExerciseDto(exercise.Id, exercise.Exercise.Name, exercise.Exercise.PrimaryMuscleGroup, exercise.Sequence, exercise.PrescribedSets, exercise.MinimumRepetitions, exercise.MaximumRepetitions, exercise.RestSeconds)).ToArray()))
                     .ToArray()));
         });
 
@@ -168,7 +168,7 @@ public static class ApiEndpointExtensions
     private static MemberDto ToMember(Member member) => new(member.Id, member.FirstName, member.LastName, member.AuthUser.Email);
     private static ActivePlanDto ToPlan(Plan plan) => new(plan.Id, plan.Name, plan.TrainingPlan.SessionsPerWeek, plan.ReviewDueAt);
     private static TrainingTodayResponse ToTrainingToday(WorkoutSession session) => new(session.Id, session.WorkoutTemplate.Name, session.Status, session.ScheduledFor, session.StartedAt,
-        session.Exercises.OrderBy(x => x.Sequence).Select(x => new WorkoutExerciseDto(x.Id, x.Exercise.Name, x.Exercise.PrimaryMuscleGroup, x.Sequence, x.PrescribedSets, x.MinimumRepetitions, x.MaximumRepetitions, x.RestSeconds, x.RecommendedLoadKg, x.SetPerformances.Count)).ToArray());
+        session.Exercises.OrderBy(x => x.Sequence).Select(x => new WorkoutExerciseDto(x.Id, x.Exercise.Name, x.Exercise.PrimaryMuscleGroup, x.Sequence, x.PrescribedSets, x.MinimumRepetitions, x.MaximumRepetitions, x.RestSeconds, x.SetPerformances.Count)).ToArray());
     private static CompleteSetResponse ToSet(SetPerformance set, bool wasAlreadyProcessed) => new(set.Id, set.ClientOperationId, set.SetNumber, set.WeightKg, set.Repetitions, set.RepsInReserve, set.CompletedAt, wasAlreadyProcessed);
     internal static IResult ApiError(string code, string message, int status) => Results.Json(new ErrorResponse(code, message, null, ActivityTraceId()), statusCode: status);
     private static IResult ApiError(HttpContext context, string code, string message, int status) => Results.Json(new ErrorResponse(code, message, null, context.TraceIdentifier), statusCode: status);

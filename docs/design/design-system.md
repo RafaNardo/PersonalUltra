@@ -2,6 +2,10 @@
 
 Direção visual: premium, dark, técnica e esportiva, inspirada na sensação de performance da linha Apple Watch Ultra sem copiar identidade proprietária, assets ou layouts.
 
+Os assets temporários licenciados para a identidade-base estão em
+`docs/assets/brand/`. Eles serão integrados no `PU-M0-008`; até então, assets
+visuais herdados não devem orientar novas decisões de branding.
+
 ## Base
 - background `#080808`
 - surface `#151515`

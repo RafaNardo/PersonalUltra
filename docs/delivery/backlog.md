@@ -8,7 +8,7 @@
 - `PU-M0-005`: criar Trainer, TrainerBranding, Student, TrainerStudent, StudentInvite e Anamnesis.
 - `PU-M0-006`: remover MethodologyVersion/Rule, StandardPlanProvisioner, RecommendedLoad, Coach mutations e progress photos.
 - `PU-M0-007`: identidades demo Trainer e Student.
-- `PU-M0-008`: aplicar design tokens Ultra e suporte a TrainerBranding.PrimaryColor.
+- `PU-M0-008`: aplicar design tokens Ultra e suporte a TrainerBranding.PrimaryColor. Usar como branding temporário os assets licenciados em `docs/assets/brand/` (`personal-ultra-app-icon.png`, logos e brand guide), substituindo os assets SVR no app. O branding dinâmico por Trainer continua em M1.
 
 **DoD M0:** mobile abre em Trainer ou Student; duas APIs sobem; separação preparada para futuro split em dois apps.
 

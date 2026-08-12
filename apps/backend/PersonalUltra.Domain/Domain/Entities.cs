@@ -56,38 +56,16 @@ public sealed class MemberProfile
     public Member Member { get; set; } = null!;
 }
 
-public sealed class MethodologyVersion
-{
-    public Guid Id { get; set; }
-    public string Code { get; set; } = null!;
-    public string Version { get; set; } = null!;
-    public bool IsActive { get; set; }
-    public DateTimeOffset PublishedAt { get; set; }
-    public List<MethodologyRule> Rules { get; } = [];
-}
-
-public sealed class MethodologyRule
-{
-    public Guid Id { get; set; }
-    public Guid MethodologyVersionId { get; set; }
-    public string Code { get; set; } = null!;
-    public string RuleType { get; set; } = null!;
-    public string DefinitionJson { get; set; } = "{}";
-    public MethodologyVersion MethodologyVersion { get; set; } = null!;
-}
-
 public sealed class Plan
 {
     public Guid Id { get; set; }
     public Guid MemberId { get; set; }
-    public Guid MethodologyVersionId { get; set; }
     public string Name { get; set; } = null!;
     public string Status { get; set; } = null!;
     public DateOnly StartsOn { get; set; }
     public DateTimeOffset? ReviewDueAt { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public Member Member { get; set; } = null!;
-    public MethodologyVersion MethodologyVersion { get; set; } = null!;
     public TrainingPlan TrainingPlan { get; set; } = null!;
 }
 
@@ -129,7 +107,6 @@ public sealed class WorkoutTemplateExercise
     public int MinimumRepetitions { get; set; }
     public int MaximumRepetitions { get; set; }
     public int RestSeconds { get; set; }
-    public decimal RecommendedLoadKg { get; set; }
     public WorkoutTemplate WorkoutTemplate { get; set; } = null!;
     public Exercise Exercise { get; set; } = null!;
 }
@@ -159,7 +136,6 @@ public sealed class WorkoutSessionExercise
     public int MinimumRepetitions { get; set; }
     public int MaximumRepetitions { get; set; }
     public int RestSeconds { get; set; }
-    public decimal RecommendedLoadKg { get; set; }
     public string ExerciseSnapshotJson { get; set; } = "{}";
     public WorkoutSession WorkoutSession { get; set; } = null!;
     public Exercise Exercise { get; set; } = null!;
@@ -261,18 +237,6 @@ public sealed class CoachMessage
     public string? MetadataJson { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public Conversation Conversation { get; set; } = null!;
-}
-
-public sealed class CoachAction
-{
-    public Guid Id { get; set; }
-    public Guid MemberId { get; set; }
-    public string Type { get; set; } = null!;
-    public string Status { get; set; } = null!;
-    public string PayloadJson { get; set; } = "{}";
-    public string SafetyLevel { get; set; } = null!;
-    public DateTimeOffset CreatedAt { get; set; }
-    public DateTimeOffset? ResolvedAt { get; set; }
 }
 
 public sealed class PainReport

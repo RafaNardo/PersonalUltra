@@ -26,10 +26,10 @@ public sealed record ActivePlanDto(Guid Id, string Name, int SessionsPerWeek, Da
 public sealed record TodayWorkoutSummaryDto(Guid Id, string Name, string Status, int ExerciseCount);
 public sealed record HomeResponse(string Greeting, ActivePlanDto ActivePlan, TodayWorkoutSummaryDto? TodayWorkout, int CompletedWorkoutsThisWeek);
 public sealed record TrainingTodayResponse(Guid Id, string Name, string Status, DateOnly ScheduledFor, DateTimeOffset? StartedAt, IReadOnlyList<WorkoutExerciseDto> Exercises);
-public sealed record WorkoutExerciseDto(Guid Id, string Name, string PrimaryMuscleGroup, int Sequence, int PrescribedSets, int MinimumRepetitions, int MaximumRepetitions, int RestSeconds, decimal RecommendedLoadKg, int CompletedSets);
+public sealed record WorkoutExerciseDto(Guid Id, string Name, string PrimaryMuscleGroup, int Sequence, int PrescribedSets, int MinimumRepetitions, int MaximumRepetitions, int RestSeconds, int CompletedSets);
 public sealed record TrainingPlanResponse(string Name, int SessionsPerWeek, IReadOnlyList<TrainingPlanWorkoutDto> Workouts);
 public sealed record TrainingPlanWorkoutDto(Guid Id, string Name, int Sequence, IReadOnlyList<TrainingPlanExerciseDto> Exercises);
-public sealed record TrainingPlanExerciseDto(Guid Id, string Name, string PrimaryMuscleGroup, int Sequence, int PrescribedSets, int MinimumRepetitions, int MaximumRepetitions, int RestSeconds, decimal RecommendedLoadKg);
+public sealed record TrainingPlanExerciseDto(Guid Id, string Name, string PrimaryMuscleGroup, int Sequence, int PrescribedSets, int MinimumRepetitions, int MaximumRepetitions, int RestSeconds);
 public sealed record StartWorkoutResponse(Guid Id, string Status, DateTimeOffset StartedAt, bool WasAlreadyStarted);
 public sealed record CompleteSetRequest(Guid ClientOperationId, int SetNumber, decimal WeightKg, int Repetitions, int? RepsInReserve);
 public sealed record CompleteSetResponse(Guid Id, Guid ClientOperationId, int SetNumber, decimal WeightKg, int Repetitions, int? RepsInReserve, DateTimeOffset CompletedAt, bool WasAlreadyProcessed);

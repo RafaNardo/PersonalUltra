@@ -1,5 +1,5 @@
 import { useState } from 'react';
-import { Alert, Image, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useAddWeight, useProgress, useResetCurrentMemberDemo, useWeights } from '@/src/api/hooks';
 import type { WeightEntry } from '@/src/api/types';
 import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
@@ -11,14 +11,6 @@ import { router } from 'expo-router';
 import { useAuthStore } from '@/src/state/auth-store';
 
 const chartHeight = 156;
-const progressPhotos = [
-  { label: 'Avaliação 01', source: require('../../assets/progress-model/day-01.png') },
-  { label: 'Avaliação 02', source: require('../../assets/progress-model/day-08.png') },
-  { label: 'Avaliação 03', source: require('../../assets/progress-model/day-15.png') },
-  { label: 'Avaliação 04', source: require('../../assets/progress-model/day-22.png') },
-  { label: 'Avaliação 05', source: require('../../assets/progress-model/day-28.png') },
-];
-
 export default function ProgressScreen() {
   const progress = useProgress();
   const weights = useWeights();
@@ -99,14 +91,6 @@ export default function ProgressScreen() {
       <View style={styles.strengthRule} /><Text style={styles.strengthInsight}>{progress.data.strengthInsight}</Text>
     </Card>
 
-    <Card style={styles.photosCard}>
-      <View><Text style={styles.chartTitle}>Evolução física</Text><Text style={styles.chartCopy}>Registros visuais da demonstração.</Text></View>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.photosList} decelerationRate="fast" snapToInterval={174}>
-        {progressPhotos.map((photo) => <View key={photo.label} style={styles.photoItem}><Image source={photo.source} style={styles.photo} resizeMode="cover" /><View style={styles.photoLabel}><Text style={styles.photoLabelText}>{photo.label}</Text></View></View>)}
-      </ScrollView>
-      <View style={styles.photoDots}>{progressPhotos.map((photo, index) => <View key={photo.label} style={[styles.photoDot, index === 0 && styles.photoDotActive]} />)}</View>
-    </Card>
-
     <Card style={styles.logCard}>
       <Text style={styles.chartTitle}>Registrar peso</Text>
       <Text style={styles.chartCopy}>Use o mesmo horário e as mesmas condições sempre que possível.</Text>
@@ -163,7 +147,6 @@ const styles = StyleSheet.create({
   chartArea: { height: chartHeight, marginTop: spacing.sm, marginLeft: 24, position: 'relative' }, gridTop: { position: 'absolute', top: 16, left: 0, right: 0, height: 1, backgroundColor: colors.border }, gridMiddle: { position: 'absolute', top: chartHeight / 2, left: 0, right: 0, height: 1, backgroundColor: colors.border }, gridBottom: { position: 'absolute', bottom: 16, left: 0, right: 0, height: 1, backgroundColor: colors.border }, axisTop: { ...typography.caption, color: colors.textMuted, position: 'absolute', left: -29, top: 8 }, axisBottom: { ...typography.caption, color: colors.textMuted, position: 'absolute', left: -29, bottom: 8 }, trendLine: { position: 'absolute', height: 2, backgroundColor: colors.primary, borderRadius: radius.pill, transformOrigin: 'left center' }, point: { position: 'absolute', width: 8, height: 8, borderRadius: 4, backgroundColor: colors.primary }, pointCurrent: { width: 12, height: 12, borderRadius: 6, backgroundColor: colors.textPrimary, borderWidth: 3, borderColor: colors.primary }, emptyChart: { height: chartHeight, alignItems: 'center', justifyContent: 'center', paddingHorizontal: spacing.xl }, emptyChartText: { ...typography.bodyMD, color: colors.textMuted, textAlign: 'center' },
   chartFooter: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between' }, chartDate: { ...typography.caption, color: colors.textMuted }, currentWeight: { alignItems: 'center', borderWidth: 1, borderColor: colors.primary, borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, marginTop: -spacing.lg }, currentWeightValue: { ...typography.bodyMD, color: colors.textPrimary }, currentWeightLabel: { ...typography.caption, color: colors.primary, fontSize: 9 },
   strengthCard: { gap: spacing.md }, cardKicker: { ...typography.caption, color: colors.primary, letterSpacing: 1 }, strengthRow: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.md }, workoutValue: { ...typography.metricXL, color: colors.textPrimary }, workoutLabel: { ...typography.caption, color: colors.textSecondary, textTransform: 'uppercase' }, strengthMarker: { borderWidth: 1, borderColor: '#245E42', backgroundColor: '#10291D', borderRadius: radius.sm, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs }, markerText: { ...typography.caption, color: colors.success, fontSize: 10 }, strengthRule: { height: 1, backgroundColor: colors.border }, strengthInsight: { ...typography.bodyMD, color: colors.textSecondary },
-  photosCard: { gap: spacing.md, paddingRight: 0 }, photosList: { gap: spacing.sm, paddingRight: spacing.lg }, photoItem: { width: 166, height: 236, borderRadius: radius.md, overflow: 'hidden', backgroundColor: colors.surfaceElevated }, photo: { width: '100%', height: '100%' }, photoLabel: { position: 'absolute', left: spacing.sm, right: spacing.sm, bottom: spacing.sm, backgroundColor: 'rgba(0, 0, 0, 0.72)', borderRadius: radius.sm, paddingVertical: spacing.xs, alignItems: 'center' }, photoLabelText: { ...typography.caption, color: colors.textPrimary, textTransform: 'uppercase', letterSpacing: .6 }, photoDots: { flexDirection: 'row', gap: spacing.xs, justifyContent: 'center', paddingRight: spacing.lg }, photoDot: { width: 5, height: 5, borderRadius: radius.pill, backgroundColor: colors.textMuted }, photoDotActive: { width: 18, backgroundColor: colors.primary },
   logCard: { gap: spacing.md }, form: { flexDirection: 'row', gap: spacing.sm }, input: { flex: 1, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated, paddingHorizontal: spacing.md, color: colors.textPrimary, ...typography.bodyLG },
   demoReset: { alignItems: 'center', gap: spacing.xs, paddingVertical: spacing.lg }, demoResetCopy: { ...typography.caption, color: colors.textMuted, textTransform: 'uppercase', letterSpacing: .8 }, demoResetDescription: { ...typography.bodyMD, color: colors.textSecondary, textAlign: 'center', maxWidth: 300 },
 });

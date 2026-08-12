@@ -1,4 +1,4 @@
-import type { CoachAction, CoachConversation, CompleteSet, CompleteSetInput, CompleteWorkout, DevLogin, ExerciseAlternative, FoodAlternative, Home, InitialPlan, Meal, NutritionToday, OnboardingProfile, PainReport, ProgressSummary, ResolveCoachAction, SaveOnboardingProfile, TrainingPlan, TrainingToday, WeightEntry } from '@/src/api/types';
+import type { CoachConversation, CompleteSet, CompleteSetInput, CompleteWorkout, DevLogin, ExerciseAlternative, FoodAlternative, Home, InitialPlan, Meal, NutritionToday, OnboardingProfile, PainReport, ProgressSummary, SaveOnboardingProfile, TrainingPlan, TrainingToday, WeightEntry } from '@/src/api/types';
 
 // Keep the baseline self-contained: a checked-out project talks to its local
 // API unless a developer explicitly supplies another endpoint.
@@ -52,9 +52,4 @@ export const api = {
   coachConversation: (token: string) => request<CoachConversation>('/coach/conversation', {}, token),
   sendCoachMessage: (token: string, content: string) => request<CoachConversation>('/coach/messages', { method: 'POST', body: JSON.stringify({ content }) }, token),
   reportPain: (token: string, area: string, side: string, intensity: number, context: string) => request<PainReport>('/health/pain-reports', { method: 'POST', body: JSON.stringify({ area, side, intensity, context }) }, token),
-  exerciseAlternatives: (token: string, sessionId: string, exerciseId: string) => request<ExerciseAlternative[]>(`/training/sessions/${sessionId}/exercises/${exerciseId}/alternatives`, {}, token),
-  proposeExerciseSubstitution: (token: string, sessionId: string, exerciseId: string, replacementId: string) => request<CoachAction>(`/training/sessions/${sessionId}/exercises/${exerciseId}/substitution-proposals`, { method: 'POST', body: JSON.stringify({ exerciseId: replacementId }) }, token),
-  coachActions: (token: string) => request<CoachAction[]>('/coach/actions', {}, token),
-  confirmCoachAction: (token: string, actionId: string) => request<ResolveCoachAction>(`/coach/actions/${actionId}/confirm`, { method: 'POST' }, token),
-  rejectCoachAction: (token: string, actionId: string) => request<ResolveCoachAction>(`/coach/actions/${actionId}/reject`, { method: 'POST' }, token),
 };

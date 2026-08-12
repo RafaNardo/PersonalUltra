@@ -27,7 +27,6 @@ public sealed class MemberDemoResetService(PersonalUltraDbContext db)
         // level. Do not replace these with a database-wide seed reset.
         await DeleteAsync(db.CoachMessages.Where(x => x.Conversation.MemberId == memberId), cancellationToken);
         await DeleteAsync(db.Conversations.Where(x => x.MemberId == memberId), cancellationToken);
-        await DeleteAsync(db.CoachActions.Where(x => x.MemberId == memberId), cancellationToken);
         await DeleteAsync(db.PainReports.Where(x => x.MemberId == memberId), cancellationToken);
         await DeleteAsync(db.DailyLogs.Where(x => x.MemberId == memberId), cancellationToken);
         await DeleteAsync(db.WeightEntries.Where(x => x.MemberId == memberId), cancellationToken);

@@ -2,11 +2,9 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using PersonalUltra.Application.Nutrition;
-using PersonalUltra.Application.Training;
 using PersonalUltra.Application.Safety;
 using PersonalUltra.StudentApi.Endpoints;
 using PersonalUltra.Application.Coach;
-using PersonalUltra.StudentApi.Application.Plans;
 using PersonalUltra.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -15,13 +13,10 @@ builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddSingleton<DemoSessionTokenService>();
 builder.Services.AddScoped<DemoDataSeeder>();
 builder.Services.AddScoped<MemberDemoResetService>();
-builder.Services.AddScoped<StandardPlanProvisioner>();
 builder.Services.AddSingleton<FoodAlternativesEngine>();
-builder.Services.AddSingleton<ExerciseAlternativesEngine>();
 builder.Services.AddSingleton<PainSafetyEngine>();
 builder.Services.AddScoped<CoachContextBuilder>();
 builder.Services.AddSingleton<CoachOutputValidator>();
-builder.Services.AddSingleton<ExerciseSubstitutionTool>();
 builder.Services.Configure<OpenAiCoachOptions>(builder.Configuration.GetSection(OpenAiCoachOptions.SectionName));
 builder.Services.PostConfigure<OpenAiCoachOptions>(options => options.ApiKey ??= builder.Configuration["ai-api-key"]);
 builder.Services.AddHttpClient<OpenAiCoachResponder>(client => client.Timeout = TimeSpan.FromSeconds(12));
@@ -71,7 +66,6 @@ if (app.Environment.IsDevelopment())
 
 app.MapPersonalUltraApi();
 app.MapOnboardingApi();
-app.MapInitialPlanApi();
 app.MapM1Api();
 app.Run();
 

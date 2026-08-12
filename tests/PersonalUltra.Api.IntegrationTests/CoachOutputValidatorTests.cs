@@ -9,7 +9,6 @@ public sealed class CoachOutputValidatorTests
     [Theory]
     [InlineData(CoachMessageKinds.Text, false, false)]
     [InlineData(CoachMessageKinds.Choice, true, false)]
-    [InlineData(CoachMessageKinds.ActionProposal, false, true)]
     [InlineData(CoachMessageKinds.ProgressInsight, false, false)]
     public void Validates_the_supported_structured_message_types(string kind, bool requiresUserInput, bool requiresConfirmation)
     {

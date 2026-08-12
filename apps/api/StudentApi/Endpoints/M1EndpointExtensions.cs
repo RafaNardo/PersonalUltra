@@ -1,10 +1,8 @@
 using System.Security.Claims;
-using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using PersonalUltra.StudentApi.Contracts;
 using PersonalUltra.Application.Coach;
 using PersonalUltra.Application.Nutrition;
-using PersonalUltra.Application.Training;
 using PersonalUltra.Application.Safety;
 using PersonalUltra.Domain;
 using PersonalUltra.Infrastructure;
@@ -139,11 +137,6 @@ public static class M1EndpointExtensions
             var conversation = await GetOrCreateCoachConversationAsync(db, memberId, clock, ct);
             var inputAt = clock.GetUtcNow();
             var input = new CoachMessage { Id = Guid.NewGuid(), Conversation = conversation, Role = "User", Kind = "Text", Content = content, CreatedAt = inputAt };
-            if (IsFatigueMessage(input.Content))
-            {
-                await PersistFatigueOptionsAsync(db, conversation, input, memberId, clock, ct);
-                return Results.Ok(ToCoachConversation(conversation));
-            }
             CoachReply reply;
             try
             {
@@ -174,112 +167,6 @@ public static class M1EndpointExtensions
             db.CoachMessages.AddRange(input, output);
             await db.SaveChangesAsync(ct);
             return Results.Ok(ToCoachConversation(conversation));
-        });
-        api.MapGet("/training/sessions/{sessionId:guid}/exercises/{exerciseId:guid}/alternatives", async (Guid sessionId, Guid exerciseId, PersonalUltraDbContext db, ClaimsPrincipal user, ExerciseAlternativesEngine alternativesEngine, CancellationToken ct) =>
-        {
-            var current = await db.WorkoutSessionExercises.Include(x => x.Exercise).Include(x => x.WorkoutSession)
-                .SingleOrDefaultAsync(x => x.Id == exerciseId && x.WorkoutSessionId == sessionId && x.WorkoutSession.MemberId == MemberId(user), ct);
-            if (current is null) return Results.NotFound();
-
-            var catalog = await db.Exercises.AsNoTracking().ToListAsync(ct);
-            var alternatives = alternativesEngine.FindApprovedAlternatives(current.Exercise, catalog)
-                .Select(candidate => new ExerciseAlternativeDto(candidate.ExerciseId, candidate.Name, candidate.ReasonCode));
-            return Results.Ok(alternatives);
-        });
-        api.MapPost("/training/sessions/{sessionId:guid}/exercises/{exerciseId:guid}/substitution-proposals", async (Guid sessionId, Guid exerciseId, CreateExerciseSubstitutionProposalRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, ExerciseSubstitutionTool substitutionTool, CancellationToken ct) =>
-        {
-            var memberId = MemberId(user);
-            var current = await db.WorkoutSessionExercises.Include(x => x.Exercise).Include(x => x.WorkoutSession).SingleOrDefaultAsync(x => x.Id == exerciseId && x.WorkoutSessionId == sessionId && x.WorkoutSession.MemberId == memberId, ct);
-            var replacement = await db.Exercises.FindAsync([request.ExerciseId], ct);
-            var proposal = current is null || replacement is null ? null : substitutionTool.CreateProposal(current, replacement);
-            if (proposal is null)
-                return ApiEndpointExtensions.ApiError("INVALID_EXERCISE_SUBSTITUTION", "A substituição precisa preservar a musculatura primária do exercício.", StatusCodes.Status400BadRequest);
-
-            var action = new CoachAction
-            {
-                Id = Guid.NewGuid(),
-                MemberId = memberId,
-                Type = "ExerciseSubstitution",
-                Status = "Proposed",
-                SafetyLevel = proposal.SafetyLevel,
-                CreatedAt = clock.GetUtcNow(),
-                PayloadJson = JsonSerializer.Serialize(new ExerciseSubstitutionPayload(proposal.SessionId, proposal.WorkoutSessionExerciseId, proposal.ReplacementExerciseId, proposal.ReasonCode)),
-            };
-            var conversation = await GetOrCreateCoachConversationAsync(db, memberId, clock, ct);
-            db.CoachActions.Add(action);
-            db.CoachMessages.Add(new CoachMessage
-            {
-                Id = Guid.NewGuid(),
-                Conversation = conversation,
-                Role = "Assistant",
-                Kind = CoachMessageKinds.ActionProposal,
-                Content = "Encontrei uma alternativa que preserva a musculatura primária. Revise a proposta antes de aplicá-la ao seu treino.",
-                MetadataJson = JsonSerializer.Serialize(new
-                {
-                    reasonCode = proposal.ReasonCode,
-                    messageType = CoachMessageKinds.ActionProposal,
-                    requiresUserInput = false,
-                    requiresConfirmation = proposal.RequiresConfirmation,
-                    actionId = action.Id,
-                    proposalType = "Substituição de exercício",
-                    safetyLevel = proposal.SafetyLevel,
-                }, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
-                CreatedAt = action.CreatedAt,
-            });
-            await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/coach/actions/{action.Id}", Action(action));
-        });
-        api.MapGet("/coach/actions", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) => Results.Ok((await db.CoachActions.Where(x => x.MemberId == MemberId(user) && x.Status == "Proposed").OrderByDescending(x => x.CreatedAt).ToListAsync(ct)).Select(Action)));
-        api.MapPost("/coach/actions/{actionId:guid}/confirm", async (Guid actionId, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, ExerciseSubstitutionTool substitutionTool, CancellationToken ct) =>
-        {
-            var action = await db.CoachActions.SingleOrDefaultAsync(x => x.Id == actionId && x.MemberId == MemberId(user), ct);
-            if (action is null) return Results.NotFound();
-            if (action.Status == "Confirmed") return Results.Ok(new ResolveCoachActionDto(action.Id, action.Status, "Esta alteração já foi aplicada."));
-            if (action.Status != "Proposed") return Results.Conflict(new { code = "ACTION_ALREADY_RESOLVED" });
-            if (action.SafetyLevel != ExerciseSubstitutionTool.SafetyLevel)
-                return ApiEndpointExtensions.ApiError("SAFETY_ACTION_BLOCKED", "Esta proposta não pode ser aplicada automaticamente.", StatusCodes.Status409Conflict);
-
-            if (action.Type == "ExerciseSubstitution")
-            {
-                var payload = DeserializeExerciseSubstitutionPayload(action.PayloadJson);
-                var target = payload is null ? null : await db.WorkoutSessionExercises.Include(x => x.Exercise).Include(x => x.WorkoutSession)
-                    .SingleOrDefaultAsync(x => x.Id == payload.WorkoutSessionExerciseId && x.WorkoutSessionId == payload.SessionId && x.WorkoutSession.MemberId == action.MemberId, ct);
-                var replacement = payload is null ? null : await db.Exercises.FindAsync([payload.ReplacementExerciseId], ct);
-                if (payload is null || target is null || replacement is null || payload.ReasonCode != ExerciseAlternativesEngine.SamePrimaryMuscleGroupReasonCode || substitutionTool.CreateProposal(target, replacement) is null)
-                    return ApiEndpointExtensions.ApiError("SAFETY_ACTION_BLOCKED", "A proposta não é mais segura para ser aplicada.", StatusCodes.Status409Conflict);
-
-                target.ExerciseId = payload.ReplacementExerciseId;
-                target.ExerciseSnapshotJson = JsonSerializer.Serialize(new { source = "coach-confirmed-substitution", replacementExerciseId = payload.ReplacementExerciseId });
-            }
-            else if (action.Type == "WorkoutReschedule")
-            {
-                var payload = DeserializeWorkoutReschedulePayload(action.PayloadJson);
-                var session = payload is null ? null : await db.WorkoutSessions.SingleOrDefaultAsync(x => x.Id == payload.SessionId && x.MemberId == action.MemberId, ct);
-                var hasConflict = payload is not null && await db.WorkoutSessions.AnyAsync(x => x.MemberId == action.MemberId && x.ScheduledFor == payload.TargetDate && x.Id != payload.SessionId, ct);
-                if (payload is null || session is null || session.Status != "Planned" || session.ScheduledFor != payload.SourceScheduledFor || payload.TargetDate != payload.SourceScheduledFor.AddDays(1) || payload.ReasonCode != "FATIGUE_RESCHEDULE_NEXT_DAY" || hasConflict)
-                    return ApiEndpointExtensions.ApiError("SAFETY_ACTION_BLOCKED", "O reagendamento não é mais seguro para ser aplicado.", StatusCodes.Status409Conflict);
-                session.ScheduledFor = payload.TargetDate;
-            }
-            else if (action.Type == "WorkoutRest")
-            {
-                var payload = DeserializeWorkoutRestPayload(action.PayloadJson);
-                var session = payload is null ? null : await db.WorkoutSessions.SingleOrDefaultAsync(x => x.Id == payload.SessionId && x.MemberId == action.MemberId, ct);
-                if (payload is null || session is null || session.Status != "Planned" || payload.ReasonCode != "FATIGUE_REST_DAY")
-                    return ApiEndpointExtensions.ApiError("SAFETY_ACTION_BLOCKED", "O descanso não é mais seguro para ser registrado.", StatusCodes.Status409Conflict);
-                session.Status = "Skipped";
-            }
-            else return ApiEndpointExtensions.ApiError("SAFETY_ACTION_BLOCKED", "Esta proposta não pode ser aplicada automaticamente.", StatusCodes.Status409Conflict);
-            action.Status = "Confirmed"; action.ResolvedAt = clock.GetUtcNow(); await db.SaveChangesAsync(ct);
-            return Results.Ok(new ResolveCoachActionDto(action.Id, action.Status, "Alteração aplicada após sua confirmação."));
-        });
-        api.MapPost("/coach/actions/{actionId:guid}/reject", async (Guid actionId, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
-        {
-            var action = await db.CoachActions.SingleOrDefaultAsync(x => x.Id == actionId && x.MemberId == MemberId(user), ct);
-            if (action is null) return Results.NotFound();
-            if (action.Status == "Rejected") return Results.Ok(new ResolveCoachActionDto(action.Id, action.Status, "Esta proposta já foi descartada."));
-            if (action.Status != "Proposed") return Results.Conflict(new { code = "ACTION_ALREADY_RESOLVED" });
-            action.Status = "Rejected"; action.ResolvedAt = clock.GetUtcNow(); await db.SaveChangesAsync(ct);
-            return Results.Ok(new ResolveCoachActionDto(action.Id, action.Status, "Proposta descartada."));
         });
         api.MapPost("/demo/reset", async (IHostEnvironment environment, IConfiguration configuration, DemoDataSeeder seeder, CancellationToken ct) =>
         {
@@ -327,71 +214,4 @@ public static class M1EndpointExtensions
         };
         return new CoachReply(CoachMessageKinds.Text, content, decision.ReasonCode);
     }
-    private static bool IsFatigueMessage(string content) => content.Contains("cansad", StringComparison.OrdinalIgnoreCase) || content.Contains("fadig", StringComparison.OrdinalIgnoreCase);
-    private static async Task PersistFatigueOptionsAsync(PersonalUltraDbContext db, Conversation conversation, CoachMessage input, Guid memberId, TimeProvider clock, CancellationToken ct)
-    {
-        var today = DateOnly.FromDateTime(clock.GetUtcNow().UtcDateTime);
-        var session = await db.WorkoutSessions.SingleOrDefaultAsync(x => x.MemberId == memberId && x.ScheduledFor == today && x.Status == "Planned", ct);
-        var outputs = new List<CoachMessage>
-        {
-            new()
-            {
-                Id = Guid.NewGuid(), Conversation = conversation, Role = "Assistant", Kind = CoachMessageKinds.Text,
-                Content = "Entendi a fadiga. Não há uma regra aprovada nesta versão para ajustar carga ou volume. Você pode remarcar o treino ou registrar um dia de descanso; nada será alterado sem sua confirmação.",
-                MetadataJson = JsonSerializer.Serialize(new CoachMessageMetadata("FATIGUE_NO_APPROVED_ADJUSTMENT", CoachMessageKinds.Text, false, false), new JsonSerializerOptions(JsonSerializerDefaults.Web)),
-                CreatedAt = input.CreatedAt.AddTicks(1),
-            },
-        };
-        if (session is not null)
-        {
-            var restAction = new CoachAction
-            {
-                Id = Guid.NewGuid(), MemberId = memberId, Type = "WorkoutRest", Status = "Proposed", SafetyLevel = ExerciseSubstitutionTool.SafetyLevel, CreatedAt = input.CreatedAt.AddTicks(2),
-                PayloadJson = JsonSerializer.Serialize(new WorkoutRestPayload(session.Id, "FATIGUE_REST_DAY")),
-            };
-            db.CoachActions.Add(restAction);
-            outputs.Add(FatigueProposalMessage(conversation, restAction, "Registrar descanso", "FATIGUE_REST_DAY", "Registrar este treino como descanso hoje."));
-
-            var targetDate = session.ScheduledFor.AddDays(1);
-            var targetOccupied = await db.WorkoutSessions.AnyAsync(x => x.MemberId == memberId && x.ScheduledFor == targetDate, ct);
-            if (!targetOccupied)
-            {
-                var rescheduleAction = new CoachAction
-                {
-                    Id = Guid.NewGuid(), MemberId = memberId, Type = "WorkoutReschedule", Status = "Proposed", SafetyLevel = ExerciseSubstitutionTool.SafetyLevel, CreatedAt = input.CreatedAt.AddTicks(3),
-                    PayloadJson = JsonSerializer.Serialize(new WorkoutReschedulePayload(session.Id, session.ScheduledFor, targetDate, "FATIGUE_RESCHEDULE_NEXT_DAY")),
-                };
-                db.CoachActions.Add(rescheduleAction);
-                outputs.Add(FatigueProposalMessage(conversation, rescheduleAction, "Remarcar treino", "FATIGUE_RESCHEDULE_NEXT_DAY", "Remarcar este treino para o próximo dia disponível."));
-            }
-        }
-        db.CoachMessages.Add(input);
-        db.CoachMessages.AddRange(outputs);
-        await db.SaveChangesAsync(ct);
-    }
-    private static CoachMessage FatigueProposalMessage(Conversation conversation, CoachAction action, string proposalType, string reasonCode, string content) => new()
-    {
-        Id = Guid.NewGuid(), Conversation = conversation, Role = "Assistant", Kind = CoachMessageKinds.ActionProposal, Content = content,
-        MetadataJson = JsonSerializer.Serialize(new { reasonCode, messageType = CoachMessageKinds.ActionProposal, requiresUserInput = false, requiresConfirmation = true, actionId = action.Id, proposalType, safetyLevel = action.SafetyLevel }, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
-        CreatedAt = action.CreatedAt,
-    };
-    private static CoachActionDto Action(CoachAction action) => new(action.Id, action.Type, action.Status, action.SafetyLevel, action.PayloadJson, action.CreatedAt);
-    private static ExerciseSubstitutionPayload? DeserializeExerciseSubstitutionPayload(string payloadJson)
-    {
-        try { return JsonSerializer.Deserialize<ExerciseSubstitutionPayload>(payloadJson); }
-        catch (JsonException) { return null; }
-    }
-    private static WorkoutReschedulePayload? DeserializeWorkoutReschedulePayload(string payloadJson)
-    {
-        try { return JsonSerializer.Deserialize<WorkoutReschedulePayload>(payloadJson); }
-        catch (JsonException) { return null; }
-    }
-    private static WorkoutRestPayload? DeserializeWorkoutRestPayload(string payloadJson)
-    {
-        try { return JsonSerializer.Deserialize<WorkoutRestPayload>(payloadJson); }
-        catch (JsonException) { return null; }
-    }
-    private sealed record ExerciseSubstitutionPayload(Guid SessionId, Guid WorkoutSessionExerciseId, Guid ReplacementExerciseId, string ReasonCode = ExerciseAlternativesEngine.SamePrimaryMuscleGroupReasonCode);
-    private sealed record WorkoutReschedulePayload(Guid SessionId, DateOnly SourceScheduledFor, DateOnly TargetDate, string ReasonCode);
-    private sealed record WorkoutRestPayload(Guid SessionId, string ReasonCode);
 }

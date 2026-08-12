@@ -49,11 +49,11 @@ databases.
 - A single member-oriented API and mobile navigation tree (`PU-M0-003`,
   `PU-M0-004`).
 - SVR visual assets and product copy (`PU-M0-008`).
-- `Member`, methodology rules, standard-plan provisioning, recommended load,
-  automatic progression, progress photos and Coach action writes (`PU-M0-005`
-  and `PU-M0-006`).
-- The current Coach UI/API can perform inherited mutation flows; Coach V1 must
-  become read-only in `PU-M0-006`/M4 work.
+- `Member` (`PU-M0-005`); methodology rules, standard-plan provisioning,
+  recommended load, automatic progression, progress photos and Coach action
+  writes were removed in `PU-M0-006`.
+- The inherited Coach UI/API could perform mutation flows; Coach V1 is now
+  read-only, with its product experience completed in M4.
 
 ## Resolved follow-up decisions
 

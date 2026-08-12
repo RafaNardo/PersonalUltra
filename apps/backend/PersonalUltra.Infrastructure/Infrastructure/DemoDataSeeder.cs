@@ -54,16 +54,6 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
 
         var now = timeProvider.GetUtcNow();
         var today = DateOnly.FromDateTime(now.UtcDateTime);
-        var methodology = new MethodologyVersion
-        {
-            Id = Guid.NewGuid(), Code = "SVR", Version = "0.1-demo", IsActive = true, PublishedAt = now
-        };
-        methodology.Rules.Add(new MethodologyRule
-        {
-            Id = Guid.NewGuid(), Code = "SVR-PROGRESSION-001", RuleType = "Progression",
-            DefinitionJson = "{\"strategy\":\"double-progression\",\"reasonCode\":\"DEMO_APPROVED_RULE\"}"
-        });
-
         var member = new Member
         {
             Id = DemoIds.MemberId, AuthUserId = DemoIds.UserId, FirstName = "Rafa", LastName = "Silva", CreatedAt = now,
@@ -71,7 +61,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
         };
         var plan = new Plan
         {
-            Id = Guid.NewGuid(), Member = member, MethodologyVersion = methodology, Name = "SVR Foco em Glúteos e Pernas 4x",
+            Id = Guid.NewGuid(), Member = member, Name = "Treino demonstrativo",
             Status = "Active", StartsOn = today.AddDays(-28), ReviewDueAt = now.AddDays(14), CreatedAt = now
         };
         var trainingPlan = new TrainingPlan { Id = Guid.NewGuid(), Plan = plan, SessionsPerWeek = 4 };
@@ -113,7 +103,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
         trainingPlan.WorkoutTemplates.Add(glutes);
         trainingPlan.WorkoutTemplates.Add(legs);
         trainingPlan.WorkoutTemplates.Add(posteriorGlutes);
-        dbContext.AddRange(methodology, member, plan, trainingPlan, benchPress, row, squat, deadlift, shoulderPress, lateralRaise, latPulldown, tricepsRope, bicepsCurl, hipThrust, hipAbductionMachine, cableKickback, ankleKickback, frogPump, gluteBridge, gobletSquat, legPress, legExtension, dumbbellLunge, stepUp, dumbbellWalk, stiff, legCurl, sumoSquat, pullThrough, unilateralHipThrust, unilateralBridge, bandAbduction);
+        dbContext.AddRange(member, plan, trainingPlan, benchPress, row, squat, deadlift, shoulderPress, lateralRaise, latPulldown, tricepsRope, bicepsCurl, hipThrust, hipAbductionMachine, cableKickback, ankleKickback, frogPump, gluteBridge, gobletSquat, legPress, legExtension, dumbbellLunge, stepUp, dumbbellWalk, stiff, legCurl, sumoSquat, pullThrough, unilateralHipThrust, unilateralBridge, bandAbduction);
 
         var previousSession = CreateSession(member, glutes, today.AddDays(-2), "Completed", now.AddDays(-2), now.AddDays(-2).AddHours(1));
         AddCompletedPerformances(previousSession, now.AddDays(-2));
@@ -141,7 +131,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
         {
             Id = Guid.NewGuid(), Exercise = exercise, Sequence = sequence, PrescribedSets = sets,
             MinimumRepetitions = minimumRepetitions, MaximumRepetitions = maximumRepetitions,
-            RestSeconds = restSeconds, RecommendedLoadKg = load
+            RestSeconds = restSeconds
         };
     }
 
@@ -159,7 +149,6 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
                 Id = Guid.NewGuid(), Exercise = templateExercise.Exercise, Sequence = templateExercise.Sequence,
                 PrescribedSets = templateExercise.PrescribedSets, MinimumRepetitions = templateExercise.MinimumRepetitions,
                 MaximumRepetitions = templateExercise.MaximumRepetitions, RestSeconds = templateExercise.RestSeconds,
-                RecommendedLoadKg = templateExercise.RecommendedLoadKg,
                 ExerciseSnapshotJson = $"{{\"name\":\"{templateExercise.Exercise.Name}\",\"source\":\"demo-seed\"}}"
             });
         }
@@ -215,7 +204,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
                 sessionExercise.SetPerformances.Add(new SetPerformance
                 {
                     Id = Guid.NewGuid(), ClientOperationId = Guid.NewGuid(), SetNumber = number,
-                    WeightKg = sessionExercise.RecommendedLoadKg + loadAdjustment, Repetitions = sessionExercise.MinimumRepetitions + 1,
+                    WeightKg = Math.Max(1, 20 + loadAdjustment), Repetitions = sessionExercise.MinimumRepetitions + 1,
                     RepsInReserve = 2, CompletedAt = completedAt.AddMinutes(number * 10)
                 });
             }

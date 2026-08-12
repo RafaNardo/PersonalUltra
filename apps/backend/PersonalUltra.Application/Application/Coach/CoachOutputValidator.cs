@@ -7,7 +7,6 @@ public static class CoachMessageKinds
 {
     public const string Text = "Text";
     public const string Choice = "Choice";
-    public const string ActionProposal = "ActionProposal";
     public const string ProgressInsight = "ProgressInsight";
 }
 
@@ -45,7 +44,6 @@ public sealed class CoachOutputValidator
             CoachMessageKinds.Choice => new CoachMessageMetadata(reasonCode, CoachMessageKinds.Choice, true, false),
             // A proposal is presentation-only here. M1-024 remains responsible
             // for confirmation and applying any future material action.
-            CoachMessageKinds.ActionProposal => new CoachMessageMetadata(reasonCode, CoachMessageKinds.ActionProposal, false, true),
             CoachMessageKinds.ProgressInsight => new CoachMessageMetadata(reasonCode, CoachMessageKinds.ProgressInsight, false, false),
             _ => throw new CoachOutputValidationException("Coach output has an unsupported message type."),
         };

@@ -35,7 +35,7 @@
 - recommended load;
 - CoachAction writes;
 - automatic exercise substitution;
-- progress photos.
+- progress photos (removed in `PU-M0-006`).
 
 ## Add
 - Trainer;
