@@ -1,5 +1,6 @@
 using Microsoft.EntityFrameworkCore;
 using Microsoft.AspNetCore.Authentication;
+using PersonalUltra.TrainerApi.Endpoints;
 using PersonalUltra.Infrastructure;
 
 var builder = WebApplication.CreateBuilder(args);
@@ -25,6 +26,7 @@ app.MapGet("/api/v1/demo/identity", async (PersonalUltraDbContext db, Cancellati
     var trainer = await db.Trainers.AsNoTracking().SingleAsync(x => x.Id == PersonalUltra.Domain.DemoIds.TrainerId, cancellationToken);
     return Results.Ok(new { actor = "trainer", id = trainer.Id, name = trainer.Name });
 }).RequireAuthorization();
+app.MapDashboardApi();
 app.Run();
 
 public partial class Program;

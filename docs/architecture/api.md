@@ -16,6 +16,12 @@ Base: `/api/v1`
 - `GET/PUT /students/{id}/nutrition`
 - `POST /students/{id}/messages`
 
+### Dashboard inicial
+`GET /dashboard` é autenticado como Trainer e retorna somente alunos com vínculo
+ativo desse Trainer, além das contagens de anamnese pendente/concluída. Métricas
+de treino, peso e atividade entram quando seus respectivos fluxos estiverem
+associados ao `Student`; o endpoint não inventa esses dados durante a transição.
+
 ## Student API
 - `GET /bootstrap`
 - `GET /home`

@@ -17,5 +17,6 @@
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\..\apps\api\StudentApi\StudentApi.csproj" />
+    <ProjectReference Include="..\..\apps\api\TrainerApi\TrainerApi.csproj" Aliases="trainerapi" />
   </ItemGroup>
 </Project>
