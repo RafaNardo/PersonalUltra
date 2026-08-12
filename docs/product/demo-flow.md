@@ -14,7 +14,7 @@
 Trocar para Student em controle dev/demo-only.
 
 ## Student
-1. Receber o link de convite do Trainer.
+1. Receber o link de convite do Trainer por WhatsApp ou outro canal. Caso ainda não tenha o app, instala-o pelo link informado e volta à mensagem para abrir o convite.
 2. Cadastrar nome, e-mail e telefone.
 3. Preencher a anamnese.
 4. Ver a mensagem ativa do personal e o estado de aguardando protocolo.
