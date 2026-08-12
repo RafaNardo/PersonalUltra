@@ -1,65 +1,49 @@
-# PRD — SVR Method v0.2
+# PRD — Personal Ultra Demo
 
-## Fluxo central
-`Onboarding → Plano → Home → Treino → Registro → Evolução → Ajustes → Coach → Novo ciclo`
+## Objetivo
+Demonstrar um fluxo B2B2C no qual o personal cadastra e acompanha alunos, prescreve treino/alimentação e mantém contato; o aluno executa, registra e consulta tudo com uma experiência premium.
 
-## Onboarding
-1. Objetivo principal
-2. Experiência
-3. Dias/semana
-4. Duração média
-5. Local/equipamentos
-6. Saúde, condições e limitações
-7. Dor atual
-8. Preferências
-9. Dados físicos
-10. Nutrição
-11. Resumo e confirmação
+## Trainer V1
+- dashboard com alunos ativos, treinaram hoje, precisam de atenção, novos pesos e atividade recente;
+- lista e detalhe de alunos;
+- anamnese;
+- criar/editar treinos;
+- templates de treino;
+- aplicar template ao aluno;
+- grade semanal recomendada;
+- alimentação;
+- mensagem motivacional exibida na Home do aluno;
+- WhatsApp via deep link;
+- progresso de peso;
+- branding: nome, foto, logo, cor primária, capa, metodologia e avatar Coach.
 
-### Saúde e limitações
-Perguntar explicitamente sobre problemas de saúde e questões musculares, articulares ou ósseas. A condição de saúde deve ser separada de restrições de movimento e dor atual. O sistema não deve converter um diagnóstico em regras clínicas simplistas sem validação da metodologia.
+## Student V1
+- Home com branding e mensagem do personal;
+- grade recomendada;
+- treino recomendado hoje;
+- escolha livre entre os treinos disponíveis;
+- execução com peso, repetições, descanso e histórico;
+- alimentação;
+- progresso V1 somente de peso;
+- Coach para dúvidas read-only.
 
-## Home
-- treino do dia
-- consistência
-- peso
-- insight do Coach
-- resumo nutricional
+## Flexibilidade de treino
+O aluno não fica bloqueado ao treino do dia. A plataforma mostra a recomendação e todos os treinos disponíveis; o aluno escolhe qual executar.
 
-## Treino
-- vídeo/instrução
-- séries/faixa de reps
-- descanso
-- RIR/RPE quando aplicável
-- última sessão
-- recomendação de carga
-- registro de carga/reps
-- troca de exercício
-- funcionamento offline
+## Mensagem do personal
+É conteúdo in-app, não push notification.
 
-## SVR Coach
-Conversa, interpreta, explica e propõe ações. Não cria regras próprias, não altera plano diretamente, não calcula macros sozinho e não diagnostica.
+Exemplos:
+- Bora treinar hoje.
+- Te espero na academia.
+- Vi que você aumentou o peso, top!
 
-## Nutrição
-- metas de calorias/macros
-- refeições
-- registro
-- substituições aprovadas
-- explicações do Coach
-
-## Progresso
-- dias no método
-- peso/medidas
-- força
-- consistência
-- treinos
-- fotos
-
-## Check-in
-Sono, energia, recuperação, estresse, motivação, dor e peso opcional.
-
-## Plano
-Versionado; preserva objetivos, restrições, metodologia, treino, nutrição e data de revisão.
-
-## Fora do MVP
-Wearables, correção por câmera, comunidade, marketplace, ranking global, painel admin completo e integrações amplas.
+## Fora da V1
+- recomendação automática de carga;
+- geração automática de treino;
+- fotos e avaliação física detalhada;
+- push notification real;
+- WhatsApp API;
+- billing;
+- full white-label builds;
+- Coach com actions/mutations.
