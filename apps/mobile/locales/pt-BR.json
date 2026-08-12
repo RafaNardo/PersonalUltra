@@ -1,0 +1,8 @@
+{
+  "ios": {
+    "CFBundleDisplayName": "SVR Method"
+  },
+  "android": {
+    "app_name": "SVR Method"
+  }
+}

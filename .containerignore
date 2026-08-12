@@ -1,0 +1,10 @@
+.git
+.vs
+.vscode
+node_modules
+**/bin
+**/obj
+tests
+docs
+*.user
+*.suo

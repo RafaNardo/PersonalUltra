@@ -1,0 +1,35 @@
+import { router } from 'expo-router';
+import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { useState } from 'react';
+import { useDevLogin } from '@/src/api/hooks';
+import { Button, Card } from '@/src/components/ui';
+import { Screen } from '@/src/components/layout';
+import { colors, spacing, typography } from '@/src/design/tokens';
+import { useAuthStore } from '@/src/state/auth-store';
+import { feedback } from '@/src/platform/feedback';
+import { telemetry } from '@/src/platform/telemetry';
+
+export default function LoginScreen() {
+  const login = useDevLogin();
+  const signIn = useAuthStore((state) => state.signIn);
+  const [email, setEmail] = useState('');
+  const handleLogin = async () => {
+    const normalizedEmail = email.trim();
+    if (!normalizedEmail) return;
+    const session = await login.mutateAsync(normalizedEmail);
+    feedback.success();
+    telemetry.event('demo_login_completed');
+    signIn(session.accessToken, session.member.firstName);
+    router.replace('/');
+  };
+
+  return <Screen style={styles.screen}>
+    <View style={styles.hero}><Image source={require('../assets/brand/svr-logo-transparent.png')} resizeMode="contain" style={styles.logo} /><Text style={styles.title}>Método aplicado.{`\n`}Evolução medida.</Text><Text style={styles.copy}>Seu treino de hoje, com a intensidade e a clareza que fazem a diferença.</Text></View>
+    <Card style={styles.card}><Text style={styles.cardTitle}>Comece pelo seu e-mail</Text><Text style={styles.cardCopy}>Se você já iniciou sua jornada, continuamos de onde parou. Novos alunos seguem para o onboarding.</Text><TextInput value={email} onChangeText={setEmail} autoCapitalize="none" autoCorrect={false} keyboardType="email-address" placeholder="seuemail@exemplo.com" placeholderTextColor={colors.textMuted} accessibilityLabel="Seu e-mail" style={styles.input} />{login.error && <Text style={styles.error}>{login.error.message}</Text>}<Button onPress={handleLogin} loading={login.isPending} disabled={!email.trim()}>Continuar</Button></Card>
+  </Screen>;
+}
+
+const styles = StyleSheet.create({
+  screen: { justifyContent: 'space-between', paddingVertical: spacing.xxxl }, hero: { gap: spacing.lg }, logo: { width: 132, height: 60 }, title: { ...typography.displayXL, color: colors.textPrimary }, copy: { ...typography.bodyLG, color: colors.textSecondary, maxWidth: 310 },
+  card: { gap: spacing.md }, cardTitle: { ...typography.headingMD, color: colors.textPrimary }, cardCopy: { ...typography.bodyMD, color: colors.textSecondary }, input: { ...typography.bodyMD, color: colors.textPrimary, borderWidth: 1, borderColor: colors.border, borderRadius: 12, paddingHorizontal: spacing.md, paddingVertical: spacing.md }, error: { ...typography.bodyMD, color: colors.danger },
+});

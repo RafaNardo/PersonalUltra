@@ -1,0 +1,21 @@
+namespace SvrMethod.Api.Contracts;
+
+public sealed record StrengthProgressDto(string ExerciseName, decimal CurrentLoadKg, decimal ChangePercent);
+public sealed record ProgressSummaryDto(decimal CurrentWeightKg, decimal WeightChangeKg, int CompletedWorkouts, int ConsistencyPercent, int DaysOnMethod, StrengthProgressDto? Strength, string StrengthInsight);
+public sealed record WeightDto(Guid Id, decimal WeightKg, DateTimeOffset RecordedAt);
+public sealed record CreateWeightRequest(decimal WeightKg, DateTimeOffset? RecordedAt);
+public sealed record NutritionTodayDto(int CaloriesTarget, int ProteinTarget, int CarbsTarget, int FatTarget, IReadOnlyList<MealDto> Meals);
+public sealed record MealDto(Guid Id, string Name, bool Completed, IReadOnlyList<MealFoodDto> Foods);
+public sealed record MealFoodDto(Guid Id, Guid FoodId, string Name, decimal QuantityGrams, decimal Calories, decimal Protein, decimal Carbs, decimal Fat);
+public sealed record FoodAlternativeDto(Guid FoodId, string Name, decimal SuggestedQuantityGrams, string ReasonCode);
+public sealed record SubstituteFoodRequest(Guid FoodId);
+public sealed record CoachMessageDto(Guid Id, string Role, string Kind, string Content, string? MetadataJson, DateTimeOffset CreatedAt);
+public sealed record CoachConversationDto(Guid Id, IReadOnlyList<CoachMessageDto> Messages);
+public sealed record SendCoachMessageRequest(string Content);
+public sealed record CoachActionDto(Guid Id, string Type, string Status, string SafetyLevel, string PayloadJson, DateTimeOffset CreatedAt);
+public sealed record CreateExerciseSubstitutionProposalRequest(Guid ExerciseId);
+public sealed record ResolveCoachActionDto(Guid Id, string Status, string Message);
+public sealed record PainReportRequest(string Area, string Side, int Intensity, string Context);
+public sealed record PainReportDto(Guid Id, string SafetyLevel, string ReasonCode, string Message, bool RequiresConfirmation);
+public sealed record ExerciseAlternativeDto(Guid ExerciseId, string Name, string ReasonCode);
+public sealed record SubstituteExerciseRequest(Guid ExerciseId);

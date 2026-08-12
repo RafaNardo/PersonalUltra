@@ -1,0 +1,22 @@
+# .NET build output
+[Bb]in/
+[Oo]bj/
+
+# Node and Expo output
+node_modules/
+.expo/
+.expo-export-check/
+dist/
+
+# Local environment files
+.env
+.env.*
+!.env.example
+
+# IDE and operating system files
+.vs/
+.vscode/
+*.user
+*.suo
+Thumbs.db
+Desktop.ini

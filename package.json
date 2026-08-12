@@ -1,0 +1,13 @@
+{
+  "name": "svr-method",
+  "version": "0.1.0",
+  "private": true,
+  "workspaces": [
+    "apps/mobile"
+  ],
+  "scripts": {
+    "api:build": "dotnet build apps/api/SvrMethod.Api.csproj",
+    "mobile:start": "npm --workspace @svr-method/mobile run start",
+    "mobile:typecheck": "npm --workspace @svr-method/mobile run typecheck"
+  }
+}

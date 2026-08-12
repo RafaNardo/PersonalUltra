@@ -1,0 +1,38 @@
+export type Member = { id: string; firstName: string; lastName: string; email: string };
+export type ActivePlan = { id: string; name: string; sessionsPerWeek: number; reviewDueAt?: string | null };
+export type WorkoutExercise = { id: string; name: string; primaryMuscleGroup: string; sequence: number; prescribedSets: number; minimumRepetitions: number; maximumRepetitions: number; restSeconds: number; recommendedLoadKg: number; completedSets: number };
+export type TrainingToday = { id: string; name: string; status: 'Planned' | 'InProgress' | 'Completed' | 'Skipped'; scheduledFor: string; startedAt?: string | null; exercises: WorkoutExercise[] };
+export type TrainingPlanExercise = Omit<WorkoutExercise, 'completedSets'>;
+export type TrainingPlanWorkout = { id: string; name: string; sequence: number; exercises: TrainingPlanExercise[] };
+export type TrainingPlan = { name: string; sessionsPerWeek: number; workouts: TrainingPlanWorkout[] };
+export type Home = { greeting: string; activePlan: ActivePlan; todayWorkout?: { id: string; name: string; status: string; exerciseCount: number } | null; completedWorkoutsThisWeek: number };
+export type DevLogin = { accessToken: string; tokenType: string; member: Member };
+export type InitialPlanWorkout = { id: string; name: string; sequence: number; exerciseCount: number };
+export type InitialPlanNutrition = { caloriesTarget: number; proteinGramsTarget: number; carbsGramsTarget: number; fatGramsTarget: number; meals: string[] };
+export type InitialPlan = {
+  isProvisioned: boolean; planId?: string | null; name?: string | null; sessionsPerWeek?: number | null;
+  startsOn?: string | null; reviewDueAt?: string | null; workouts: InitialPlanWorkout[]; nutrition?: InitialPlanNutrition | null; wasAlreadyProvisioned: boolean;
+};
+export type OnboardingProfile = {
+  firstName: string; lastName: string; goal: string; experienceLevel: string; trainingDaysPerWeek: number;
+  sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number;
+  weightKg: number; healthConditions: string; movementRestrictions: string; currentPainDescription: string;
+  nutritionPreferences: string; nutritionRestrictions: string; currentStep: number; isCompleted: boolean;
+};
+export type SaveOnboardingProfile = Partial<Omit<OnboardingProfile, 'currentStep' | 'isCompleted'>> & { currentStep: number };
+export type CompleteSetInput = { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number; repsInReserve?: number };
+export type CompleteSet = { id: string; clientOperationId: string; setNumber: number; weightKg: number; repetitions: number; repsInReserve?: number; completedAt: string; wasAlreadyProcessed: boolean };
+export type CompleteWorkout = { id: string; status: 'Completed'; completedAt: string; completedSets: number };
+export type StrengthProgress = { exerciseName: string; currentLoadKg: number; changePercent: number };
+export type ProgressSummary = { currentWeightKg: number; weightChangeKg: number; completedWorkouts: number; consistencyPercent: number; daysOnMethod: number; strength?: StrengthProgress | null; strengthInsight: string };
+export type WeightEntry = { id: string; weightKg: number; recordedAt: string };
+export type MealFood = { id: string; foodId: string; name: string; quantityGrams: number; calories: number; protein: number; carbs: number; fat: number };
+export type Meal = { id: string; name: string; completed: boolean; foods: MealFood[] };
+export type NutritionToday = { caloriesTarget: number; proteinTarget: number; carbsTarget: number; fatTarget: number; meals: Meal[] };
+export type FoodAlternative = { foodId: string; name: string; suggestedQuantityGrams: number; reasonCode: string };
+export type CoachMessage = { id: string; role: 'User' | 'Assistant'; kind: 'Text' | 'Choice' | 'ActionProposal' | 'ProgressInsight'; content: string; metadataJson?: string | null; createdAt: string };
+export type CoachConversation = { id: string; messages: CoachMessage[] };
+export type PainReport = { id: string; safetyLevel: 'Green' | 'Yellow' | 'Red'; reasonCode: string; message: string; requiresConfirmation: boolean };
+export type ExerciseAlternative = { exerciseId: string; name: string; reasonCode: string };
+export type CoachAction = { id: string; type: string; status: string; safetyLevel: string; payloadJson: string; createdAt: string };
+export type ResolveCoachAction = { id: string; status: 'Confirmed' | 'Rejected'; message: string };

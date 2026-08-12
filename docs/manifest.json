@@ -1,0 +1,12 @@
+{
+  "project": "SVR Method",
+  "version": "0.1",
+  "mockups": [
+    "svr-main-concept.png",
+    "svr-core-screens.png",
+    "svr-onboarding.png",
+    "svr-ui-panel.png",
+    "svr-app-board.png"
+  ],
+  "display_font": "replaceable later"
+}
