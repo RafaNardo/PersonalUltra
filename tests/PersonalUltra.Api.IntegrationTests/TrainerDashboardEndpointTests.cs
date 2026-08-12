@@ -91,11 +91,27 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
         Assert.Equal("Bora treinar hoje.", message.Message);
     }
 
+    [Fact]
+    public async Task Trainer_can_create_a_secure_expiring_student_invite_link()
+    {
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.TrainerToken);
+
+        var response = await client.PostAsJsonAsync("/api/v1/student-invites", new { email = "aluna@example.com" });
+
+        Assert.Equal(HttpStatusCode.Created, response.StatusCode);
+        var invite = await response.Content.ReadFromJsonAsync<StudentInviteResponse>();
+        Assert.Equal("aluna@example.com", invite!.Email);
+        Assert.StartsWith("personalultra://invite/", invite.InviteUrl);
+        Assert.True(invite.Token.Length >= 40);
+        Assert.True(invite.ExpiresAt > DateTimeOffset.UtcNow.AddDays(6));
+    }
+
     private sealed record DashboardResponse(string TrainerName, int ActiveStudents, int PendingAnamneses, int CompletedAnamneses, IReadOnlyList<DashboardStudentSummary> RecentStudents);
     private sealed record DashboardStudentSummary(Guid StudentId, string FirstName, string LastName, string? Email, string AnamnesisStatus, DateTimeOffset StartedAt);
     private sealed record StudentListResponse(IReadOnlyList<DashboardStudentSummary> Students);
     private sealed record ErrorResponse(string Code, string Message, object? Details, string TraceId);
     private sealed record TrainerMessageResponse(Guid Id, Guid StudentId, string Message, DateTimeOffset StartsAt, DateTimeOffset? ExpiresAt, DateTimeOffset CreatedAt);
+    private sealed record StudentInviteResponse(Guid Id, string Token, string InviteUrl, string? Email, DateTimeOffset ExpiresAt);
 }
 
 public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Program>
