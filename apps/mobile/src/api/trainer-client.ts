@@ -44,4 +44,5 @@ export const trainerClient = {
   },
   dashboard: () => request<TrainerDashboard>('/dashboard'),
   students: async () => (await request<{ students: TrainerStudent[] }>('/students')).students,
+  student: (studentId: string) => request<TrainerStudent>(`/students/${studentId}`),
 };
