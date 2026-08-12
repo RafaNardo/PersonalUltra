@@ -34,7 +34,11 @@ export default function OnboardingScreen() {
   const [details, setDetails] = useState({ health: undefined as boolean | undefined, movement: undefined as boolean | undefined, pain: undefined as boolean | undefined, nutrition: undefined as boolean | undefined });
 
   useEffect(() => {
-    if (!profile.data) return;
+    if (profile.data?.isCompleted) router.replace('/prepare-plan');
+  }, [profile.data?.isCompleted]);
+
+  useEffect(() => {
+    if (!profile.data || profile.data.isCompleted) return;
     setForm(profile.data);
     setStep(Math.max(1, Math.min(stepCount, profile.data.currentStep)));
     setDetails({
@@ -97,6 +101,7 @@ export default function OnboardingScreen() {
 
   if (profile.isLoading) return <LoadingView message="Preparando seu onboarding…" />;
   if (profile.isError) return <ErrorView message={profile.error.message} onRetry={() => profile.refetch()} />;
+  if (profile.data?.isCompleted) return <LoadingView message="Abrindo seu acompanhamento…" />;
 
   const content = () => {
     switch (step) {

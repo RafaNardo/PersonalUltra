@@ -34,7 +34,15 @@ export function useTrainingToday() {
 }
 export function useTrainingPlan() { return useQuery({ queryKey: keys.trainingPlan, queryFn: () => api.trainingPlan(token()), enabled: Boolean(useAuthStore((state) => state.accessToken)) }); }
 
-export function useDevLogin() { return useMutation({ mutationFn: api.devLogin }); }
+export function useDevLogin() {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: api.devLogin,
+    // A new login creates a new demo session. Do not allow a bootstrap response
+    // from the prior session to choose the next route for this one.
+    onSuccess: () => client.clear(),
+  });
+}
 export function useProgress() { return useQuery({ queryKey: keys.progress, queryFn: () => api.progress(token()), enabled: Boolean(useAuthStore((state) => state.accessToken)) }); }
 export function useWeights() { return useQuery({ queryKey: keys.weights, queryFn: () => api.weights(token()), enabled: Boolean(useAuthStore((state) => state.accessToken)) }); }
 export function useAddWeight() { const client = useQueryClient(); return useMutation({ mutationFn: (weightKg: number) => api.addWeight(token(), weightKg), onSuccess: () => { client.invalidateQueries({ queryKey: keys.weights }); client.invalidateQueries({ queryKey: keys.progress }); } }); }
