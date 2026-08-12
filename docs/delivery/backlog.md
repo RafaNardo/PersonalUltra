@@ -1,85 +1,83 @@
-# Implementation Backlog v0.1
+# Milestones / Codex Backlog
 
-## M0 — Walking Skeleton
-- M0-001 Create monorepo
-- M0-002 Local infrastructure (Docker + Postgres + health)
-- M0-003 Initial EF Core model
-- M0-004 SVR Demo Seed
-- M0-005 Dev Authentication
-- M0-006 Bootstrap API
-- M0-007 Home API
-- M0-008 Training Today API
-- M0-009 Start Workout (idempotent)
-- M0-010 Complete Set (`clientOperationId`)
-- M0-011 Complete Workout
-- M0-012 Design tokens
-- M0-013 Core components
-- M0-014 API client
-- M0-015 Dev Login Screen
-- M0-016 Bootstrap navigation
-- M0-017 Home Screen
-- M0-018 Workout Screen
-- M0-019 Exercise Screen
-- M0-020 Rest Timer
-- M0-021 Complete Workout Screen
+## M0 — Foundation
+- `PU-M0-001`: criar baseline novo reutilizando Expo, ASP.NET Core, Postgres, EF, SQLite/offline e primitives úteis do donor repo.
+- `PU-M0-002`: renomear solução/packages/namespaces para PersonalUltra.
+- `PU-M0-003`: criar TrainerApi e StudentApi compartilhando Domain/Application/Infrastructure/DbContext.
+- `PU-M0-004`: separar mobile em trainer/student/shared e adicionar role switch demo-only.
+- `PU-M0-005`: criar Trainer, TrainerBranding, Student, TrainerStudent, StudentInvite e Anamnesis.
+- `PU-M0-006`: remover MethodologyVersion/Rule, StandardPlanProvisioner, RecommendedLoad, Coach mutations e progress photos.
+- `PU-M0-007`: identidades demo Trainer e Student.
+- `PU-M0-008`: aplicar design tokens Ultra e suporte a TrainerBranding.PrimaryColor.
 
-### Definition of Done M0
-`open → demo login → Home → workout → exercise → log set → rest → finish → refreshed Home`
+**DoD M0:** mobile abre em Trainer ou Student; duas APIs sobem; separação preparada para futuro split em dois apps.
 
-Status: concluído (incluindo infraestrutura local com Podman).
+## M1 — Trainer Core
+- `PU-M1-001`: branding model/API.
+- `PU-M1-002`: dashboard API.
+- `PU-M1-003`: dashboard mobile.
+- `PU-M1-004`: students list API.
+- `PU-M1-005`: students list mobile.
+- `PU-M1-006`: student detail API.
+- `PU-M1-007`: student detail com Resumo/Anamnese/Treino/Alimentação/Progresso.
+- `PU-M1-008`: TrainerMessage domain/API.
+- `PU-M1-009`: composer de mensagem.
+- `PU-M1-010`: WhatsApp deep link.
+- `PU-M1-011`: branding dinâmico na Student Home.
+- `PU-M1-012`: mensagem do Trainer na Student Home.
 
-## M1 — Demo
-- M1-001 Real SVR branding
-- M1-002 Premium Splash
-- M1-003 Progress API
-- M1-004 Progress Screen
-- M1-005 Weight Log
-- M1-006 Nutrition DB
-- M1-007 Nutrition Today API
-- M1-008 Nutrition Screen
-- M1-009 Meal Screen
-- M1-010 Food Alternatives Engine v0
-- M1-011 Food substitution UI
-- M1-012 Coach Persistence
-- M1-013 LLM abstraction
-- M1-014 Coach Context Builder
-- M1-015 Coach Base Chat
-- M1-016 Structured Coach Output
-- M1-017 Coach Mobile Screen
-- M1-018 Exercise Alternative Engine
-- M1-019 Coach Tool: Exercise Substitution
-- M1-020 Pain Reporting
-- M1-021 Safety Engine v0
-- M1-022 Coach Pain Flow
-- M1-023 ActionProposal Component
-- M1-024 Confirm Coach Action
-- M1-025 Haptics
-- M1-026 Loading/Error/Empty States
-- M1-027 Analytics
-- M1-028 Crash Reporting
-- M1-029 Demo Reset
-- M1-030 iOS Demo Build
-- M1-031 Android Demo Build
+**DoD M1:** Trainer acompanha alunos e Student Home reflete branding/mensagem.
 
-### Agent execution prompt
-`Read AGENTS.md and the relevant documents. Implement task M0-XXX from delivery/backlog.md. Do not implement future tasks. Preserve documented architecture. Run relevant tests. Report ambiguities before making architecture changes.`
+## M2 — Invitations & Anamnesis
+- `PU-M2-001`: gerar convite/link.
+- `PU-M2-002`: resolver token na Student API.
+- `PU-M2-003`: onboarding associado ao Trainer.
+- `PU-M2-004`: modelo de anamnese.
+- `PU-M2-005`: formulário Student.
+- `PU-M2-006`: persistência.
+- `PU-M2-007`: visualização Trainer.
+- `PU-M2-008`: atividade de anamnese no dashboard.
 
-### Status M1 (demo)
+**DoD M2:** Trainer convida; Student preenche; Trainer vê.
 
-Concluído: branding e splash, progresso/peso, nutrição/refeições/substituições, persistência e chat do Coach com saída estruturada, alternativas e confirmação de exercício, relato de dor e safety v0, haptics, estados de carregamento/erro, telemetria local, reset de demo e perfis EAS para iOS/Android. Os builds EAS precisam ser executados em uma conta com credenciais de assinatura configuradas; nenhum build remoto é disparado pelo repositório.
+## M3 — Training Prescription
+- `PU-M3-001`: workout template domain.
+- `PU-M3-002`: templates API.
+- `PU-M3-003`: templates UI.
+- `PU-M3-004`: editor de treino (exercício, ordem, séries, reps, descanso, notas).
+- `PU-M3-005`: duplicar template.
+- `PU-M3-006`: aplicar template copiando snapshot para Student.
+- `PU-M3-007`: editar plano do Student.
+- `PU-M3-008`: grade semanal recomendada.
+- `PU-M3-009`: Student API retorna recomendado + disponíveis + grade.
+- `PU-M3-010`: Student Home/treinos mostra recomendado e alternativas.
+- `PU-M3-011`: permitir iniciar qualquer treino disponível.
+- `PU-M3-012`: portar execução de treino.
+- `PU-M3-013`: portar SQLite/offline sync.
+- `PU-M3-014`: histórico de sessões/séries no Trainer.
 
-## M2-A — Entrada e Plano Inicial
+**DoD M3:** Trainer prescreve; Student escolhe/executa; Trainer vê resultado.
 
-- M2-A-1 Identidade por e-mail e Bootstrap
-- M2-A-2 Onboarding e Perfil Persistido
-- M2-A-3 Provisionamento Idempotente do Plano Padrão
-- M2-A-4 Preparação e Apresentação do Plano
-- M2-A-5 Recomeçar Demonstração do Membro Atual
+## M4 — Nutrition, Progress, Coach & Polish
+- `PU-M4-001`: adaptar domínio nutrição.
+- `PU-M4-002`: editor de alimentação Trainer.
+- `PU-M4-003`: Student nutrition.
+- `PU-M4-004`: Weight API.
+- `PU-M4-005`: Student progress somente peso.
+- `PU-M4-006`: Trainer weight chart.
+- `PU-M4-007`: Coach context builder read-only.
+- `PU-M4-008`: remover qualquer Coach mutation.
+- `PU-M4-009`: Coach UI read-only.
+- `PU-M4-010`: demo seed com 12–20 Students.
+- `PU-M4-011`: Student principal com anamnese, 4 treinos, histórico, alimentação, peso e TrainerMessage.
+- `PU-M4-012`: demo reset.
+- `PU-M4-013`: polish de loading/error/empty/haptics.
+- `PU-M4-014`: verificar demo end-to-end.
 
-### Definition of Done M2-A
+**DoD M4:** demo comercial completa.
 
-`e-mail → nova conta ou sessão existente → onboarding retomável → revisão → plano padrão próprio provisionado → apresentação do plano → Home`
+## M5 — Production Foundation (após validação)
+Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
 
-M2-A-5 é um fluxo explícito de demonstração: o reset remove somente os dados pertencentes ao membro autenticado, encerra a sessão no aplicativo e retorna ao login. Não pode apagar o catálogo global, a conta demo base ou dados de outros membros.
-
-Fora do escopo: IA, RAG, geração individualizada, alteração automática do plano, avaliação clínica e revisão automática após 45 dias. A data de revisão pode ser registrada para uso futuro, mas não dispara automação neste bloco.
+## Prompt padrão Codex
+`Read AGENTS.md and all docs relevant to PU-MX-YYY. Implement only that task. Preserve Trainer/Student boundaries and future mobile splitability. Do not implement future tasks. Run relevant tests/typecheck and report architecture ambiguity before changing documented boundaries.`
