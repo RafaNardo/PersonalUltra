@@ -98,7 +98,7 @@ export default function PreparePlanScreen() {
     <View style={styles.workouts}>{plan.data.workouts.map((workout) => <Card key={workout.id} style={styles.workout}><View style={styles.sequence}><Text style={styles.sequenceText}>{workout.sequence}</Text></View><View style={styles.workoutBody}><Text style={styles.workoutName}>{workout.name}</Text><Text style={styles.workoutCopy}>{workout.exerciseCount} exercícios prescritos</Text></View></Card>)}</View>
     {plan.data.nutrition && <Card style={styles.nutrition}><View><Text style={styles.sectionTitle}>SUA NUTRIÇÃO</Text><Text style={styles.nutritionCalories}>{plan.data.nutrition.caloriesTarget.toLocaleString('pt-BR')} kcal</Text><Text style={styles.sectionCopy}>meta diária inicial</Text></View><View style={styles.macros}><Text style={styles.macro}>P {plan.data.nutrition.proteinGramsTarget}g</Text><Text style={styles.macro}>C {plan.data.nutrition.carbsGramsTarget}g</Text><Text style={styles.macro}>G {plan.data.nutrition.fatGramsTarget}g</Text></View><View style={styles.meals}>{plan.data.nutrition.meals.map((meal) => <View key={meal} style={styles.meal}><Text style={styles.mealText}>{meal}</Text></View>)}</View></Card>}
     <Card style={styles.note}><Text style={styles.noteTitle}>Seu ponto de partida está salvo</Text><Text style={styles.noteCopy}>A estrutura mostrada é o plano padrão da demonstração. Ajustes individualizados e geração por IA não fazem parte desta etapa.</Text></Card>
-    <Button onPress={() => router.replace('/(app)/home')}>Conhecer minha Home</Button>
+    <Button onPress={() => router.replace('/student/home')}>Conhecer minha Home</Button>
   </Screen>;
 }
 

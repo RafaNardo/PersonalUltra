@@ -47,7 +47,7 @@ export default function PainScreen() {
     }
   }
 
-  return <Screen><TopBar eyebrow="Segurança primeiro" title="Registrar dor" onBack={() => router.replace('/(app)/coach')} />
+  return <Screen><TopBar eyebrow="Segurança primeiro" title="Registrar dor" onBack={() => router.replace('/student/coach')} />
     <Card style={styles.card}>
       <Text style={styles.copy}>Registre o que sentiu. Nenhuma alteração no treino será feita automaticamente.</Text>
       <Field label="Onde dói?" value={area} onChangeText={setArea} maxLength={100} placeholder="Ex.: joelho" />

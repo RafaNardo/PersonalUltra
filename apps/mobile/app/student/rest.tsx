@@ -13,7 +13,7 @@ export default function RestScreen() {
   const setRestSeconds = useTrainingStore((state) => state.setRestSeconds);
   useEffect(() => { setRestSeconds(remaining); if (remaining <= 0) return; const timer = setInterval(() => setRemaining((value) => Math.max(0, value - 1)), 1000); return () => clearInterval(timer); }, [remaining, setRestSeconds]);
   const minutes = Math.floor(remaining / 60).toString().padStart(2, '0'); const secs = (remaining % 60).toString().padStart(2, '0');
-  const back = () => router.replace(`/(app)/exercise/${sessionId}/${exerciseId}`);
+  const back = () => router.replace(`/student/exercise/${sessionId}/${exerciseId}`);
   return <Screen scroll={false} style={styles.screen}><View style={styles.top}>{queued === 'true' && <Tag tone="success">Série salva localmente</Tag>}<Text style={styles.label}>DESCANSO</Text></View><View style={styles.timerGroup}><View style={styles.timerRing}><Text style={styles.timer}>{minutes}:{secs}</Text><Text style={styles.timerCaption}>RECUPERAÇÃO</Text></View><Text style={styles.copy}>{remaining ? 'Respire. A próxima série começa com intenção.' : 'Você está pronto para a próxima série.'}</Text><ProgressBar value={remaining / initial} /></View><View style={styles.actions}><Button onPress={back}>{remaining ? 'Pular descanso' : 'Voltar para exercício'}</Button>{remaining > 0 && <Button variant="secondary" onPress={() => setRemaining((value) => value + 30)}>+30 segundos</Button>}</View></Screen>;
 }
 
