@@ -1,16 +1,28 @@
-# Product Vision
+# Product Vision — Personal Ultra
 
-## Produto
-**SVR Method** — plataforma fitness premium que aplica a metodologia SVR individualmente por meio de treino, nutrição, acompanhamento, evolução e um Coach assistido por IA.
-
-## Problema
-Consultorias fitness tradicionais escalam mal: quanto mais alunos, mais equipe é necessária. Há também um público que deseja seguir a metodologia SVR, mas não necessariamente contratar consultoria individual.
+Personal Ultra é uma plataforma B2B2C para personal trainers entregarem consultorias digitais com experiência premium para o aluno.
 
 ## Posicionamento
-Não somos “um app com IA que monta treino”. Somos **a metodologia SVR aplicada individualmente através de tecnologia**.
+Não ser apenas um gerenciador de ficha.
 
-## North Star
-**Treinos concluídos por assinante por semana.**
+> Entregue uma consultoria que parece um app próprio.
 
-## Centro do produto
-`Plano → Treino + Nutrição + Check-ins + Evolução + Coach`
+## Valor
+- produtividade do personal;
+- percepção de valor do aluno;
+- acompanhamento operacional;
+- personalização de marca;
+- execução de treino com UX premium.
+
+## Atores
+### Trainer
+Cria e gerencia alunos, anamnese, treinos, templates, alimentação, mensagens e acompanhamento.
+
+### Student
+Consome Home personalizada, treino, alimentação, progresso de peso e Coach para dúvidas.
+
+## White-label V1
+Não significa app separado. Customiza nome/foto/logo, cor primária, capa, nome da metodologia e avatar do Coach.
+
+## Futuro
+Após validação: split em dois apps físicos, avaliações avançadas e AI-assisted workout generation com revisão obrigatória do Trainer.
