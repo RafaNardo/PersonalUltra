@@ -153,13 +153,32 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
         Assert.True(invite.ExpiresAt > DateTimeOffset.UtcNow.AddDays(6));
     }
 
+    [Fact]
+    public async Task Trainer_replaces_a_pending_invite_when_using_the_same_email()
+    {
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.TrainerToken);
+        var email = $"renew-{Guid.NewGuid():N}@example.com";
+        var firstResponse = await client.PostAsJsonAsync("/api/v1/student-invites", new { email });
+        var first = await firstResponse.Content.ReadFromJsonAsync<StudentInviteResponse>();
+        var secondResponse = await client.PostAsJsonAsync("/api/v1/student-invites", new { email });
+        var second = await secondResponse.Content.ReadFromJsonAsync<StudentInviteResponse>();
+
+        Assert.Equal(HttpStatusCode.Created, secondResponse.StatusCode);
+        Assert.True(second!.ReplacedPendingInvite);
+        Assert.NotEqual(first!.InviteCode, second.InviteCode);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        var expiredFirst = await db.StudentInvites.SingleAsync(item => item.Id == first.Id);
+        Assert.True(expiredFirst.ExpiresAt <= DateTimeOffset.UtcNow);
+    }
+
     private sealed record DashboardResponse(string TrainerName, int ActiveStudents, int PendingAnamneses, int CompletedAnamneses, IReadOnlyList<DashboardStudentSummary> RecentStudents, IReadOnlyList<DashboardActivity> RecentActivities);
     private sealed record DashboardActivity(Guid StudentId, string StudentName, string Type, DateTimeOffset OccurredAt);
     private sealed record DashboardStudentSummary(Guid StudentId, string FirstName, string LastName, string? Email, string? Phone, string AnamnesisStatus, DateTimeOffset StartedAt);
     private sealed record StudentListResponse(IReadOnlyList<DashboardStudentSummary> Students);
     private sealed record ErrorResponse(string Code, string Message, object? Details, string TraceId);
     private sealed record TrainerMessageResponse(Guid Id, Guid StudentId, string Message, DateTimeOffset StartsAt, DateTimeOffset? ExpiresAt, DateTimeOffset CreatedAt);
-    private sealed record StudentInviteResponse(Guid Id, string Token, string InviteUrl, string? Email, DateTimeOffset ExpiresAt);
+    private sealed record StudentInviteResponse(Guid Id, string Token, string InviteCode, string InviteUrl, string? Email, DateTimeOffset ExpiresAt, bool ReplacedPendingInvite);
     private sealed record TrainerAnamnesisResponse(string Goal, string ExperienceLevel, int TrainingDaysPerWeek, int SessionDurationMinutes, string TrainingLocation, string EquipmentNotes, decimal HeightCm, decimal WeightKg, string HealthConditions, string MovementRestrictions, string CurrentPainDescription, string NutritionPreferences, string NutritionRestrictions, DateTimeOffset CompletedAt);
 }
 

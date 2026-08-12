@@ -14,6 +14,7 @@ export default function TrainerInviteScreen() {
   const [email, setEmail] = useState('');
   const [phone, setPhone] = useState('');
   const [inviteCode, setInviteCode] = useState<string>();
+  const [replacedPendingInvite, setReplacedPendingInvite] = useState(false);
   const phoneDigits = phone.replace(/\D/g, '');
   const canSendWhatsApp = phoneDigits.length >= 8 && phoneDigits.length <= 15;
 
@@ -21,6 +22,7 @@ export default function TrainerInviteScreen() {
     try {
       const invite = await createInvite.mutateAsync(email);
       setInviteCode(formatInviteCode(invite.inviteCode));
+      setReplacedPendingInvite(invite.replacedPendingInvite);
     } catch (error) {
       Alert.alert('Não foi possível criar o convite', error instanceof Error ? error.message : 'Tente novamente.');
     }
@@ -49,7 +51,7 @@ export default function TrainerInviteScreen() {
       <PhoneInput value={phone} onChangeText={setPhone} placeholder="(11) 99999-9999" placeholderTextColor={colors.textMuted} accessibilityLabel="Telefone para WhatsApp do aluno" style={styles.input} />
       <Button loading={createInvite.isPending} onPress={() => void create()}>Gerar link de convite</Button>
     </Card>
-    {inviteCode && <Card style={styles.result}><Text style={styles.resultTitle}>Convite pronto</Text><Text style={styles.copy}>O aluno instala o app, escolhe “Tenho um convite” e informa este código.</Text><TextInput value={inviteCode} editable={false} selectTextOnFocus accessibilityLabel="Código de convite" style={styles.code} /><Button variant="secondary" onPress={() => void copyInvite()}>Copiar convite</Button><Button variant="secondary" disabled={!canSendWhatsApp} onPress={() => void sendWhatsApp()}>Enviar pelo WhatsApp</Button>{!canSendWhatsApp && <Text style={styles.hint}>Informe um telefone válido com DDD para enviar pelo WhatsApp.</Text>}</Card>}
+    {inviteCode && <Card style={styles.result}><Text style={styles.resultTitle}>{replacedPendingInvite ? 'Novo código gerado' : 'Convite pronto'}</Text><Text style={styles.copy}>{replacedPendingInvite ? 'O código anterior para este e-mail foi invalidado. Envie este novo código ao aluno.' : 'O aluno instala o app, escolhe “Tenho um convite” e informa este código.'}</Text><TextInput value={inviteCode} editable={false} selectTextOnFocus accessibilityLabel="Código de convite" style={styles.code} /><Button variant="secondary" onPress={() => void copyInvite()}>Copiar convite</Button><Button variant="secondary" disabled={!canSendWhatsApp} onPress={() => void sendWhatsApp()}>Enviar pelo WhatsApp</Button>{!canSendWhatsApp && <Text style={styles.hint}>Informe um telefone válido com DDD para enviar pelo WhatsApp.</Text>}</Card>}
   </Screen>;
 }
 

@@ -8,4 +8,5 @@ public sealed record StudentInviteResponse(
     string InviteCode,
     string InviteUrl,
     string? Email,
-    DateTimeOffset ExpiresAt);
+    DateTimeOffset ExpiresAt,
+    bool ReplacedPendingInvite);

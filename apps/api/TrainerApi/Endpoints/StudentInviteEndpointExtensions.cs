@@ -22,10 +22,15 @@ public static class StudentInviteEndpointExtensions
                 return context.ApiError("VALIDATION_ERROR", "Informe um e-mail válido ou deixe o campo em branco.", StatusCodes.Status400BadRequest);
 
             var now = clock.GetUtcNow();
+            var trainerId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+            var pendingInvites = email is null
+                ? []
+                : await db.StudentInvites.Where(item => item.TrainerId == trainerId && item.Email == email && item.AcceptedAt == null && item.ExpiresAt > now).ToListAsync(cancellationToken);
+            foreach (var pendingInvite in pendingInvites) pendingInvite.ExpiresAt = now;
             var invite = new StudentInvite
             {
                 Id = Guid.NewGuid(),
-                TrainerId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!),
+                TrainerId = trainerId,
                 Token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32)),
                 InviteCode = await CreateInviteCodeAsync(db, cancellationToken),
                 Email = email,
@@ -37,7 +42,7 @@ public static class StudentInviteEndpointExtensions
 
             var linkBase = (configuration["StudentInvite:LinkBaseUrl"] ?? "personalultra://invite").TrimEnd('/');
             return Results.Created($"/api/v1/student-invites/{invite.Id}", new StudentInviteResponse(
-                invite.Id, invite.Token, invite.InviteCode, $"{linkBase}/{invite.Token}", invite.Email, invite.ExpiresAt));
+                invite.Id, invite.Token, invite.InviteCode, $"{linkBase}/{invite.Token}", invite.Email, invite.ExpiresAt, pendingInvites.Count > 0));
         });
     }
 
