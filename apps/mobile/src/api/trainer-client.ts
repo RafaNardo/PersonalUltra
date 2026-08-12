@@ -18,6 +18,8 @@ export type TrainerDashboard = {
   }>;
 };
 
+export type TrainerStudent = TrainerDashboard['recentStudents'][number];
+
 async function request<T>(path: string): Promise<T> {
   let response: Response;
   try {
@@ -41,4 +43,5 @@ export const trainerClient = {
     return response.json() as Promise<{ actor: 'trainer' }>;
   },
   dashboard: () => request<TrainerDashboard>('/dashboard'),
+  students: async () => (await request<{ students: TrainerStudent[] }>('/students')).students,
 };
