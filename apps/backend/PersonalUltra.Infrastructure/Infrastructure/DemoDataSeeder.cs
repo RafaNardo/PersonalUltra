@@ -8,11 +8,17 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
-        if (!await dbContext.Trainers.AnyAsync(x => x.Id == DemoIds.TrainerId, cancellationToken))
+        var trainer = await dbContext.Trainers.Include(x => x.Branding).SingleOrDefaultAsync(x => x.Id == DemoIds.TrainerId, cancellationToken);
+        if (trainer is null)
         {
-            var trainer = new Trainer { Id = DemoIds.TrainerId, Name = "Alex Personal", CreatedAt = now };
+            trainer = new Trainer { Id = DemoIds.TrainerId, Name = "Severo", CreatedAt = now };
             dbContext.Add(trainer);
-            dbContext.Add(new TrainerBranding { Id = Guid.NewGuid(), Trainer = trainer, DisplayName = "Alex Personal", PrimaryColor = "#FF6B00" });
+            dbContext.Add(new TrainerBranding { Id = Guid.NewGuid(), Trainer = trainer, DisplayName = "Severo", PrimaryColor = "#FF6B00" });
+        }
+        else
+        {
+            trainer.Name = "Severo";
+            if (trainer.Branding is not null) trainer.Branding.DisplayName = "Severo";
         }
 
         if (!await dbContext.Students.AnyAsync(x => x.Id == DemoIds.StudentId, cancellationToken))

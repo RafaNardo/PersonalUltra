@@ -33,7 +33,7 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
 
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var invite = await response.Content.ReadFromJsonAsync<InviteResolutionResponse>();
-        Assert.Equal("Alex Personal", invite!.TrainerName);
+        Assert.Equal("Severo", invite!.TrainerName);
         Assert.Equal("aluna@example.com", invite.Email);
     }
 

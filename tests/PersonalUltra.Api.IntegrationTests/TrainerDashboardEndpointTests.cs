@@ -37,7 +37,7 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var dashboard = await response.Content.ReadFromJsonAsync<DashboardResponse>();
         Assert.NotNull(dashboard);
-        Assert.Equal("Alex Personal", dashboard!.TrainerName);
+        Assert.Equal("Severo", dashboard!.TrainerName);
         Assert.Equal(1, dashboard.ActiveStudents);
         Assert.Equal(1, dashboard.PendingAnamneses);
         Assert.Equal(0, dashboard.CompletedAnamneses);
