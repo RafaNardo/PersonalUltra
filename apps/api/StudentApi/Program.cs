@@ -23,7 +23,8 @@ builder.Services.AddHttpClient<OpenAiCoachResponder>(client => client.Timeout = 
 builder.Services.AddSingleton<DeterministicCoachResponder>();
 builder.Services.AddScoped<ICoachResponder, ResilientCoachResponder>();
 builder.Services.AddAuthentication(DevAuthenticationHandler.SchemeName)
-    .AddScheme<AuthenticationSchemeOptions, DevAuthenticationHandler>(DevAuthenticationHandler.SchemeName, _ => { });
+    .AddScheme<AuthenticationSchemeOptions, DevAuthenticationHandler>(DevAuthenticationHandler.SchemeName, _ => { })
+    .AddScheme<AuthenticationSchemeOptions, DemoActorAuthenticationHandler>(DemoActorAuthenticationHandler.StudentScheme, _ => { });
 builder.Services.AddAuthorization();
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
@@ -67,6 +68,11 @@ if (app.Environment.IsDevelopment())
 app.MapPersonalUltraApi();
 app.MapOnboardingApi();
 app.MapM1Api();
+app.MapGet("/api/v1/demo/identity", async (PersonalUltraDbContext db, CancellationToken cancellationToken) =>
+{
+    var student = await db.Students.AsNoTracking().SingleAsync(x => x.Id == PersonalUltra.Domain.DemoIds.StudentId, cancellationToken);
+    return Results.Ok(new { actor = "student", id = student.Id, name = $"{student.FirstName} {student.LastName}" });
+}).RequireAuthorization(new Microsoft.AspNetCore.Authorization.AuthorizeAttribute { AuthenticationSchemes = DemoActorAuthenticationHandler.StudentScheme });
 app.Run();
 
 public partial class Program;

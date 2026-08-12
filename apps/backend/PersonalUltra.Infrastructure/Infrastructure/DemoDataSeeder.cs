@@ -33,6 +33,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
 
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
+        await EnsureCoreDemoIdentitiesAsync(cancellationToken);
         if (await dbContext.AuthUsers.AnyAsync(user => user.Id == DemoIds.UserId, cancellationToken))
         {
             var existingPlan = await dbContext.Plans.Include(x => x.TrainingPlan).ThenInclude(x => x.WorkoutTemplates).ThenInclude(x => x.Exercises).ThenInclude(x => x.Exercise)
@@ -133,6 +134,32 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
             MinimumRepetitions = minimumRepetitions, MaximumRepetitions = maximumRepetitions,
             RestSeconds = restSeconds
         };
+    }
+
+    private async Task EnsureCoreDemoIdentitiesAsync(CancellationToken cancellationToken)
+    {
+        var now = timeProvider.GetUtcNow();
+        var trainer = await dbContext.Trainers.SingleOrDefaultAsync(x => x.Id == DemoIds.TrainerId, cancellationToken);
+        if (trainer is null)
+        {
+            trainer = new Trainer { Id = DemoIds.TrainerId, Name = "Alex Personal", CreatedAt = now };
+            dbContext.Trainers.Add(trainer);
+            dbContext.TrainerBrandings.Add(new TrainerBranding
+            {
+                Id = Guid.NewGuid(), Trainer = trainer, DisplayName = "Alex Personal", PrimaryColor = "#5D3FD3"
+            });
+        }
+
+        var student = await dbContext.Students.SingleOrDefaultAsync(x => x.Id == DemoIds.StudentId, cancellationToken);
+        if (student is null)
+        {
+            student = new Student { Id = DemoIds.StudentId, FirstName = "Rafa", LastName = "Silva", Email = "demo@student.personalultra.local", CreatedAt = now };
+            dbContext.Students.Add(student);
+        }
+
+        var linked = await dbContext.TrainerStudents.AnyAsync(x => x.TrainerId == DemoIds.TrainerId && x.StudentId == DemoIds.StudentId, cancellationToken);
+        if (!linked) dbContext.TrainerStudents.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, StartedAt = now });
+        await dbContext.SaveChangesAsync(cancellationToken);
     }
 
     private static WorkoutSession CreateSession(Member member, WorkoutTemplate template, DateOnly scheduledFor, string status, DateTimeOffset? startedAt, DateTimeOffset? completedAt)

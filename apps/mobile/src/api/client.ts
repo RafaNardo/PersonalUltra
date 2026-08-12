@@ -26,6 +26,7 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
 }
 
 export const api = {
+  demoIdentity: (token: string) => request<{ actor: 'student'; id: string; name: string }>('/demo/identity', {}, token),
   devLogin: (email: string) => request<DevLogin>('/auth/dev-login', { method: 'POST', body: JSON.stringify({ email }) }),
   bootstrap: (token: string) => request<{ member: DevLogin['member']; activePlan?: Home['activePlan']; nextRoute: string }>('/bootstrap', {}, token),
   onboardingProfile: (token: string) => request<OnboardingProfile>('/onboarding/profile', {}, token),
