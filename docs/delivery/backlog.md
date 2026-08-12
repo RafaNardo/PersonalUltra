@@ -62,6 +62,11 @@ Implementação concluída na demo: templates e editor inicial no Trainer, dupli
 aplicação por snapshot ao Student, grade recomendada, execução com registro de
 séries, histórico e persistência compatível com a fundação SQLite/offline.
 
+Revisão pós-implementação: a prescrição, aplicação, escolha e execução estão
+conectadas ao backend. O editor visual ainda começa com um exercício por modelo;
+edição completa de múltiplos exercícios e ajuste visual da grade do aluno seguem
+como refinamento de produto, sem dados fictícios na leitura.
+
 **DoD M3:** Trainer prescreve; Student escolhe/executa; Trainer vê resultado.
 
 ## M4 — Nutrition, Progress, Coach & Polish
@@ -87,6 +92,13 @@ séries, histórico e persistência compatível com a fundação SQLite/offline.
 Implementação concluída na demo: alimentação Trainer/Student, registro e consulta
 de peso, Coach explicativo read-only, seed ampliado, reset demo, branding validado
 por Trainer e aplicado ao contexto Student, além da consolidação no detalhe do aluno.
+
+Revisão pós-implementação: os fluxos principais estão conectados a dados reais do
+backend/seed. Permanecem como refinamentos explícitos antes de considerar a M4
+comercialmente fechada: gráfico visual de peso, editor completo de múltiplas
+refeições/exercícios, tela Trainer para configurar cor/logo e botão mobile para
+reset demo. Esses itens não são mockados; são apenas superfícies de edição/polish
+ainda simplificadas.
 
 **DoD M4:** demo comercial completa, incluindo branding dinâmico por Trainer.
 
