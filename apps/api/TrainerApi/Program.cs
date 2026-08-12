@@ -27,6 +27,7 @@ app.MapGet("/api/v1/demo/identity", async (PersonalUltraDbContext db, Cancellati
     return Results.Ok(new { actor = "trainer", id = trainer.Id, name = trainer.Name });
 }).RequireAuthorization();
 app.MapDashboardApi();
+app.MapStudentApi();
 app.Run();
 
 public partial class Program;

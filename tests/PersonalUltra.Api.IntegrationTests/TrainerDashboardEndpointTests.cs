@@ -47,8 +47,23 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
         Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Students_returns_the_authenticated_trainers_active_students()
+    {
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.TrainerToken);
+
+        var response = await client.GetAsync("/api/v1/students");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var list = await response.Content.ReadFromJsonAsync<StudentListResponse>();
+        var student = Assert.Single(list!.Students);
+        Assert.Equal("Rafa", student.FirstName);
+        Assert.Equal("Silva", student.LastName);
+    }
+
     private sealed record DashboardResponse(string TrainerName, int ActiveStudents, int PendingAnamneses, int CompletedAnamneses, IReadOnlyList<DashboardStudentSummary> RecentStudents);
     private sealed record DashboardStudentSummary(Guid StudentId, string FirstName, string LastName, string? Email, string AnamnesisStatus, DateTimeOffset StartedAt);
+    private sealed record StudentListResponse(IReadOnlyList<DashboardStudentSummary> Students);
 }
 
 public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Program>
