@@ -20,6 +20,13 @@ public sealed class DemoSessionTokenService(IConfiguration configuration, TimePr
         return $"{payload}.{Signature(payload)}";
     }
 
+    public string CreateStudent(Guid studentId)
+    {
+        var expiresAt = clock.GetUtcNow().AddDays(14).ToUnixTimeSeconds();
+        var payload = $"{Prefix}.student.{studentId:D}.{expiresAt}";
+        return $"{payload}.{Signature(payload)}";
+    }
+
     public bool TryValidate(string token, out Guid memberId)
     {
         memberId = Guid.Empty;
@@ -32,6 +39,21 @@ public sealed class DemoSessionTokenService(IConfiguration configuration, TimePr
         if (!FixedTimeEquals(parts[3], Signature(payload)) || expiresAt < clock.GetUtcNow().ToUnixTimeSeconds()) return false;
 
         memberId = parsedMemberId;
+        return true;
+    }
+
+    public bool TryValidateStudent(string token, out Guid studentId)
+    {
+        studentId = Guid.Empty;
+        var parts = token.Split('.', StringSplitOptions.None);
+        if (parts.Length != 5 || parts[0] != Prefix || parts[1] != "student" || !Guid.TryParse(parts[2], out var parsedStudentId)
+            || !long.TryParse(parts[3], NumberStyles.None, CultureInfo.InvariantCulture, out var expiresAt))
+            return false;
+
+        var payload = string.Join('.', parts.Take(4));
+        if (!FixedTimeEquals(parts[4], Signature(payload)) || expiresAt < clock.GetUtcNow().ToUnixTimeSeconds()) return false;
+
+        studentId = parsedStudentId;
         return true;
     }
 

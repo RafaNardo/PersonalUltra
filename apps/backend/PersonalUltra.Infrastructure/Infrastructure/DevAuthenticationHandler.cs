@@ -35,12 +35,21 @@ public sealed class DevAuthenticationHandler(
         var memberId = string.Equals(token, expected, StringComparison.Ordinal)
             ? DemoIds.MemberId
             : sessions.TryValidate(token, out var sessionMemberId) ? sessionMemberId : Guid.Empty;
-        if (memberId == Guid.Empty || !await db.Members.AsNoTracking().AnyAsync(member => member.Id == memberId, Context.RequestAborted))
+        if (memberId != Guid.Empty && await db.Members.AsNoTracking().AnyAsync(member => member.Id == memberId, Context.RequestAborted))
+        {
+            var memberIdentity = new ClaimsIdentity(
+            [
+                new Claim(ClaimTypes.NameIdentifier, memberId.ToString()), new Claim("subject", "member")
+            ], SchemeName);
+            return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(memberIdentity), SchemeName));
+        }
+
+        if (!sessions.TryValidateStudent(token, out var studentId) || !await db.Students.AsNoTracking().AnyAsync(student => student.Id == studentId, Context.RequestAborted))
             return AuthenticateResult.NoResult();
 
         var identity = new ClaimsIdentity(
         [
-            new Claim(ClaimTypes.NameIdentifier, memberId.ToString())
+            new Claim(ClaimTypes.NameIdentifier, studentId.ToString()), new Claim("subject", "student")
         ], SchemeName);
         return AuthenticateResult.Success(new AuthenticationTicket(new ClaimsPrincipal(identity), SchemeName));
     }

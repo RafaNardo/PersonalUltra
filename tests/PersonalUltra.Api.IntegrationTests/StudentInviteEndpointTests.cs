@@ -48,6 +48,26 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
         Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
     }
 
+    [Fact]
+    public async Task Invite_acceptance_creates_a_student_linked_to_the_inviting_trainer_and_a_student_session()
+    {
+        const string token = "invite-to-accept";
+        await SeedInviteAsync(token, DateTimeOffset.UtcNow.AddDays(1));
+
+        var response = await client.PostAsJsonAsync($"/api/v1/invite/{token}/accept", new { firstName = "Ana", lastName = "Souza", email = "aluna@example.com" });
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var acceptance = await response.Content.ReadFromJsonAsync<InviteAcceptanceResponse>();
+        Assert.Equal("Ana", acceptance!.FirstName);
+        Assert.Equal(DemoIds.TrainerId, acceptance.TrainerId);
+        Assert.NotEmpty(acceptance.AccessToken);
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        Assert.True(await db.TrainerStudents.AnyAsync(link => link.TrainerId == DemoIds.TrainerId && link.StudentId == acceptance.StudentId));
+        var acceptedInvite = await db.StudentInvites.SingleAsync(invite => invite.Token == token);
+        Assert.NotNull(acceptedInvite.AcceptedAt);
+    }
+
     private async Task SeedInviteAsync(string token, DateTimeOffset expiresAt)
     {
         using var scope = factory.Services.CreateScope();
@@ -57,6 +77,7 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
     }
 
     private sealed record InviteResolutionResponse(string TrainerName, string? Email, DateTimeOffset ExpiresAt);
+    private sealed record InviteAcceptanceResponse(string AccessToken, string TokenType, Guid StudentId, string FirstName, string LastName, string Email, Guid TrainerId);
 }
 
 public sealed class StudentApiFactory : WebApplicationFactory<Program>
