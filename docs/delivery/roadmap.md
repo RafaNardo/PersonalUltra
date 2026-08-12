@@ -13,7 +13,7 @@ Fluxo Trainer -> convite -> cadastro -> anamnese -> acompanhamento.
 Templates, editor, aplicação ao aluno, grade recomendada e liberdade de escolha de treino.
 
 ## M4 — Nutrition, Progress, Coach & Demo Polish
-Alimentação, progresso somente de peso, Coach read-only, seed, demo comercial completa e, por último, branding dinâmico do Trainer aplicado ao Student.
+Alimentação, progresso somente de peso, Coach read-only, seed, demo comercial completa e, por último, branding dinâmico do Trainer aplicado ao Student. Fecha também a retirada do fluxo SVR/`Member`, deixando a entrada do aluno apoiada somente em `Student`.
 
 ## M5 — Production Foundation
 Somente após validação:
