@@ -11,6 +11,8 @@ export default function AppLayout() {
     <Tabs.Screen name="coach" options={{ title: 'Coach', tabBarIcon: ({ focused }) => <TabIcon symbol="✦" focused={focused} /> }} />
     <Tabs.Screen name="nutrition" options={{ title: 'Nutrição', tabBarIcon: ({ focused }) => <TabIcon symbol="◉" focused={focused} /> }} />
     <Tabs.Screen name="progress" options={{ title: 'Progresso', tabBarIcon: ({ focused }) => <TabIcon symbol="↗" focused={focused} /> }} />
+    <Tabs.Screen name="index" options={{ href: null, tabBarStyle: { display: 'none' } }} />
+    <Tabs.Screen name="access" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     <Tabs.Screen name="pain" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     <Tabs.Screen name="meal/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
     <Tabs.Screen name="workout/[id]" options={{ href: null, tabBarStyle: { display: 'none' } }} />
