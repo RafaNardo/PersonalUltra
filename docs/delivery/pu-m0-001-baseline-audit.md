@@ -59,7 +59,7 @@ databases.
 
 - The PostgreSQL data/volume may be reset for the new Personal Ultra
   infrastructure. `PU-M0-002` therefore uses new database, credential and
-  compose-volume identifiers without deleting local Docker data.
+  compose-volume identifiers without deleting local Podman data.
 - The inherited exercise assets are licensed for continued use. Their existing
   SVR file names and visual treatment remain product/branding work for
   `PU-M0-008`.

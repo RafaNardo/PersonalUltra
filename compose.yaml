@@ -15,15 +15,28 @@ services:
       timeout: 5s
       retries: 12
 
-  api:
+  student-api:
     build:
-      context: ./apps/api
-      dockerfile: Containerfile
+      context: .
+      dockerfile: apps/api/StudentApi/Containerfile
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__PersonalUltraDatabase: Host=postgres;Port=5432;Database=personal_ultra;Username=personal_ultra;Password=personal_ultra
     ports:
       - "8080:8080"
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  trainer-api:
+    build:
+      context: .
+      dockerfile: apps/api/TrainerApi/Containerfile
+    environment:
+      ASPNETCORE_ENVIRONMENT: Development
+      ConnectionStrings__PersonalUltraDatabase: Host=postgres;Port=5432;Database=personal_ultra;Username=personal_ultra;Password=personal_ultra
+    ports:
+      - "8081:8080"
     depends_on:
       postgres:
         condition: service_healthy

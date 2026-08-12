@@ -1,13 +1,12 @@
 FROM mcr.microsoft.com/dotnet/sdk:8.0 AS build
 WORKDIR /src
-COPY PersonalUltra.Api.csproj .
-RUN dotnet restore PersonalUltra.Api.csproj
 COPY . .
-RUN dotnet publish PersonalUltra.Api.csproj --configuration Release --output /app/publish --no-restore
+RUN dotnet restore apps/api/StudentApi/StudentApi.csproj
+RUN dotnet publish apps/api/StudentApi/StudentApi.csproj --configuration Release --output /app/publish --no-restore
 
 FROM mcr.microsoft.com/dotnet/aspnet:8.0
 WORKDIR /app
 COPY --from=build /app/publish .
 ENV ASPNETCORE_URLS=http://+:8080
 EXPOSE 8080
-ENTRYPOINT ["dotnet", "PersonalUltra.Api.dll"]
+ENTRYPOINT ["dotnet", "StudentApi.dll"]

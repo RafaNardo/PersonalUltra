@@ -25,6 +25,9 @@ Esta documentação substitui a documentação herdada do SVR Method como fonte 
 - `delivery/roadmap.md`
 - `delivery/reuse-map.md`
 
+## Desenvolvimento local
+- `development/local-environment.md`
+
 ## Regra importante
 Na demo existe um único app mobile com role switching. O código deve permanecer preparado para o split futuro em dois apps independentes: Trainer e Student.
 
