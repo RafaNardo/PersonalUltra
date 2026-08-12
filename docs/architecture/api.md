@@ -28,6 +28,7 @@ associados ao `Student`; o endpoint não inventa esses dados durante a transiç�
 - `GET /invite/{token}`
 - `PUT /anamnesis`
 - `POST /anamnesis/complete`
+- `GET /home/trainer-message`
 - `GET /workouts`
 - `GET /workouts/recommended`
 - `POST /workout-sessions`

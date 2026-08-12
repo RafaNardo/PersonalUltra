@@ -31,9 +31,9 @@
 - `PU-M2-004`: modelo de anamnese.
 - `PU-M2-005`: formulário Student.
 - `PU-M2-006`: persistência.
-- `PU-M2-007`: visualização Trainer.
+- `PU-M2-007`: visualização Trainer e integração da anamnese concluída ao detalhe do aluno.
 - `PU-M2-008`: atividade de anamnese no dashboard.
-- `PU-M2-009`: integrar a anamnese concluída ao detalhe do aluno no Trainer.
+- `PU-M2-009`: incorporada a `PU-M2-007`, para não duplicar a mesma entrega.
 - `PU-M2-010`: capturar e persistir telefone de contato do Student vinculado.
 - `PU-M2-011`: WhatsApp deep link do Trainer para o telefone real do Student.
 - `PU-M2-012`: expor a TrainerMessage ativa na Student API e Home, usando o vínculo real Trainer/Student.

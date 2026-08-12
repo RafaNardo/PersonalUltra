@@ -14,12 +14,12 @@
 Trocar para Student em controle dev/demo-only.
 
 ## Student
-1. Ver branding e mensagem do personal.
-2. Ver grade recomendada.
-3. Escolher outro treino disponível.
-4. Executar e registrar peso/repetições.
-5. Ver alimentação.
-6. Perguntar ao Coach.
-7. Registrar peso corporal.
+1. Receber o link de convite do Trainer.
+2. Cadastrar nome, e-mail e telefone.
+3. Preencher a anamnese.
+4. Ver a mensagem ativa do personal e o estado de aguardando protocolo.
+
+Treinos, alimentação, peso e Coach entram nas milestones M3 e M4, quando
+estiverem associados ao `Student` real.
 
 O role switch jamais deve ser fonte de autorização de negócio.
