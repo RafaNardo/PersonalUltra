@@ -208,6 +208,14 @@ V1 templates should support:
 
 The template library should remain usable with dozens of items: use a compact searchable list that opens a read-only detail surface. Editing, deleting and creating a new model from an existing one belong to that detail surface, not to every list row.
 
+The Student workout list exposes one primary `Adicionar treino` action. A short
+choice screen then explains `Criar do zero` and `Usar um modelo`; the management
+screen should not force both paths to compete as equal buttons.
+
+Template discovery combines name search with muscle-group filters derived from
+the catalog exercises currently present in each template. A template may appear
+in several groups. V1 does not store or maintain a second manual category field.
+
 `Create new from this model` prepares a local-only draft before any API mutation. The local payload must carry an explicit schema version; an unreadable or unsupported version is discarded safely instead of being migrated implicitly. Saving the new model persists it through the normal Trainer API and removes the local draft. This is lightweight mobile draft resilience, not enterprise template versioning.
 
 A template references catalog exercises while being edited. Applying it to a Student creates a Student-owned editable workout snapshot. Later template changes do not mutate already-applied Student workouts.

@@ -105,6 +105,41 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     }
 
     [Fact]
+    public async Task Template_list_derives_distinct_muscle_groups_from_catalog_exercises()
+    {
+        var templateId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var exercises = await db.Exercises.AsNoTracking().Where(x => x.IsActive).GroupBy(x => x.PrimaryMuscleGroup).Select(x => x.First()).Take(2).ToArrayAsync();
+            Assert.Equal(2, exercises.Length);
+            var template = new WorkoutTemplate { Id = templateId, TrainerId = DemoIds.TrainerId, Name = "Modelo para filtros", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            template.Exercises.Add(new WorkoutTemplateExercise { Id = Guid.NewGuid(), WorkoutTemplateId = templateId, ExerciseId = exercises[0].Id, Sequence = 1, Sets = 3, RepetitionsMin = 8, RepetitionsMax = 12, RestSeconds = 60 });
+            template.Exercises.Add(new WorkoutTemplateExercise { Id = Guid.NewGuid(), WorkoutTemplateId = templateId, ExerciseId = exercises[1].Id, Sequence = 2, Sets = 3, RepetitionsMin = 8, RepetitionsMax = 12, RestSeconds = 60 });
+            db.WorkoutTemplates.Add(template);
+            await db.SaveChangesAsync();
+        }
+
+        try
+        {
+            var response = await client.GetAsync("/api/v1/training/templates/");
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var templates = await response.Content.ReadFromJsonAsync<TemplateSummaryResponse[]>();
+            var result = Assert.Single(templates!, template => template.Id == templateId);
+            Assert.Equal(2, result.MuscleGroups.Count);
+            Assert.Equal(result.MuscleGroups.Distinct(), result.MuscleGroups);
+        }
+        finally
+        {
+            using var cleanupScope = factory.Services.CreateScope();
+            var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            cleanupDb.WorkoutTemplateExercises.RemoveRange(cleanupDb.WorkoutTemplateExercises.Where(x => x.WorkoutTemplateId == templateId));
+            cleanupDb.WorkoutTemplates.RemoveRange(cleanupDb.WorkoutTemplates.Where(x => x.Id == templateId));
+            await cleanupDb.SaveChangesAsync();
+        }
+    }
+
+    [Fact]
     public async Task Trainer_lists_and_opens_owned_student_workouts_with_ordered_snapshot_details()
     {
         var listResponse = await client.GetAsync($"/api/v1/students/{DemoIds.StudentId}/workouts");
@@ -857,6 +892,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     }
 
     private sealed record TemplateResponse(Guid Id, IReadOnlyList<TemplateExerciseResponse> Exercises);
+    private sealed record TemplateSummaryResponse(Guid Id, IReadOnlyList<string> MuscleGroups);
     private sealed record TemplateExerciseResponse(Guid ExerciseId, string Name, string ImageRef, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
     private sealed record AppliedWorkoutResponse(Guid Id);
     private sealed record ErrorResponse(string Code);

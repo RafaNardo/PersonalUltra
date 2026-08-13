@@ -24,6 +24,10 @@ ativo desse Trainer, além das contagens de anamnese pendente/concluída. Métri
 de treino, peso e atividade entram quando seus respectivos fluxos estiverem
 associados ao `Student`; o endpoint não inventa esses dados durante a transição.
 
+`GET /training/templates` inclui os grupos musculares distintos derivados dos
+exercícios de cada modelo para busca/filtro no mobile; não existe categoria
+manual duplicada no modelo de domínio.
+
 ## Student API
 - `GET /bootstrap`
 - `GET /home`

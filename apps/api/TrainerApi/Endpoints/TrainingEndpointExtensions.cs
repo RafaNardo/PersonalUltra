@@ -54,7 +54,7 @@ public static class TrainingEndpointExtensions
                 .AsNoTracking()
                 .Where(x => x.TrainerId == trainerId)
                 .OrderBy(x => x.Name)
-                .Select(x => new WorkoutTemplateSummary(x.Id, x.Name, x.Notes, x.Exercises.Count, x.UpdatedAt))
+                .Select(x => new WorkoutTemplateSummary(x.Id, x.Name, x.Notes, x.Exercises.Count, x.UpdatedAt, x.Exercises.Select(exercise => exercise.Exercise.PrimaryMuscleGroup).Distinct().OrderBy(group => group).ToArray()))
                 .ToListAsync(ct);
             return Results.Ok(result);
         });

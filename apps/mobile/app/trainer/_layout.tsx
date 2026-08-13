@@ -12,6 +12,7 @@ export default function TrainerLayout() {
     <Tabs.Screen name="students/[id]" options={{ href: null }} />
     <Tabs.Screen name="students/nutrition/[id]" options={{ href: null }} />
     <Tabs.Screen name="students/[studentId]/workouts/[workoutId]" options={{ href: null }} />
+    <Tabs.Screen name="students/[studentId]/workouts/add" options={{ href: null }} />
     <Tabs.Screen name="students/[studentId]/workouts/from-template" options={{ href: null }} />
     <Tabs.Screen name="students/[studentId]/workouts/new" options={{ href: null }} />
     <Tabs.Screen name="students/[studentId]/workouts/[workoutId]/catalog/index" options={{ href: null }} />

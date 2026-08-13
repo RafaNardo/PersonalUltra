@@ -8,6 +8,7 @@ import { useTrainerStudent } from '@/src/features/trainer/students/hooks';
 import { useApplyTrainerTemplate, useTrainerTemplate, useTrainerTemplates } from '@/src/features/trainer/training/hooks';
 import { feedback } from '@/src/platform/feedback';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { filterTemplates, TemplateMuscleFilters, templateGroups } from '@/src/features/trainer/training/template-filters';
 
 const weekdays = ['Seg', 'Ter', 'Qua', 'Qui', 'Sex', 'Sáb', 'Dom'];
 
@@ -15,16 +16,15 @@ export default function ApplyTemplateToStudentScreen() {
   const { studentId } = useLocalSearchParams<{ studentId: string }>();
   const [selectedTemplateId, setSelectedTemplateId] = useState<string>();
   const [templateSearch, setTemplateSearch] = useState('');
+  const [muscleGroup, setMuscleGroup] = useState<string>();
   const [recommendedDay, setRecommendedDay] = useState(1);
   const [isRecommended, setIsRecommended] = useState(false);
   const student = useTrainerStudent(studentId ?? '');
   const templates = useTrainerTemplates();
   const selectedTemplate = useTrainerTemplate(selectedTemplateId ?? '', Boolean(selectedTemplateId));
   const apply = useApplyTrainerTemplate();
-  const filteredTemplates = useMemo(() => {
-    const term = templateSearch.trim().toLocaleLowerCase('pt-BR');
-    return term ? (templates.data ?? []).filter((template) => template.name.toLocaleLowerCase('pt-BR').includes(term)) : (templates.data ?? []);
-  }, [templateSearch, templates.data]);
+  const groups = useMemo(() => templateGroups(templates.data ?? []), [templates.data]);
+  const filteredTemplates = useMemo(() => filterTemplates(templates.data ?? [], templateSearch, muscleGroup), [muscleGroup, templateSearch, templates.data]);
 
   if (!studentId) return <ErrorView message="Não foi possível identificar o aluno deste treino." />;
   if (student.isLoading || templates.isLoading) return <LoadingView message="Preparando os modelos…" />;
@@ -87,9 +87,10 @@ export default function ApplyTemplateToStudentScreen() {
     <Card style={styles.studentCard}><Text style={styles.label}>NOVO TREINO PARA</Text><Text style={styles.studentName}>{studentName}</Text><Text style={styles.copy}>Escolha uma prescrição pronta. Antes de adicionar, você poderá revisar os exercícios e definir o dia.</Text></Card>
 
     {templates.data!.length > 0 ? <SearchField value={templateSearch} onChangeText={setTemplateSearch} placeholder="Buscar modelo…" accessibilityLabel="Buscar modelo para o aluno" /> : null}
-    {templates.data!.length === 0 ? <EmptyState status="SEM MODELOS DISPONÍVEIS" symbol="+" title="Crie um modelo antes de usar este atalho." message="A biblioteca permite montar prescrições reutilizáveis. Depois, volte ao aluno para aplicá-las." actionLabel="Abrir biblioteca de modelos" onAction={() => router.push('/trainer/training/templates')} /> : filteredTemplates.length === 0 ? <EmptyState variant="inline" status="NENHUM RESULTADO" symbol="⌕" title="Não encontramos esse modelo." message="Tente outro nome ou limpe a busca para consultar todas as opções." actionLabel="Limpar busca" onAction={() => setTemplateSearch('')} /> : <View style={styles.list}>{filteredTemplates.map((template) => {
+    <TemplateMuscleFilters groups={groups} selected={muscleGroup} onSelect={setMuscleGroup} />
+    {templates.data!.length === 0 ? <EmptyState status="SEM MODELOS DISPONÍVEIS" symbol="+" title="Crie um modelo antes de usar este atalho." message="A biblioteca permite montar prescrições reutilizáveis. Depois, volte ao aluno para aplicá-las." actionLabel="Abrir biblioteca de modelos" onAction={() => router.push('/trainer/training/templates')} /> : filteredTemplates.length === 0 ? <EmptyState variant="inline" status="NENHUM RESULTADO" symbol="⌕" title="Não encontramos esse modelo." message="Tente outro nome, escolha outro grupo muscular ou limpe os filtros." actionLabel="Limpar filtros" onAction={() => { setTemplateSearch(''); setMuscleGroup(undefined); }} /> : <View style={styles.list}>{filteredTemplates.map((template) => {
       const count = template.exerciseCount ?? template.exercises?.length ?? 0;
-      return <ListItem key={template.id} title={template.name} metadata={`${count} ${count === 1 ? 'exercício' : 'exercícios'}${template.updatedAt ? ` · atualizado em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(template.updatedAt))}` : ''}`} description={count === 0 ? 'Adicione exercícios na biblioteca antes de usar este modelo.' : template.notes || undefined} actionLabel={count === 0 ? 'Modelo vazio' : 'Escolher'} disabled={count === 0} onPress={() => { setSelectedTemplateId(template.id); feedback.selection(); }} accessibilityLabel={`Escolher modelo ${template.name}`} accessibilityHint={count === 0 ? 'Modelo sem exercícios; edite-o na biblioteca antes de usar' : 'Abre a revisão antes de adicionar ao aluno'} />;
+      return <ListItem key={template.id} title={template.name} metadata={`${count} ${count === 1 ? 'exercício' : 'exercícios'}${template.updatedAt ? ` · atualizado em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(template.updatedAt))}` : ''}`} description={count === 0 ? 'Adicione exercícios na biblioteca antes de usar este modelo.' : template.muscleGroups?.join(' · ') || template.notes || undefined} actionLabel={count === 0 ? 'Modelo vazio' : 'Escolher'} disabled={count === 0} onPress={() => { setSelectedTemplateId(template.id); feedback.selection(); }} accessibilityLabel={`Escolher modelo ${template.name}`} accessibilityHint={count === 0 ? 'Modelo sem exercícios; edite-o na biblioteca antes de usar' : 'Abre a revisão antes de adicionar ao aluno'} />;
     })}</View>}
 
     <Button variant="ghost" onPress={() => router.push('/trainer/training/templates')}>Gerenciar biblioteca de modelos</Button>
