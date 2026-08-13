@@ -3,6 +3,9 @@ import * as SQLite from 'expo-sqlite';
 export type CompleteSetInput = { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number; repsInReserve?: number | null };
 export type CachedWorkoutSnapshot = {
   sessionId: string;
+  workoutId: string;
+  workoutName: string;
+  status: string;
   exercises: Array<{
     id: string;
     exerciseId?: string;
@@ -17,6 +20,7 @@ export type CachedWorkoutSnapshot = {
     repetitionsMax: number;
     restSeconds: number;
     notes: string;
+    completedSets: number;
   }>;
 };
 
