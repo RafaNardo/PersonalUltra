@@ -50,6 +50,38 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     }
 
     [Fact]
+    public async Task Deleted_trainer_workout_is_not_available_to_student()
+    {
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
+        var workoutId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var exercise = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino excluído", RecommendedDay = 2, IsActive = false, CreatedAt = DateTimeOffset.UtcNow };
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, exercise, 1, 3, 8, 12, 60));
+            db.StudentWorkouts.Add(workout);
+            await db.SaveChangesAsync();
+        }
+
+        var training = await client.GetFromJsonAsync<StudentTrainingListResponse>("/api/v1/training/");
+        var preview = await client.GetAsync($"/api/v1/training/{workoutId}");
+        var start = await client.PostAsync($"/api/v1/training/{workoutId}/start", null);
+
+        Assert.DoesNotContain(training!.Available, workout => workout.Id == workoutId);
+        Assert.Equal(HttpStatusCode.NotFound, preview.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, start.StatusCode);
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        cleanupDb.StudentWorkoutExercises.RemoveRange(cleanupDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == workoutId));
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == workoutId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
+    [Fact]
     public async Task Starting_a_workout_copies_an_immutable_session_snapshot_and_preserves_actual_performance()
     {
         var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });

@@ -232,7 +232,7 @@ public static class TrainingEndpointExtensions
 
             var workouts = await db.StudentWorkouts
                 .AsNoTracking()
-                .Where(x => x.TrainerId == trainerId && x.StudentId == studentId)
+                .Where(x => x.TrainerId == trainerId && x.StudentId == studentId && x.IsActive)
                 .OrderBy(x => x.RecommendedDay)
                 .ThenBy(x => x.Name)
                 .Select(x => new TrainerStudentWorkoutSummary(x.Id, x.Name, x.Notes, x.RecommendedDay, x.IsRecommended, x.Exercises.Count, x.CreatedAt))
@@ -279,7 +279,7 @@ public static class TrainingEndpointExtensions
 
             var workout = await db.StudentWorkouts
                 .AsNoTracking()
-                .Where(x => x.Id == workoutId && x.TrainerId == trainerId && x.StudentId == studentId)
+                .Where(x => x.Id == workoutId && x.TrainerId == trainerId && x.StudentId == studentId && x.IsActive)
                 .Select(x => new TrainerStudentWorkoutDetail(
                     x.Id,
                     x.StudentId,
@@ -298,6 +298,24 @@ public static class TrainingEndpointExtensions
                 : Results.Ok(workout);
         }).RequireAuthorization();
 
+        app.MapDelete("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        {
+            var trainerId = TrainerId(user);
+            if (!await OwnsStudent(db, trainerId, studentId, ct))
+                return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+
+            var workout = await db.StudentWorkouts
+                .Include(x => x.Exercises)
+                .SingleOrDefaultAsync(x => x.Id == workoutId && x.TrainerId == trainerId && x.StudentId == studentId && x.IsActive, ct);
+            if (workout is null)
+                return context.ApiError("WORKOUT_NOT_FOUND", "Treino não encontrado para este aluno.", 404);
+
+            workout.IsActive = false;
+            workout.IsRecommended = false;
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        }).RequireAuthorization();
+
         app.MapPut("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, TrainerStudentWorkoutUpdateRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
         {
             var trainerId = TrainerId(user);
@@ -310,7 +328,7 @@ public static class TrainingEndpointExtensions
 
             var workout = await db.StudentWorkouts
                 .Include(x => x.Exercises)
-                .SingleOrDefaultAsync(x => x.Id == workoutId && x.TrainerId == trainerId && x.StudentId == studentId, ct);
+                .SingleOrDefaultAsync(x => x.Id == workoutId && x.TrainerId == trainerId && x.StudentId == studentId && x.IsActive, ct);
             if (workout is null)
                 return context.ApiError("WORKOUT_NOT_FOUND", "Treino não encontrado para este aluno.", 404);
 

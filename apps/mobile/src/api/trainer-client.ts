@@ -85,6 +85,7 @@ export const trainerClient = {
   createStudentWorkout: (studentId: string, input: { name: string; notes?: string; recommendedDay: number }) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts`, { method: 'POST', body: JSON.stringify(input) }),
   studentWorkout: (studentId: string, workoutId: string) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts/${workoutId}`),
   updateStudentWorkout: (studentId: string, workoutId: string, exercises: TrainerStudentWorkoutExerciseInput[]) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts/${workoutId}`, { method: 'PUT', body: JSON.stringify({ exercises }) }),
+  deleteStudentWorkout: (studentId: string, workoutId: string) => request<void>(`/students/${studentId}/workouts/${workoutId}`, { method: 'DELETE' }),
   exerciseCatalog: ({ search, muscleGroup }: { search?: string; muscleGroup?: string } = {}) => {
     const query = new URLSearchParams();
     const normalizedSearch = search?.trim();

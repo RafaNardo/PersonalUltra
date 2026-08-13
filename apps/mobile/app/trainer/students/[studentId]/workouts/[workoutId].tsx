@@ -1,3 +1,4 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
 import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
@@ -5,7 +6,7 @@ import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/com
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { useTrainerStudent } from '@/src/features/trainer/students/hooks';
-import { useTrainerStudentWorkout, useUpdateTrainerStudentWorkout } from '@/src/features/trainer/training/hooks';
+import { useDeleteTrainerStudentWorkout, useTrainerStudentWorkout, useUpdateTrainerStudentWorkout } from '@/src/features/trainer/training/hooks';
 import { useWorkoutEditorStore, workoutEditorKey, type WorkoutEditorExercise } from '@/src/features/trainer/training/workout-editor-store';
 import { feedback } from '@/src/platform/feedback';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
@@ -16,6 +17,7 @@ export default function TrainerStudentWorkoutScreen() {
   const student = useTrainerStudent(studentId);
   const workout = useTrainerStudentWorkout(studentId, workoutId);
   const updateWorkout = useUpdateTrainerStudentWorkout(studentId, workoutId);
+  const deleteWorkout = useDeleteTrainerStudentWorkout(studentId, workoutId);
   const draft = useWorkoutEditorStore((state) => state.drafts[key]);
   const initialize = useWorkoutEditorStore((state) => state.initialize);
   const resetFromServer = useWorkoutEditorStore((state) => state.resetFromServer);
@@ -35,6 +37,17 @@ export default function TrainerStudentWorkoutScreen() {
   const editExercise = (exercise: WorkoutEditorExercise) => router.push({ pathname: '/trainer/students/[studentId]/workouts/[workoutId]/catalog/[exerciseId]', params: { studentId: studentId!, workoutId: workoutId!, exerciseId: exercise.exerciseId ?? 'snapshot', workoutExerciseId: exercise.clientId } });
   const confirmRemoval = (exercise: WorkoutEditorExercise) => Alert.alert('Remover exercício?', `${exercise.name} será removido quando você publicar as alterações.`, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Remover', style: 'destructive', onPress: () => { removeExercise(key, exercise.clientId); feedback.warning(); } }]);
   const discard = () => Alert.alert('Descartar alterações?', 'A lista voltará ao último estado publicado.', [{ text: 'Continuar editando', style: 'cancel' }, { text: 'Descartar', style: 'destructive', onPress: () => resetFromServer(key, workoutData) }]);
+  const confirmDelete = () => Alert.alert('Excluir este treino?', `${workoutData.name} deixará de aparecer para ${studentData.firstName}. O histórico de sessões realizadas será preservado.`, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Excluir treino', style: 'destructive', onPress: () => void removeWorkout() }]);
+  const removeWorkout = async () => {
+    try {
+      await deleteWorkout.mutateAsync();
+      feedback.success();
+      router.replace({ pathname: '/trainer/students/[id]', params: { id: studentId!, section: 'training' } });
+    } catch (error) {
+      feedback.warning();
+      Alert.alert('Não foi possível excluir', error instanceof Error ? error.message : 'Tente novamente.');
+    }
+  };
   const publish = async () => {
     try {
       const saved = await updateWorkout.mutateAsync(editor.exercises.map((exercise, index) => ({
@@ -69,6 +82,7 @@ export default function TrainerStudentWorkoutScreen() {
     <Button loading={updateWorkout.isPending} disabled={!editor.dirty} accessibilityHint="Salva a lista completa de exercícios para o aluno" onPress={() => void publish()}>Publicar alterações</Button>
     {editor.dirty ? <Button variant="ghost" disabled={updateWorkout.isPending} onPress={discard}>Descartar alterações</Button> : null}
     <Text style={styles.concurrencyNote}>As alterações chegam ao aluno após a publicação. Treinos já iniciados continuam como estavam.</Text>
+    <Pressable disabled={deleteWorkout.isPending || updateWorkout.isPending} accessibilityRole="button" accessibilityLabel="Excluir treino do aluno" onPress={confirmDelete} style={({ pressed }) => [styles.deleteButton, pressed && styles.deletePressed, (deleteWorkout.isPending || updateWorkout.isPending) && styles.disabled]}><Ionicons name="trash-outline" size={19} color={colors.danger} /><Text style={styles.deleteText}>{deleteWorkout.isPending ? 'Excluindo…' : 'Excluir treino'}</Text></Pressable>
   </Screen>;
 }
 
@@ -94,5 +108,5 @@ function weekday(day: number) {
 }
 
 const styles = StyleSheet.create({
-  page: { paddingVertical: spacing.xl, gap: spacing.md }, metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }, schedule: { ...typography.caption, color: colors.titanium, flex: 1 }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.sm }, sectionCopy: { flex: 1 }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, count: { ...typography.caption, color: colors.primary, backgroundColor: colors.surfaceElevated, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.pill }, limit: { ...typography.caption, color: colors.warning }, list: { gap: spacing.sm }, exercise: { gap: spacing.md }, exerciseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, thumbnail: { width: 82, height: 82, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallback: { width: 82, height: 82, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallbackText: { ...typography.headingMD, color: colors.primary }, exerciseIdentity: { flex: 1, gap: spacing.xxs }, exerciseName: { ...typography.headingMD, color: colors.textPrimary }, context: { ...typography.caption, color: colors.textMuted }, prescription: { ...typography.bodyMD, color: colors.primary }, actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }, orderButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, disabled: { opacity: .3 }, textButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs }, editText: { ...typography.caption, color: colors.primary }, removeText: { ...typography.caption, color: colors.danger }, errorCard: { gap: spacing.xs, borderColor: colors.danger, backgroundColor: '#251216' }, errorTitle: { ...typography.caption, color: colors.danger }, concurrencyNote: { ...typography.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 18 },
+  page: { paddingVertical: spacing.xl, gap: spacing.md }, metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }, schedule: { ...typography.caption, color: colors.titanium, flex: 1 }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.sm }, sectionCopy: { flex: 1 }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, count: { ...typography.caption, color: colors.primary, backgroundColor: colors.surfaceElevated, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.pill }, limit: { ...typography.caption, color: colors.warning }, list: { gap: spacing.sm }, exercise: { gap: spacing.md }, exerciseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, thumbnail: { width: 82, height: 82, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallback: { width: 82, height: 82, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallbackText: { ...typography.headingMD, color: colors.primary }, exerciseIdentity: { flex: 1, gap: spacing.xxs }, exerciseName: { ...typography.headingMD, color: colors.textPrimary }, context: { ...typography.caption, color: colors.textMuted }, prescription: { ...typography.bodyMD, color: colors.primary }, actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }, orderButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, disabled: { opacity: .3 }, textButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs }, editText: { ...typography.caption, color: colors.primary }, removeText: { ...typography.caption, color: colors.danger }, errorCard: { gap: spacing.xs, borderColor: colors.danger, backgroundColor: '#251216' }, errorTitle: { ...typography.caption, color: colors.danger }, concurrencyNote: { ...typography.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 18 }, deleteButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.sm, paddingTop: spacing.lg }, deletePressed: { opacity: .7 }, deleteText: { ...typography.bodyMD, color: colors.danger, fontFamily: 'MontserratSemiBold' },
 });

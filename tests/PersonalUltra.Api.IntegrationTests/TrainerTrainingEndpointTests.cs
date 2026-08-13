@@ -132,6 +132,42 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     }
 
     [Fact]
+    public async Task Trainer_deletes_workout_from_current_lists_without_destroying_history()
+    {
+        var workoutId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var exercise = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino para excluir", RecommendedDay = 1, IsRecommended = true, CreatedAt = DateTimeOffset.UtcNow };
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, exercise, 1, 3, 8, 12, 60));
+            db.StudentWorkouts.Add(workout);
+            db.WorkoutSessions.Add(new WorkoutSession { Id = sessionId, StudentId = DemoIds.StudentId, StudentWorkoutId = workoutId, StartedAt = DateTimeOffset.UtcNow.AddDays(-1), CompletedAt = DateTimeOffset.UtcNow.AddDays(-1).AddHours(1), Status = "Completed" });
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.DeleteAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{workoutId}");
+        var list = await client.GetFromJsonAsync<StudentWorkoutListResponse>($"/api/v1/students/{DemoIds.StudentId}/workouts");
+        var detail = await client.GetAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{workoutId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        Assert.DoesNotContain(list!.Workouts, x => x.Id == workoutId);
+        Assert.Equal(HttpStatusCode.NotFound, detail.StatusCode);
+        using var verifyScope = factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        var persisted = await verifyDb.StudentWorkouts.AsNoTracking().SingleAsync(x => x.Id == workoutId);
+        Assert.False(persisted.IsActive);
+        Assert.False(persisted.IsRecommended);
+        Assert.True(await verifyDb.WorkoutSessions.AnyAsync(x => x.Id == sessionId));
+
+        verifyDb.WorkoutSessions.RemoveRange(verifyDb.WorkoutSessions.Where(x => x.Id == sessionId));
+        verifyDb.StudentWorkoutExercises.RemoveRange(verifyDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == workoutId));
+        verifyDb.StudentWorkouts.RemoveRange(verifyDb.StudentWorkouts.Where(x => x.Id == workoutId));
+        await verifyDb.SaveChangesAsync();
+    }
+
+    [Fact]
     public async Task Trainer_cannot_list_or_open_workouts_outside_an_active_student_link()
     {
         var otherTrainerId = Guid.NewGuid();

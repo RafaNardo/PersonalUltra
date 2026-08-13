@@ -48,6 +48,7 @@ public sealed class StudentWorkout
     public string Notes { get; set; } = "";
     public int RecommendedDay { get; set; }
     public bool IsRecommended { get; set; }
+    public bool IsActive { get; set; } = true;
     public DateTimeOffset CreatedAt { get; set; }
     public Trainer Trainer { get; set; } = null!;
     public Student Student { get; set; } = null!;

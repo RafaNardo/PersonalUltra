@@ -22,6 +22,16 @@ export function useUpdateTrainerStudentWorkout(studentId: string, workoutId: str
     },
   });
 }
+export function useDeleteTrainerStudentWorkout(studentId: string, workoutId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: () => trainerClient.deleteStudentWorkout(studentId, workoutId),
+    onSuccess: () => {
+      client.removeQueries({ queryKey: ['trainer', 'students', studentId, 'workouts', workoutId] });
+      void client.invalidateQueries({ queryKey: ['trainer', 'students', studentId, 'workouts'], exact: true });
+    },
+  });
+}
 export function useTrainerExerciseCatalog(search = '', muscleGroup?: string, enabled = true) {
   const debouncedSearch = useDebouncedValue(search.trim(), 300);
   return useQuery({

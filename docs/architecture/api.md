@@ -13,6 +13,7 @@ Base: `/api/v1`
 - `GET/PUT /settings/prescription`
 - `POST /students/{id}/training/from-template/{templateId}`
 - `GET/PUT /students/{id}/training`
+- `DELETE /students/{id}/workouts/{workoutId}` (remoção lógica; preserva histórico)
 - `PUT /students/{id}/training/schedule`
 - `GET/PUT /students/{id}/nutrition`
 - `POST /students/{id}/messages`

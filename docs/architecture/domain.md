@@ -26,6 +26,11 @@
 
 Aplicar template deve copiar um snapshot editável para o Student. Alterar o template depois não altera alunos existentes.
 
+Excluir um `StudentWorkout` no fluxo do Trainer é uma remoção lógica: ele deixa
+de aparecer nas listas Trainer/Student e não pode iniciar novas sessões. O
+registro permanece apenas para preservar a relação com sessões e snapshots
+históricos; V1 não expõe arquivo de inativos nem reativação.
+
 V1 não possui `RecommendedLoad`.
 
 ### M3 refactor addendum — catalog-backed prescription
