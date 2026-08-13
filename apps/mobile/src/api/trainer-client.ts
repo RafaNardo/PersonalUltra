@@ -80,6 +80,7 @@ export const trainerClient = {
   duplicateTemplate: (id: string) => request<WorkoutTemplate>(`/training/templates/${id}/duplicate`, { method: 'POST' }),
   applyTemplate: (id: string, studentId: string, recommendedDay = 1, isRecommended = false) => request<{ id: string; studentId: string; name: string; recommendedDay: number; isRecommended: boolean; exerciseCount: number }>(`/training/templates/${id}/apply`, { method: 'POST', body: JSON.stringify({ studentId, recommendedDay, isRecommended }) }),
   studentWorkouts: async (studentId: string) => (await request<{ workouts: TrainerStudentWorkoutSummary[] }>(`/students/${studentId}/workouts`)).workouts,
+  createStudentWorkout: (studentId: string, input: { name: string; notes?: string; recommendedDay: number }) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts`, { method: 'POST', body: JSON.stringify(input) }),
   studentWorkout: (studentId: string, workoutId: string) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts/${workoutId}`),
   updateStudentWorkout: (studentId: string, workoutId: string, exercises: TrainerStudentWorkoutExerciseInput[]) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts/${workoutId}`, { method: 'PUT', body: JSON.stringify({ exercises }) }),
   exerciseCatalog: ({ search, muscleGroup }: { search?: string; muscleGroup?: string } = {}) => {

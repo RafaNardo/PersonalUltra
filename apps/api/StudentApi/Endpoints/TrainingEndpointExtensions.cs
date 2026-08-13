@@ -13,7 +13,7 @@ public static class TrainingEndpointExtensions
         api.MapGet("/", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         {
             if (!StudentId(user, out var studentId)) return ApiEndpointExtensions.ApiError("STUDENT_SESSION_REQUIRED", "Use uma sessão de aluno válida.", 403);
-            var workouts = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == studentId).OrderBy(x => x.RecommendedDay).ThenBy(x => x.Name).Select(x => new { x.Id, x.Name, x.Notes, x.RecommendedDay, x.IsRecommended, ExerciseCount = x.Exercises.Count, PrescribedSets = x.Exercises.Sum(e => e.Sets) }).ToListAsync(ct);
+            var workouts = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == studentId && x.Exercises.Any()).OrderBy(x => x.RecommendedDay).ThenBy(x => x.Name).Select(x => new { x.Id, x.Name, x.Notes, x.RecommendedDay, x.IsRecommended, ExerciseCount = x.Exercises.Count, PrescribedSets = x.Exercises.Sum(e => e.Sets) }).ToListAsync(ct);
             var sessionStates = await db.WorkoutSessions.AsNoTracking().Where(x => x.StudentId == studentId).OrderByDescending(x => x.StartedAt).Select(x => new { x.Id, x.StudentWorkoutId, x.Status, x.StartedAt, x.CompletedAt, CompletedSets = x.Exercises.Sum(e => e.CompletedSets) }).ToListAsync(ct);
             var summaries = workouts.Select(workout =>
             {
@@ -29,7 +29,7 @@ public static class TrainingEndpointExtensions
         api.MapGet("/{workoutId:guid}", async (Guid workoutId, PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         {
             if (!StudentId(user, out var studentId)) return ApiEndpointExtensions.ApiError("STUDENT_SESSION_REQUIRED", "Use uma sessão de aluno válida.", 403);
-            var workout = await db.StudentWorkouts.AsNoTracking().Include(x => x.Exercises).SingleOrDefaultAsync(x => x.Id == workoutId && x.StudentId == studentId, ct);
+            var workout = await db.StudentWorkouts.AsNoTracking().Include(x => x.Exercises).SingleOrDefaultAsync(x => x.Id == workoutId && x.StudentId == studentId && x.Exercises.Any(), ct);
             if (workout is null) return ApiEndpointExtensions.ApiError("WORKOUT_NOT_FOUND", "Este treino não está disponível.", 404);
             var sessions = await db.WorkoutSessions.AsNoTracking().Where(x => x.StudentId == studentId && x.StudentWorkoutId == workoutId).OrderByDescending(x => x.StartedAt).Select(x => new { x.Id, x.Status, x.CompletedAt }).ToListAsync(ct);
             var active = sessions.FirstOrDefault(x => x.Status == "InProgress");
@@ -40,7 +40,7 @@ public static class TrainingEndpointExtensions
         api.MapPost("/{workoutId:guid}/start", async (Guid workoutId, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
         {
             if (!StudentId(user, out var studentId)) return ApiEndpointExtensions.ApiError("STUDENT_SESSION_REQUIRED", "Use uma sessão de aluno válida.", 403);
-            var workout = await db.StudentWorkouts.Include(x => x.Exercises).SingleOrDefaultAsync(x => x.Id == workoutId && x.StudentId == studentId, ct); if (workout is null) return ApiEndpointExtensions.ApiError("WORKOUT_NOT_FOUND", "Este treino não está disponível.", 404);
+            var workout = await db.StudentWorkouts.Include(x => x.Exercises).SingleOrDefaultAsync(x => x.Id == workoutId && x.StudentId == studentId && x.Exercises.Any(), ct); if (workout is null) return ApiEndpointExtensions.ApiError("WORKOUT_NOT_FOUND", "Este treino não está disponível.", 404);
             var existing = await db.WorkoutSessions.Include(x => x.StudentWorkout).Include(x => x.Exercises).SingleOrDefaultAsync(x => x.StudentId == studentId && x.StudentWorkoutId == workoutId && x.Status == "InProgress", ct);
             if (existing is not null) return Results.Ok(ToResponse(existing));
             var session = new PersonalUltra.Domain.WorkoutSession { Id = Guid.NewGuid(), StudentId = studentId, StudentWorkoutId = workoutId, StudentWorkout = workout, StartedAt = clock.GetUtcNow(), Status = "InProgress" }; session.Exercises.AddRange(workout.Exercises.OrderBy(x => x.Sequence).Select(x => PersonalUltra.Domain.WorkoutSessionExercise.FromStudentWorkout(session.Id, x))); db.WorkoutSessions.Add(session); await db.SaveChangesAsync(ct); return Results.Ok(ToResponse(session));

@@ -226,6 +226,37 @@ public static class TrainingEndpointExtensions
             return Results.Ok(new TrainerStudentWorkoutListResponse(workouts));
         }).RequireAuthorization();
 
+        app.MapPost("/api/v1/students/{studentId:guid}/workouts", async (Guid studentId, TrainerStudentWorkoutCreateRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
+        {
+            var trainerId = TrainerId(user);
+            if (!await OwnsStudent(db, trainerId, studentId, ct))
+                return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+
+            var name = request.Name?.Trim() ?? "";
+            var notes = request.Notes?.Trim() ?? "";
+            if (name.Length is < 1 or > 200)
+                return context.ApiError("VALIDATION_ERROR", "Informe um nome de treino com até 200 caracteres.", 400);
+            if (notes.Length > 2000)
+                return context.ApiError("VALIDATION_ERROR", "As observações devem ter até 2000 caracteres.", 400);
+            if (request.RecommendedDay is < 1 or > 7)
+                return context.ApiError("VALIDATION_ERROR", "Escolha um dia da semana válido.", 400);
+
+            var workout = new StudentWorkout
+            {
+                Id = Guid.NewGuid(),
+                TrainerId = trainerId,
+                StudentId = studentId,
+                Name = name,
+                Notes = notes,
+                RecommendedDay = request.RecommendedDay,
+                IsRecommended = false,
+                CreatedAt = clock.GetUtcNow(),
+            };
+            db.StudentWorkouts.Add(workout);
+            await db.SaveChangesAsync(ct);
+            return Results.Ok(ToStudentWorkoutDetail(workout));
+        }).RequireAuthorization();
+
         app.MapGet("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
         {
             var trainerId = TrainerId(user);
@@ -286,6 +317,13 @@ public static class TrainingEndpointExtensions
 
             try
             {
+                if (workout.Exercises.Count == 0 && request.Exercises.Count > 0)
+                {
+                    var hasRecommendation = await db.StudentWorkouts.AnyAsync(x => x.Id != workout.Id && x.TrainerId == trainerId && x.StudentId == studentId && x.IsRecommended, ct);
+                    if (!hasRecommendation)
+                        workout.IsRecommended = true;
+                }
+
                 if (transaction is not null)
                 {
                     // Free the unique (workout, sequence) slots before arbitrary reorder.

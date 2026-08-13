@@ -21,6 +21,35 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     }
 
     [Fact]
+    public async Task Empty_trainer_draft_is_hidden_from_student_until_it_has_exercises()
+    {
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
+        var workoutId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            db.StudentWorkouts.Add(new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Rascunho Trainer", RecommendedDay = 4, CreatedAt = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        var training = await client.GetFromJsonAsync<StudentTrainingListResponse>("/api/v1/training/");
+        var preview = await client.GetAsync($"/api/v1/training/{workoutId}");
+        var start = await client.PostAsync($"/api/v1/training/{workoutId}/start", null);
+
+        Assert.DoesNotContain(training!.Available, workout => workout.Id == workoutId);
+        Assert.NotEqual(workoutId, training.Recommended?.Id);
+        Assert.Equal(HttpStatusCode.NotFound, preview.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, start.StatusCode);
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == workoutId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
+    [Fact]
     public async Task Starting_a_workout_copies_an_immutable_session_snapshot_and_preserves_actual_performance()
     {
         var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
@@ -219,6 +248,8 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     }
 
     private sealed record LoginResponse(string AccessToken);
+    private sealed record StudentTrainingListResponse(StudentWorkoutSummary? Recommended, IReadOnlyList<StudentWorkoutSummary> Available);
+    private sealed record StudentWorkoutSummary(Guid Id);
     private sealed record SessionResponse(Guid SessionId, IReadOnlyList<SessionExerciseResponse> Exercises);
     private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets);
     private sealed record TrainingResponse(IReadOnlyList<TrainingHistoryItem> History);

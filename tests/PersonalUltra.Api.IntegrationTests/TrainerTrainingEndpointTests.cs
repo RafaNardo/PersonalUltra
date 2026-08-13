@@ -657,6 +657,44 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         await cleanupDb.SaveChangesAsync();
     }
 
+    [Fact]
+    public async Task Trainer_can_create_an_empty_student_workout_without_exposing_a_recommendation()
+    {
+        Guid existingRecommendedId;
+        Guid[] priorRecommendedIds;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            priorRecommendedIds = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId && x.IsRecommended).Select(x => x.Id).ToArrayAsync();
+            var existing = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Recomendação temporária", RecommendedDay = 2, IsRecommended = true, CreatedAt = DateTimeOffset.UtcNow };
+            existingRecommendedId = existing.Id;
+            db.StudentWorkouts.Add(existing);
+            await db.SaveChangesAsync();
+        }
+
+        var invalid = await client.PostAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts", new { name = " ", recommendedDay = 9 });
+        var response = await client.PostAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts", new { name = "  Novo treino  ", notes = "  Montado do zero  ", recommendedDay = 5 });
+
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<StudentWorkoutDetailResponse>();
+        Assert.NotNull(created);
+        Assert.Empty(created!.Exercises);
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        var persisted = await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == created.Id);
+        Assert.Equal("Novo treino", persisted.Name);
+        Assert.Equal("Montado do zero", persisted.Notes);
+        Assert.Equal(5, persisted.RecommendedDay);
+        Assert.False(persisted.IsRecommended);
+        Assert.True((await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == existingRecommendedId)).IsRecommended);
+        foreach (var prior in await cleanupDb.StudentWorkouts.Where(x => priorRecommendedIds.Contains(x.Id)).ToListAsync())
+            prior.IsRecommended = true;
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == created.Id || x.Id == existingRecommendedId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
     private async Task<Exercise> GetActiveExercise()
     {
         using var scope = factory.Services.CreateScope();
