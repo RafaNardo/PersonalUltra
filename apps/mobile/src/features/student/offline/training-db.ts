@@ -71,6 +71,13 @@ export async function cachedWorkout<T>(workoutId?: string): Promise<T | undefine
   return undefined;
 }
 
+export async function cachedSession<T extends { sessionId?: string }>(sessionId: string): Promise<T | undefined> {
+  const db = await database();
+  const row = await db.getFirstAsync<{ payload: string }>('SELECT payload FROM cached_workout WHERE session_id = ?', sessionId);
+  if (!row) return undefined;
+  return JSON.parse(row.payload) as T;
+}
+
 export type PendingSet = { sessionId: string; exerciseId: string; input: CompleteSetInput };
 
 export function normalizePendingSet(value: unknown): PendingSet {

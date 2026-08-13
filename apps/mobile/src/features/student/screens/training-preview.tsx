@@ -28,7 +28,7 @@ export function StudentTrainingPreviewScreen() {
     {workout.notes ? <Text style={styles.copy}>{workout.notes}</Text> : null}
     <Text style={styles.intro}>{isContinuing ? 'Você já tem uma sessão em andamento. Continue quando estiver pronto.' : 'Confira a sequência, a prescrição e as orientações antes de começar.'}</Text>
     {workout.exercises.length === 0 ? <Card><Text style={styles.copy}>Este treino ainda não possui exercícios.</Text></Card> : workout.exercises.map((exercise) => <PreviewExercise key={exercise.id} exercise={exercise} />)}
-    <Button disabled={workout.exercises.length === 0} onPress={() => router.push({ pathname: '/student/training/[id]', params: { id: workout.id } })}>{isContinuing ? 'Continuar treino' : 'Iniciar treino'}</Button>
+    <Button disabled={workout.exercises.length === 0} onPress={() => router.replace({ pathname: '/student/training/[id]', params: { id: workout.id, start: '1' } })}>{isContinuing ? 'Continuar treino' : 'Iniciar treino'}</Button>
   </Screen>;
 }
 
