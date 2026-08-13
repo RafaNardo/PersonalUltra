@@ -9,3 +9,4 @@ public sealed record ApplyWorkoutRequest(Guid StudentId, int RecommendedDay, boo
 public sealed record AppliedWorkoutResponse(Guid Id, Guid StudentId, string Name, int RecommendedDay, bool IsRecommended, int ExerciseCount);
 public sealed record StudentTrainingHistoryResponse(IReadOnlyList<TrainingHistoryItem> Sessions);
 public sealed record TrainingHistoryItem(Guid SessionId, string WorkoutName, string Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt, int CompletedSets);
+public sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? Instructions, bool IsActive);

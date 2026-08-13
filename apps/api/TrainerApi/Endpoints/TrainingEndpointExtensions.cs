@@ -10,6 +10,41 @@ public static class TrainingEndpointExtensions
 {
     public static void MapTrainingApi(this WebApplication app)
     {
+        var exercises = app.MapGroup("/api/v1/training/exercises").RequireAuthorization();
+
+        exercises.MapGet("/", async (string? search, string? muscleGroup, PersonalUltraDbContext db, HttpContext context, CancellationToken ct) =>
+        {
+            var normalizedSearch = search?.Trim();
+            var normalizedMuscleGroup = muscleGroup?.Trim();
+            if (normalizedSearch?.Length > 100 || normalizedMuscleGroup?.Length > 100)
+                return context.ApiError("VALIDATION_ERROR", "Os filtros devem ter até 100 caracteres.", 400);
+
+            var query = db.Exercises
+                .AsNoTracking()
+                .Where(x => x.IsActive);
+
+            if (!string.IsNullOrWhiteSpace(normalizedSearch))
+            {
+                var searchTerm = normalizedSearch.ToLower();
+                query = query.Where(x => x.Name.ToLower().Contains(searchTerm) || x.Slug.ToLower().Contains(searchTerm));
+            }
+
+            if (!string.IsNullOrWhiteSpace(normalizedMuscleGroup))
+            {
+                var muscleGroupTerm = normalizedMuscleGroup.ToLower();
+                query = query.Where(x => x.PrimaryMuscleGroup.ToLower() == muscleGroupTerm);
+            }
+
+            var result = await query
+                .OrderBy(x => x.Name)
+                .ThenBy(x => x.Slug)
+                .ThenBy(x => x.Id)
+                .Select(x => new TrainerExerciseCatalogItem(x.Id, x.Name, x.Slug, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.IsActive))
+                .ToListAsync(ct);
+
+            return Results.Ok(result);
+        });
+
         var templates = app.MapGroup("/api/v1/training/templates").RequireAuthorization();
 
         templates.MapGet("/", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) =>

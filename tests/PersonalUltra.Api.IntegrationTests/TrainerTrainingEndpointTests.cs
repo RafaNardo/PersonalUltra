@@ -22,6 +22,89 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     }
 
     [Fact]
+    public async Task Trainer_can_list_only_active_catalog_exercises_with_metadata()
+    {
+        var inactive = new Exercise
+        {
+            Id = Guid.NewGuid(),
+            Name = "Exercício arquivado",
+            Slug = $"arquivado-{Guid.NewGuid():N}",
+            PrimaryMuscleGroup = "Peito",
+            ImageRef = "assets/training/arquivado.png",
+            IsActive = false,
+        };
+        using (var seedScope = factory.Services.CreateScope())
+        {
+            var seedDb = seedScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            seedDb.Exercises.Add(inactive);
+            await seedDb.SaveChangesAsync();
+        }
+
+        try
+        {
+            var response = await client.GetAsync("/api/v1/training/exercises/");
+
+            Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+            var items = await response.Content.ReadFromJsonAsync<TrainerExerciseCatalogItem[]>();
+            Assert.NotNull(items);
+            Assert.Equal(28, items!.Length);
+            Assert.All(items, item =>
+            {
+                Assert.True(item.IsActive);
+                Assert.False(string.IsNullOrWhiteSpace(item.Name));
+                Assert.False(string.IsNullOrWhiteSpace(item.Slug));
+                Assert.False(string.IsNullOrWhiteSpace(item.PrimaryMuscleGroup));
+                Assert.False(string.IsNullOrWhiteSpace(item.ImageRef));
+            });
+            Assert.DoesNotContain(items, item => item.Id == inactive.Id);
+            Assert.Equal(items.OrderBy(item => item.Name).ThenBy(item => item.Slug).ThenBy(item => item.Id), items);
+        }
+        finally
+        {
+            using var cleanupScope = factory.Services.CreateScope();
+            var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            cleanupDb.Exercises.Remove(inactive);
+            await cleanupDb.SaveChangesAsync();
+        }
+    }
+
+    [Fact]
+    public async Task Trainer_catalog_search_is_trimmed_case_insensitive_and_combinable_with_muscle_group()
+    {
+        var query = $"/api/v1/training/exercises/?search={Uri.EscapeDataString("  SUPINO  ")}&muscleGroup={Uri.EscapeDataString(" peito ")}";
+
+        var response = await client.GetAsync(query);
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var items = await response.Content.ReadFromJsonAsync<TrainerExerciseCatalogItem[]>();
+        var item = Assert.Single(items!);
+        Assert.Equal("Supino reto com barra", item.Name);
+        Assert.Equal("Peito", item.PrimaryMuscleGroup);
+    }
+
+    [Fact]
+    public async Task Trainer_catalog_rejects_oversized_filters_without_mutating_data()
+    {
+        var before = await CountCatalogExercises();
+        var response = await client.GetAsync($"/api/v1/training/exercises/?search={new string('x', 101)}");
+        var mutationResponse = await client.PostAsJsonAsync("/api/v1/training/exercises/", new { name = "Exercício livre" });
+
+        Assert.Equal(HttpStatusCode.BadRequest, response.StatusCode);
+        Assert.Equal(HttpStatusCode.MethodNotAllowed, mutationResponse.StatusCode);
+        Assert.Equal(before, await CountCatalogExercises());
+    }
+
+    [Fact]
+    public async Task Trainer_catalog_requires_authentication()
+    {
+        client.DefaultRequestHeaders.Authorization = null;
+
+        var response = await client.GetAsync("/api/v1/training/exercises/");
+
+        Assert.Equal(HttpStatusCode.Unauthorized, response.StatusCode);
+    }
+
+    [Fact]
     public async Task Trainer_creates_a_template_with_catalog_exercise_and_repetition_range()
     {
         var exercise = await GetActiveExercise();
@@ -236,8 +319,16 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         return await db.Exercises.AsNoTracking().OrderBy(x => x.Name).FirstAsync(x => x.IsActive);
     }
 
+    private async Task<int> CountCatalogExercises()
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        return await db.Exercises.CountAsync();
+    }
+
     private sealed record TemplateResponse(Guid Id, IReadOnlyList<TemplateExerciseResponse> Exercises);
     private sealed record TemplateExerciseResponse(Guid ExerciseId, string Name, int RepetitionsMin, int RepetitionsMax);
     private sealed record AppliedWorkoutResponse(Guid Id);
     private sealed record ErrorResponse(string Code);
+    private sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? Instructions, bool IsActive);
 }
