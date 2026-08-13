@@ -34,6 +34,7 @@ export type WorkoutExercise = { exerciseId: string; name: string; sequence: numb
 export type WorkoutExerciseInput = Omit<WorkoutExercise, 'name'>;
 export type TrainerStudentWorkoutSummary = { id: string; name: string; notes: string; recommendedDay: number; isRecommended: boolean; exerciseCount: number; createdAt: string };
 export type TrainerStudentWorkout = Omit<TrainerStudentWorkoutSummary, 'exerciseCount'> & { studentId: string; exercises: Array<{ id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string }> };
+export type TrainerExerciseCatalogItem = { id: string; name: string; slug: string; primaryMuscleGroup: string; equipment?: string; imageRef: string; instructions?: string; isActive: boolean };
 export type TrainerNutrition = { id: string; name: string; notes: string; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ foodName: string; quantityGrams: number }> }> };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -71,6 +72,15 @@ export const trainerClient = {
   applyTemplate: (id: string, studentId: string, recommendedDay = 1, isRecommended = false) => request(`/training/templates/${id}/apply`, { method: 'POST', body: JSON.stringify({ studentId, recommendedDay, isRecommended }) }),
   studentWorkouts: async (studentId: string) => (await request<{ workouts: TrainerStudentWorkoutSummary[] }>(`/students/${studentId}/workouts`)).workouts,
   studentWorkout: (studentId: string, workoutId: string) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts/${workoutId}`),
+  exerciseCatalog: ({ search, muscleGroup }: { search?: string; muscleGroup?: string } = {}) => {
+    const query = new URLSearchParams();
+    const normalizedSearch = search?.trim();
+    const normalizedMuscleGroup = muscleGroup?.trim();
+    if (normalizedSearch) query.set('search', normalizedSearch);
+    if (normalizedMuscleGroup) query.set('muscleGroup', normalizedMuscleGroup);
+    const suffix = query.toString();
+    return request<TrainerExerciseCatalogItem[]>(`/training/exercises/${suffix ? `?${suffix}` : ''}`);
+  },
   trainingHistory: (studentId: string) => request<{ sessions: Array<{ sessionId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number }> }>(`/students/${studentId}/training-history`),
   nutrition: (studentId: string) => request<TrainerNutrition | null>(`/students/${studentId}/nutrition`),
   saveNutrition: (studentId: string, input: { name: string; notes?: string; meals: Array<{ name: string; sequence: number; notes?: string; foods: Array<{ foodName: string; quantityGrams: number }> }> }) => request<TrainerNutrition>(`/students/${studentId}/nutrition`, { method: 'PUT', body: JSON.stringify(input) }),
