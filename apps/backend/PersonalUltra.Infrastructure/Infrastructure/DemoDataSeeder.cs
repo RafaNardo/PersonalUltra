@@ -35,7 +35,15 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
         if (!await dbContext.StudentWorkouts.AnyAsync(x => x.StudentId == DemoIds.StudentId, cancellationToken))
         {
             var workout = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Força · Treino A", Notes = "Foco em execução consistente e progressão gradual.", RecommendedDay = 1, IsRecommended = true, CreatedAt = now };
-            workout.Exercises.AddRange(new[] { ("Agachamento livre", 4, 8, 90), ("Supino reto", 4, 10, 75), ("Remada baixa", 3, 10, 75) }.Select((x, i) => new StudentWorkoutExercise { Id = Guid.NewGuid(), StudentWorkoutId = workout.Id, Name = x.Item1, Sequence = i + 1, Sets = x.Item2, Repetitions = x.Item3, RestSeconds = x.Item4 }));
+            var catalog = await dbContext.Exercises
+                .Where(x => x.Slug == "agachamento-livre" || x.Slug == "supino-reto-com-barra" || x.Slug == "remada-baixa")
+                .ToDictionaryAsync(x => x.Slug, cancellationToken);
+            workout.Exercises.AddRange(new[]
+            {
+                StudentWorkoutExercise.FromCatalog(workout.Id, catalog["agachamento-livre"], 1, 4, 8, 8, 90),
+                StudentWorkoutExercise.FromCatalog(workout.Id, catalog["supino-reto-com-barra"], 2, 4, 10, 10, 75),
+                StudentWorkoutExercise.FromCatalog(workout.Id, catalog["remada-baixa"], 3, 3, 10, 10, 75),
+            });
             dbContext.Add(workout);
         }
 

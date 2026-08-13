@@ -153,6 +153,8 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
 
 public sealed class StudentApiFactory : WebApplicationFactory<Program>
 {
+    private readonly string databaseName = $"student-api-tests-{Guid.NewGuid():N}";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -161,7 +163,7 @@ public sealed class StudentApiFactory : WebApplicationFactory<Program>
             services.RemoveAll<DbContextOptions<PersonalUltraDbContext>>();
             services.RemoveAll<DbContextOptions>();
             services.RemoveAll<IDbContextOptionsConfiguration<PersonalUltraDbContext>>();
-            services.AddDbContext<PersonalUltraDbContext>(options => options.UseInMemoryDatabase("student-invite-tests"));
+            services.AddDbContext<PersonalUltraDbContext>(options => options.UseInMemoryDatabase(databaseName));
         });
     }
 }

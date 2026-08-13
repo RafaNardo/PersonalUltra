@@ -151,17 +151,7 @@ public static class TrainingEndpointExtensions
                 IsRecommended = request.IsRecommended,
                 CreatedAt = clock.GetUtcNow(),
             };
-            applied.Exercises.AddRange(source.Exercises.Select(x => new StudentWorkoutExercise
-            {
-                Id = Guid.NewGuid(),
-                StudentWorkoutId = applied.Id,
-                Name = x.Exercise.Name,
-                Sequence = x.Sequence,
-                Sets = x.Sets,
-                Repetitions = x.RepetitionsMax,
-                RestSeconds = x.RestSeconds,
-                Notes = x.Notes,
-            }));
+            applied.Exercises.AddRange(source.Exercises.Select(x => StudentWorkoutExercise.FromTemplate(applied.Id, x)));
 
             db.StudentWorkouts.Add(applied);
             await db.SaveChangesAsync(ct);

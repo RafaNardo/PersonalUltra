@@ -168,6 +168,67 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         await cleanupDb.SaveChangesAsync();
     }
 
+    [Fact]
+    public async Task Applying_a_template_copies_catalog_and_prescription_values_into_a_student_snapshot()
+    {
+        var catalogExercise = await GetActiveExercise();
+        var templateId = Guid.NewGuid();
+        var originalCatalogName = catalogExercise.Name;
+        var originalImageRef = catalogExercise.ImageRef;
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var template = new WorkoutTemplate { Id = templateId, TrainerId = DemoIds.TrainerId, Name = "Snapshot source", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            template.Exercises.Add(new WorkoutTemplateExercise { Id = Guid.NewGuid(), WorkoutTemplateId = templateId, ExerciseId = catalogExercise.Id, Sequence = 1, Sets = 4, RepetitionsMin = 8, RepetitionsMax = 12, RestSeconds = 90, Notes = "Prescrição original" });
+            db.WorkoutTemplates.Add(template);
+            await db.SaveChangesAsync();
+        }
+
+        var applyResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{templateId}/apply", new { studentId = DemoIds.StudentId, recommendedDay = 2, isRecommended = false });
+        Assert.Equal(HttpStatusCode.OK, applyResponse.StatusCode);
+        var applied = await applyResponse.Content.ReadFromJsonAsync<AppliedWorkoutResponse>();
+        Assert.NotNull(applied);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var catalog = await db.Exercises.SingleAsync(x => x.Id == catalogExercise.Id);
+            var templatePrescription = await db.WorkoutTemplateExercises.SingleAsync(x => x.WorkoutTemplateId == templateId);
+            catalog.Name = "Nome alterado no catálogo";
+            catalog.ImageRef = "assets/training/alterado.png";
+            templatePrescription.Sets = 9;
+            templatePrescription.RepetitionsMin = 20;
+            templatePrescription.RepetitionsMax = 25;
+            templatePrescription.Notes = "Template alterado";
+            await db.SaveChangesAsync();
+        }
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var snapshot = await db.StudentWorkoutExercises.AsNoTracking().SingleAsync(x => x.StudentWorkoutId == applied.Id);
+            Assert.Equal(catalogExercise.Id, snapshot.ExerciseId);
+            Assert.Equal(originalCatalogName, snapshot.Name);
+            Assert.Equal(originalImageRef, snapshot.ImageRef);
+            Assert.Equal(4, snapshot.Sets);
+            Assert.Equal(8, snapshot.RepetitionsMin);
+            Assert.Equal(12, snapshot.RepetitionsMax);
+            Assert.Equal("Prescrição original", snapshot.Notes);
+        }
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        var catalogToRestore = await cleanupDb.Exercises.SingleAsync(x => x.Id == catalogExercise.Id);
+        catalogToRestore.Name = originalCatalogName;
+        catalogToRestore.ImageRef = originalImageRef;
+        cleanupDb.StudentWorkoutExercises.RemoveRange(cleanupDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == applied.Id));
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == applied.Id));
+        cleanupDb.WorkoutTemplateExercises.RemoveRange(cleanupDb.WorkoutTemplateExercises.Where(x => x.WorkoutTemplateId == templateId));
+        cleanupDb.WorkoutTemplates.RemoveRange(cleanupDb.WorkoutTemplates.Where(x => x.Id == templateId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
     private async Task<Exercise> GetActiveExercise()
     {
         using var scope = factory.Services.CreateScope();
@@ -177,5 +238,6 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
 
     private sealed record TemplateResponse(Guid Id, IReadOnlyList<TemplateExerciseResponse> Exercises);
     private sealed record TemplateExerciseResponse(Guid ExerciseId, string Name, int RepetitionsMin, int RepetitionsMax);
+    private sealed record AppliedWorkoutResponse(Guid Id);
     private sealed record ErrorResponse(string Code);
 }

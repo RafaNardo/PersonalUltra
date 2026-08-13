@@ -1,6 +1,24 @@
 import * as SQLite from 'expo-sqlite';
 // Kept actor-local so offline persistence can outlive the first workout API.
 export type CompleteSetInput = { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number; repsInReserve?: number | null };
+export type CachedWorkoutSnapshot = {
+  sessionId: string;
+  exercises: Array<{
+    id: string;
+    exerciseId?: string;
+    name: string;
+    primaryMuscleGroup?: string;
+    equipment?: string;
+    imageRef?: string;
+    instructions?: string;
+    sequence: number;
+    sets: number;
+    repetitionsMin: number;
+    repetitionsMax: number;
+    restSeconds: number;
+    notes: string;
+  }>;
+};
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
 
@@ -20,12 +38,12 @@ export async function initializeTrainingDatabase() {
   `);
 }
 
-export async function cacheWorkout(session: { id: string; exercises: { id: string }[] }) {
+export async function cacheWorkout(session: CachedWorkoutSnapshot) {
   const db = await database();
   const updatedAt = new Date().toISOString();
-  await db.runAsync('INSERT OR REPLACE INTO cached_workout (session_id, payload, updated_at) VALUES (?, ?, ?)', session.id, JSON.stringify(session), updatedAt);
+  await db.runAsync('INSERT OR REPLACE INTO cached_workout (session_id, payload, updated_at) VALUES (?, ?, ?)', session.sessionId, JSON.stringify(session), updatedAt);
   for (const exercise of session.exercises) {
-    await db.runAsync('INSERT OR REPLACE INTO cached_exercises (exercise_id, session_id, payload, updated_at) VALUES (?, ?, ?, ?)', exercise.id, session.id, JSON.stringify(exercise), updatedAt);
+    await db.runAsync('INSERT OR REPLACE INTO cached_exercises (exercise_id, session_id, payload, updated_at) VALUES (?, ?, ?, ?)', exercise.id, session.sessionId, JSON.stringify(exercise), updatedAt);
   }
 }
 
