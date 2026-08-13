@@ -158,7 +158,7 @@ function OverviewExercise({ session, exercise, onOpen }: { session: StudentSessi
     <View style={styles.prescription}><Prescription label="Séries" value={`${Math.min(exercise.completedSets, exercise.sets)}/${exercise.sets}`} /><Prescription label="Repetições" value={`${exercise.repetitionsMin}–${exercise.repetitionsMax}`} /><Prescription label="Descanso" value={`${exercise.restSeconds}s`} /></View>
     {exercise.instructions ? <Text numberOfLines={2} style={styles.copy}>{exercise.instructions}</Text> : null}
     {exercise.notes ? <Text numberOfLines={2} style={styles.note}>Personal: {exercise.notes}</Text> : null}
-    {state !== 'completed' ? <Button variant={state === 'current' ? 'primary' : 'secondary'} onPress={onOpen} accessibilityHint="Abre este exercício para registrar a próxima série">{state === 'current' ? 'Começar exercício' : 'Escolher exercício'}</Button> : <Text accessibilityLabel={`${exercise.name} concluído`} style={styles.completedHint}>Todas as séries deste exercício foram registradas.</Text>}
+    {state !== 'completed' ? <Button variant={state === 'current' ? 'primary' : 'secondary'} onPress={onOpen} accessibilityLabel={`Começar exercício ${exercise.name}`} accessibilityHint="Abre este exercício para registrar a próxima série">Começar exercício</Button> : <Text accessibilityLabel={`${exercise.name} concluído`} style={styles.completedHint}>Todas as séries deste exercício foram registradas.</Text>}
   </Card>;
 }
 
