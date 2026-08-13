@@ -118,11 +118,6 @@ function RestTimer({ session, exercise, isOfflineSnapshot, authToken, studentId 
 
   const remaining = targetAt === undefined ? restSeconds : Math.max(0, Math.ceil((targetAt - clock) / 1000));
   const finished = remaining === 0;
-  const addThirtySeconds = () => {
-    setTargetAt((current) => Math.max(current ?? Date.now(), Date.now()) + 30_000);
-    setClock(Date.now());
-  };
-
   if (sessionComplete) return <SessionReady session={session} isOfflineSnapshot={isOfflineSnapshot} complete={complete} completionError={completionError} />;
 
   const continueFromRest = () => {
@@ -143,7 +138,7 @@ function RestTimer({ session, exercise, isOfflineSnapshot, authToken, studentId 
       <Text style={styles.copy}>{finished ? (exerciseComplete ? 'Escolha qualquer exercício pendente para continuar. A sequência do personal é uma sugestão.' : 'Descanso concluído. Continue quando estiver pronto.') : 'Use este intervalo conforme a prescrição do seu personal.'}</Text>
     </Card>
     {exerciseComplete ? <PendingExerciseList session={session} exercises={pendingExercises} restFinished={finished} /> : null}
-    <View style={styles.actions}>{exerciseComplete ? <><Button variant="secondary" onPress={addThirtySeconds}>+30 segundos</Button><Button variant="secondary" onPress={continueFromRest}>Pular descanso</Button></> : <><Button variant="secondary" onPress={addThirtySeconds}>+30 segundos</Button><Button variant="secondary" onPress={continueFromRest}>Pular descanso</Button><Button disabled={!finished} onPress={continueFromRest}>Próxima série</Button></>}</View>
+    <View style={styles.actions}>{!finished ? <Button variant="secondary" onPress={continueFromRest}>Pular descanso</Button> : null}{!exerciseComplete ? <Button disabled={!finished} onPress={continueFromRest}>Próxima série</Button> : null}</View>
   </Screen>;
 }
 
