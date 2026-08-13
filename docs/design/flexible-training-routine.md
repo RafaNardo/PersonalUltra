@@ -2,6 +2,11 @@
 
 Status: direção aprovada para `M3RF`.
 
+Fundação entregue em `PU-M3RF-001`: `StudentWorkout` já persiste
+`SuggestedOrder`, contratos Trainer/Student o expõem de forma aditiva e novas
+criações recebem o próximo índice. A UI e os leitores ainda usam campos legados
+até os gates próprios; isso evita uma troca transversal não faseada.
+
 ## Problema
 
 `Ativo`, `recomendado` e dia da semana misturam disponibilidade, destaque e

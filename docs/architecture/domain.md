@@ -31,6 +31,13 @@ de aparecer nas listas Trainer/Student e não pode iniciar novas sessões. O
 registro permanece apenas para preservar a relação com sessões e snapshots
 históricos; V1 não expõe arquivo de inativos nem reativação.
 
+`StudentWorkout.SuggestedOrder` é a ordem persistida definida pelo Trainer para
+os treinos disponíveis de um Student. Ela não representa dia, frequência ou
+obrigação. Novos treinos são acrescentados ao fim. A fundação M3RF fez backfill
+determinístico por `RecommendedDay`, `CreatedAt` e `Id`. `RecommendedDay` e
+`IsRecommended` continuam temporariamente no modelo apenas para compatibilidade
+e serão removidos em `PU-M3RF-007`, depois da migração de todos os leitores.
+
 V1 não possui `RecommendedLoad`.
 
 ### M3 refactor addendum — catalog-backed prescription

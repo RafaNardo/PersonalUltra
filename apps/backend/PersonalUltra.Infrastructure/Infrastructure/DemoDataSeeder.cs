@@ -98,6 +98,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
         // that already contains an unknown (possibly user-edited) one. This
         // flag only controls newly added seeded rows; existing rows are kept.
         var recommendationAlreadyExists = existing.Any(x => x.IsRecommended);
+        var nextSuggestedOrder = existing.Select(x => x.SuggestedOrder).DefaultIfEmpty(0).Max();
 
         foreach (var seed in DemoWorkoutSeed.Workouts)
         {
@@ -118,6 +119,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
                 StudentId = DemoIds.StudentId,
                 Name = seed.Name,
                 Notes = seed.Notes,
+                SuggestedOrder = ++nextSuggestedOrder,
                 RecommendedDay = seed.RecommendedDay,
                 IsRecommended = seed.IsRecommended && !recommendationAlreadyExists,
                 CreatedAt = now,

@@ -23,6 +23,11 @@ enviar antes do próximo. Não agrupar toda a refatoração num único diff.
 pois os consumidores ainda existem. `PU-M3RF-007` é o único gate autorizado a
 removê-los fisicamente depois que todos os leitores forem migrados.
 
+`PU-M3RF-001` foi entregue: a migration preenche `SuggestedOrder` por Student
+usando `RecommendedDay`, `CreatedAt` e `Id` como desempate determinístico; os
+contratos expõem o novo campo sem remover os antigos. Começar o próximo loop em
+`PU-M3RF-002` sem repetir ou ampliar esse gate.
+
 ## Regras invariantes
 
 - Trainer e Student APIs continuam separadas e compartilham o mesmo domínio e banco;

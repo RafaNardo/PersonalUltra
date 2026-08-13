@@ -149,6 +149,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         Assert.Equal(4, list!.Workouts.Count);
         var summary = Assert.Single(list.Workouts, workout => workout.Name == "Upper A");
         Assert.Equal(6, summary.ExerciseCount);
+        Assert.Equal(1, summary.SuggestedOrder);
 
         var detailResponse = await client.GetAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{summary.Id}");
 
@@ -156,6 +157,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var detail = await detailResponse.Content.ReadFromJsonAsync<StudentWorkoutDetailResponse>();
         Assert.NotNull(detail);
         Assert.Equal(DemoIds.StudentId, detail!.StudentId);
+        Assert.Equal(summary.SuggestedOrder, detail.SuggestedOrder);
         Assert.Equal([1, 2, 3, 4, 5, 6], detail.Exercises.Select(x => x.Sequence));
         Assert.All(detail.Exercises, exercise =>
         {
@@ -769,10 +771,12 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var otherStudentId = Guid.NewGuid();
         Guid existingRecommendedId;
         Guid[] priorRecommendedIds;
+        int expectedSuggestedOrder;
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             priorRecommendedIds = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId && x.IsRecommended).Select(x => x.Id).ToArrayAsync();
+            expectedSuggestedOrder = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId).MaxAsync(x => x.SuggestedOrder) + 1;
             db.Trainers.Add(new Trainer { Id = otherTrainerId, Name = "Outro personal", CreatedAt = DateTimeOffset.UtcNow });
             db.Students.Add(new Student { Id = otherStudentId, FirstName = "Aluno", LastName = "Sem vínculo", CreatedAt = DateTimeOffset.UtcNow });
             var owned = new WorkoutTemplate { Id = ownedTemplateId, TrainerId = DemoIds.TrainerId, Name = "Modelo próprio", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
@@ -807,6 +811,8 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var created = await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == applied!.Id);
         Assert.True(created.IsRecommended);
         Assert.Equal(4, created.RecommendedDay);
+        Assert.Equal(expectedSuggestedOrder, created.SuggestedOrder);
+        Assert.Equal(expectedSuggestedOrder, applied.SuggestedOrder);
         var priorRecommendations = await cleanupDb.StudentWorkouts.Where(x => priorRecommendedIds.Contains(x.Id)).ToListAsync();
         foreach (var prior in priorRecommendations)
             prior.IsRecommended = true;
@@ -824,10 +830,12 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     {
         Guid existingRecommendedId;
         Guid[] priorRecommendedIds;
+        int expectedSuggestedOrder;
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             priorRecommendedIds = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId && x.IsRecommended).Select(x => x.Id).ToArrayAsync();
+            expectedSuggestedOrder = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId).MaxAsync(x => x.SuggestedOrder) + 1;
             var existing = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Recomendação temporária", RecommendedDay = 2, IsRecommended = true, CreatedAt = DateTimeOffset.UtcNow };
             existingRecommendedId = existing.Id;
             db.StudentWorkouts.Add(existing);
@@ -850,6 +858,8 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         Assert.Equal("Montado do zero", persisted.Notes);
         Assert.Equal(5, persisted.RecommendedDay);
         Assert.False(persisted.IsRecommended);
+        Assert.Equal(expectedSuggestedOrder, persisted.SuggestedOrder);
+        Assert.Equal(expectedSuggestedOrder, created.SuggestedOrder);
         Assert.True((await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == existingRecommendedId)).IsRecommended);
         foreach (var prior in await cleanupDb.StudentWorkouts.Where(x => priorRecommendedIds.Contains(x.Id)).ToListAsync())
             prior.IsRecommended = true;
@@ -894,12 +904,12 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     private sealed record TemplateResponse(Guid Id, IReadOnlyList<TemplateExerciseResponse> Exercises);
     private sealed record TemplateSummaryResponse(Guid Id, IReadOnlyList<string> MuscleGroups);
     private sealed record TemplateExerciseResponse(Guid ExerciseId, string Name, string ImageRef, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
-    private sealed record AppliedWorkoutResponse(Guid Id);
+    private sealed record AppliedWorkoutResponse(Guid Id, int SuggestedOrder);
     private sealed record ErrorResponse(string Code);
     private sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? Instructions, bool IsActive);
     private sealed record StudentWorkoutListResponse(IReadOnlyList<StudentWorkoutSummaryResponse> Workouts);
-    private sealed record StudentWorkoutSummaryResponse(Guid Id, string Name, int ExerciseCount);
-    private sealed record StudentWorkoutDetailResponse(Guid Id, Guid StudentId, IReadOnlyList<StudentWorkoutExerciseResponse> Exercises);
+    private sealed record StudentWorkoutSummaryResponse(Guid Id, string Name, int SuggestedOrder, int ExerciseCount);
+    private sealed record StudentWorkoutDetailResponse(Guid Id, Guid StudentId, int SuggestedOrder, IReadOnlyList<StudentWorkoutExerciseResponse> Exercises);
     private sealed record StudentWorkoutExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? ImageRef, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
     private sealed record TrainingHistoryResponse(IReadOnlyList<TrainingHistoryItemResponse> Sessions);
     private sealed record TrainingHistoryItemResponse(Guid SessionId, string Status, int CompletedSets, IReadOnlyList<TrainingHistoryExerciseResponse> Exercises);

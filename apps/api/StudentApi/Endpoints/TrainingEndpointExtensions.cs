@@ -13,7 +13,7 @@ public static class TrainingEndpointExtensions
         api.MapGet("/", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         {
             if (!StudentId(user, out var studentId)) return ApiEndpointExtensions.ApiError("STUDENT_SESSION_REQUIRED", "Use uma sessão de aluno válida.", 403);
-            var workouts = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == studentId && x.IsActive && x.Exercises.Any()).OrderBy(x => x.RecommendedDay).ThenBy(x => x.Name).Select(x => new { x.Id, x.Name, x.Notes, x.RecommendedDay, x.IsRecommended, ExerciseCount = x.Exercises.Count, PrescribedSets = x.Exercises.Sum(e => e.Sets) }).ToListAsync(ct);
+            var workouts = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == studentId && x.IsActive && x.Exercises.Any()).OrderBy(x => x.RecommendedDay).ThenBy(x => x.Name).Select(x => new { x.Id, x.Name, x.Notes, x.RecommendedDay, x.IsRecommended, x.SuggestedOrder, ExerciseCount = x.Exercises.Count, PrescribedSets = x.Exercises.Sum(e => e.Sets) }).ToListAsync(ct);
             var sessionStates = await db.WorkoutSessions.AsNoTracking().Where(x => x.StudentId == studentId).OrderByDescending(x => x.StartedAt).Select(x => new { x.Id, x.StudentWorkoutId, WorkoutName = x.StudentWorkout.Name, x.Status, x.StartedAt, x.CompletedAt, CompletedSets = x.Exercises.Sum(e => e.CompletedSets) }).ToListAsync(ct);
             var summaries = workouts.Select(workout =>
             {
@@ -21,7 +21,7 @@ public static class TrainingEndpointExtensions
                 var active = sessions.FirstOrDefault(x => x.Status == "InProgress");
                 var lastCompleted = sessions.FirstOrDefault(x => x.Status == "Completed");
                 var state = active is not null ? "InProgress" : lastCompleted is not null ? "Completed" : workout.IsRecommended ? "Recommended" : "Available";
-                return new StudentWorkoutSummary(workout.Id, workout.Name, workout.Notes, workout.RecommendedDay, workout.IsRecommended, workout.ExerciseCount, workout.PrescribedSets, state, active?.Id, lastCompleted?.CompletedAt);
+                return new StudentWorkoutSummary(workout.Id, workout.Name, workout.Notes, workout.RecommendedDay, workout.IsRecommended, workout.SuggestedOrder, workout.ExerciseCount, workout.PrescribedSets, state, active?.Id, lastCompleted?.CompletedAt);
             }).ToList();
             var history = sessionStates.Take(20).Select(x => new StudentTrainingHistoryItem(x.Id, x.StudentWorkoutId, x.WorkoutName, x.Status, x.StartedAt, x.CompletedAt, x.CompletedSets)).ToList();
             return Results.Ok(new StudentTrainingResponse(summaries.FirstOrDefault(x => x.IsRecommended), summaries.Where(x => !x.IsRecommended).ToArray(), history));
@@ -35,7 +35,7 @@ public static class TrainingEndpointExtensions
             var active = sessions.FirstOrDefault(x => x.Status == "InProgress");
             var lastCompleted = sessions.FirstOrDefault(x => x.Status == "Completed");
             var state = active is not null ? "InProgress" : lastCompleted is not null ? "Completed" : workout.IsRecommended ? "Recommended" : "Available";
-            return Results.Ok(new StudentWorkoutPreviewResponse(workout.Id, workout.Name, workout.Notes, workout.RecommendedDay, workout.IsRecommended, state, active?.Id, lastCompleted?.CompletedAt, workout.Exercises.OrderBy(x => x.Sequence).Select(x => new StudentWorkoutExercisePreview(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes)).ToArray()));
+            return Results.Ok(new StudentWorkoutPreviewResponse(workout.Id, workout.Name, workout.Notes, workout.RecommendedDay, workout.IsRecommended, workout.SuggestedOrder, state, active?.Id, lastCompleted?.CompletedAt, workout.Exercises.OrderBy(x => x.Sequence).Select(x => new StudentWorkoutExercisePreview(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes)).ToArray()));
         });
         api.MapPost("/{workoutId:guid}/start", async (Guid workoutId, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
         {

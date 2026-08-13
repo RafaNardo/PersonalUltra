@@ -206,6 +206,8 @@ public static class TrainingEndpointExtensions
                     current.IsRecommended = false;
             }
 
+            var suggestedOrder = await NextSuggestedOrder(db, request.StudentId, ct);
+
             var applied = new StudentWorkout
             {
                 Id = Guid.NewGuid(),
@@ -213,6 +215,7 @@ public static class TrainingEndpointExtensions
                 StudentId = request.StudentId,
                 Name = source.Name,
                 Notes = source.Notes,
+                SuggestedOrder = suggestedOrder,
                 RecommendedDay = request.RecommendedDay,
                 IsRecommended = request.IsRecommended,
                 CreatedAt = clock.GetUtcNow(),
@@ -221,7 +224,7 @@ public static class TrainingEndpointExtensions
 
             db.StudentWorkouts.Add(applied);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new AppliedWorkoutResponse(applied.Id, applied.StudentId, applied.Name, applied.RecommendedDay, applied.IsRecommended, applied.Exercises.Count));
+            return Results.Ok(new AppliedWorkoutResponse(applied.Id, applied.StudentId, applied.Name, applied.RecommendedDay, applied.IsRecommended, applied.SuggestedOrder, applied.Exercises.Count));
         });
 
         app.MapGet("/api/v1/students/{studentId:guid}/workouts", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
@@ -235,7 +238,7 @@ public static class TrainingEndpointExtensions
                 .Where(x => x.TrainerId == trainerId && x.StudentId == studentId && x.IsActive)
                 .OrderBy(x => x.RecommendedDay)
                 .ThenBy(x => x.Name)
-                .Select(x => new TrainerStudentWorkoutSummary(x.Id, x.Name, x.Notes, x.RecommendedDay, x.IsRecommended, x.Exercises.Count, x.CreatedAt))
+                .Select(x => new TrainerStudentWorkoutSummary(x.Id, x.Name, x.Notes, x.RecommendedDay, x.IsRecommended, x.SuggestedOrder, x.Exercises.Count, x.CreatedAt))
                 .ToListAsync(ct);
             return Results.Ok(new TrainerStudentWorkoutListResponse(workouts));
         }).RequireAuthorization();
@@ -255,6 +258,7 @@ public static class TrainingEndpointExtensions
             if (request.RecommendedDay is < 1 or > 7)
                 return context.ApiError("VALIDATION_ERROR", "Escolha um dia da semana válido.", 400);
 
+            var suggestedOrder = await NextSuggestedOrder(db, studentId, ct);
             var workout = new StudentWorkout
             {
                 Id = Guid.NewGuid(),
@@ -262,6 +266,7 @@ public static class TrainingEndpointExtensions
                 StudentId = studentId,
                 Name = name,
                 Notes = notes,
+                SuggestedOrder = suggestedOrder,
                 RecommendedDay = request.RecommendedDay,
                 IsRecommended = false,
                 CreatedAt = clock.GetUtcNow(),
@@ -287,6 +292,7 @@ public static class TrainingEndpointExtensions
                     x.Notes,
                     x.RecommendedDay,
                     x.IsRecommended,
+                    x.SuggestedOrder,
                     x.CreatedAt,
                     x.Exercises
                         .OrderBy(exercise => exercise.Sequence)
@@ -476,11 +482,21 @@ public static class TrainingEndpointExtensions
         workout.Notes,
         workout.RecommendedDay,
         workout.IsRecommended,
+        workout.SuggestedOrder,
         workout.CreatedAt,
         workout.Exercises
             .OrderBy(x => x.Sequence)
             .Select(x => new TrainerStudentWorkoutExercise(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
             .ToArray());
+
+    private static async Task<int> NextSuggestedOrder(PersonalUltraDbContext db, Guid studentId, CancellationToken cancellationToken)
+    {
+        var currentMaximum = await db.StudentWorkouts
+            .Where(x => x.StudentId == studentId)
+            .Select(x => (int?)x.SuggestedOrder)
+            .MaxAsync(cancellationToken);
+        return checked((currentMaximum ?? 0) + 1);
+    }
 
     private static async Task<Dictionary<Guid, Exercise>?> ResolveActiveExercises(
         IReadOnlyList<WorkoutTemplateExerciseInput> requested,

@@ -21,6 +21,29 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     }
 
     [Fact]
+    public async Task Training_list_and_preview_expose_suggested_order_without_removing_legacy_fields()
+    {
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
+
+        var training = await client.GetFromJsonAsync<StudentTrainingListResponse>("/api/v1/training/");
+        var workouts = training!.Available
+            .Append(training.Recommended!)
+            .OrderBy(workout => workout.SuggestedOrder)
+            .ToArray();
+
+        Assert.Equal([1, 2, 3, 4], workouts.Select(workout => workout.SuggestedOrder));
+        Assert.All(workouts, workout => Assert.InRange(workout.RecommendedDay, 1, 7));
+
+        var selected = workouts[0];
+        var preview = await client.GetFromJsonAsync<PreviewResponse>($"/api/v1/training/{selected.Id}");
+
+        Assert.Equal(selected.SuggestedOrder, preview!.SuggestedOrder);
+        Assert.Equal(selected.RecommendedDay, preview.RecommendedDay);
+    }
+
+    [Fact]
     public async Task Empty_trainer_draft_is_hidden_from_student_until_it_has_exercises()
     {
         var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
@@ -332,12 +355,12 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
 
     private sealed record LoginResponse(string AccessToken);
     private sealed record StudentTrainingListResponse(StudentWorkoutSummary? Recommended, IReadOnlyList<StudentWorkoutSummary> Available);
-    private sealed record StudentWorkoutSummary(Guid Id);
+    private sealed record StudentWorkoutSummary(Guid Id, int RecommendedDay, int SuggestedOrder);
     private sealed record SessionResponse(Guid SessionId, IReadOnlyList<SessionExerciseResponse> Exercises);
     private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets, SessionDetailPerformanceResponse? PreviousPerformance);
     private sealed record TrainingResponse(IReadOnlyList<TrainingHistoryItem> History);
     private sealed record TrainingHistoryItem(Guid SessionId, string Status, int CompletedSets);
-    private sealed record PreviewResponse(Guid Id, string State, Guid? ActiveSessionId, IReadOnlyList<PreviewExerciseResponse> Exercises);
+    private sealed record PreviewResponse(Guid Id, int RecommendedDay, int SuggestedOrder, string State, Guid? ActiveSessionId, IReadOnlyList<PreviewExerciseResponse> Exercises);
     private sealed record PreviewExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
     private sealed record CompletionResponse(Guid Id, string Status, DateTimeOffset? CompletedAt);
     private sealed record SessionDetailResponse(Guid SessionId, Guid WorkoutId, string WorkoutName, string Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt, IReadOnlyList<SessionDetailExerciseResponse> Exercises);

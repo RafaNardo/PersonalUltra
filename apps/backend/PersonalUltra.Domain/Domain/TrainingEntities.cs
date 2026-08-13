@@ -46,6 +46,7 @@ public sealed class StudentWorkout
     public Guid StudentId { get; set; }
     public string Name { get; set; } = null!;
     public string Notes { get; set; } = "";
+    public int SuggestedOrder { get; set; }
     public int RecommendedDay { get; set; }
     public bool IsRecommended { get; set; }
     public bool IsActive { get; set; } = true;

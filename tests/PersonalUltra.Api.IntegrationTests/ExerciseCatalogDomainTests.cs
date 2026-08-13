@@ -112,6 +112,22 @@ public sealed class ExerciseCatalogDomainTests
     }
 
     [Fact]
+    public void Student_workout_persists_a_unique_suggested_order_for_each_active_student_routine()
+    {
+        using var db = CreateDatabase();
+
+        var entity = db.Model.FindEntityType(typeof(StudentWorkout));
+
+        Assert.NotNull(entity);
+        Assert.NotNull(entity!.FindProperty(nameof(StudentWorkout.SuggestedOrder)));
+        var index = Assert.Single(entity.GetIndexes(), candidate =>
+            candidate.Properties.Select(property => property.Name)
+                .SequenceEqual([nameof(StudentWorkout.StudentId), nameof(StudentWorkout.SuggestedOrder)]));
+        Assert.True(index.IsUnique);
+        Assert.Equal("\"IsActive\"", index.GetFilter());
+    }
+
+    [Fact]
     public async Task Demo_seed_image_references_match_the_versioned_donor_asset_manifest()
     {
         await using var db = CreateDatabase();
@@ -170,6 +186,7 @@ public sealed class ExerciseCatalogDomainTests
 
         Assert.Equal(["Upper A", "Lower A", "Upper B", "Lower B"], workouts.Select(x => x.Name));
         Assert.Equal([1, 2, 4, 5], workouts.Select(x => x.RecommendedDay));
+        Assert.Equal([1, 2, 3, 4], workouts.Select(x => x.SuggestedOrder));
         Assert.All(workouts, workout =>
         {
             Assert.Equal(6, workout.Exercises.Count);
@@ -195,16 +212,17 @@ public sealed class ExerciseCatalogDomainTests
         var seeder = new DemoDataSeeder(db, TimeProvider.System);
 
         await seeder.SeedAsync(CancellationToken.None);
-        var first = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == DemoIds.StudentId).Include(x => x.Exercises).OrderBy(x => x.Name).Select(x => new { x.Id, x.Name, Exercises = x.Exercises.OrderBy(e => e.Sequence).Select(e => new { e.Id, e.ExerciseId, e.Sets, e.RepetitionsMin, e.RepetitionsMax, e.RestSeconds }).ToList() }).ToListAsync();
+        var first = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == DemoIds.StudentId).Include(x => x.Exercises).OrderBy(x => x.Name).Select(x => new { x.Id, x.Name, x.SuggestedOrder, Exercises = x.Exercises.OrderBy(e => e.Sequence).Select(e => new { e.Id, e.ExerciseId, e.Sets, e.RepetitionsMin, e.RepetitionsMax, e.RestSeconds }).ToList() }).ToListAsync();
 
         await seeder.SeedAsync(CancellationToken.None);
-        var second = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == DemoIds.StudentId).Include(x => x.Exercises).OrderBy(x => x.Name).Select(x => new { x.Id, x.Name, Exercises = x.Exercises.OrderBy(e => e.Sequence).Select(e => new { e.Id, e.ExerciseId, e.Sets, e.RepetitionsMin, e.RepetitionsMax, e.RestSeconds }).ToList() }).ToListAsync();
+        var second = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == DemoIds.StudentId).Include(x => x.Exercises).OrderBy(x => x.Name).Select(x => new { x.Id, x.Name, x.SuggestedOrder, Exercises = x.Exercises.OrderBy(e => e.Sequence).Select(e => new { e.Id, e.ExerciseId, e.Sets, e.RepetitionsMin, e.RepetitionsMax, e.RestSeconds }).ToList() }).ToListAsync();
 
         Assert.Equal(first.Count, second.Count);
         for (var i = 0; i < first.Count; i++)
         {
             Assert.Equal(first[i].Id, second[i].Id);
             Assert.Equal(first[i].Name, second[i].Name);
+            Assert.Equal(first[i].SuggestedOrder, second[i].SuggestedOrder);
             Assert.Equal(first[i].Exercises.Count, second[i].Exercises.Count);
             for (var j = 0; j < first[i].Exercises.Count; j++)
                 Assert.Equal(first[i].Exercises[j], second[i].Exercises[j]);

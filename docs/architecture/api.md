@@ -28,6 +28,12 @@ associados ao `Student`; o endpoint não inventa esses dados durante a transiç�
 exercícios de cada modelo para busca/filtro no mobile; não existe categoria
 manual duplicada no modelo de domínio.
 
+Durante a transição M3RF, as respostas Trainer de treino do aluno expõem
+`suggestedOrder` de forma aditiva, preservando temporariamente `recommendedDay`
+e `isRecommended`. Criar do zero ou aplicar um modelo já reserva no servidor a
+próxima ordem persistida; os requests legados continuam válidos até suas telas
+serem migradas em `PU-M3RF-002`.
+
 ## Student API
 - `GET /bootstrap`
 - `GET /home`
@@ -49,6 +55,11 @@ manual duplicada no modelo de domínio.
 - `POST /progress/weight`
 - `GET /coach/conversation`
 - `POST /coach/messages`
+
+As respostas de lista e preview de treino Student também incluem
+`suggestedOrder` de forma aditiva. Neste primeiro gate, a composição legada de
+`recommended`/`available` e seus campos antigos permanece intacta; sua
+neutralização pertence a `PU-M3RF-003`.
 
 ## Fronteiras
 Student API não expõe mutations de prescrição.
