@@ -32,20 +32,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
         if (!await dbContext.TrainerStudents.AnyAsync(x => x.TrainerId == DemoIds.TrainerId && x.StudentId == DemoIds.StudentId, cancellationToken))
             dbContext.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, StartedAt = now });
 
-        if (!await dbContext.StudentWorkouts.AnyAsync(x => x.StudentId == DemoIds.StudentId, cancellationToken))
-        {
-            var workout = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Força · Treino A", Notes = "Foco em execução consistente e progressão gradual.", RecommendedDay = 1, IsRecommended = true, CreatedAt = now };
-            var catalog = await dbContext.Exercises
-                .Where(x => x.Slug == "agachamento-livre" || x.Slug == "supino-reto-com-barra" || x.Slug == "remada-baixa")
-                .ToDictionaryAsync(x => x.Slug, cancellationToken);
-            workout.Exercises.AddRange(new[]
-            {
-                StudentWorkoutExercise.FromCatalog(workout.Id, catalog["agachamento-livre"], 1, 4, 8, 8, 90),
-                StudentWorkoutExercise.FromCatalog(workout.Id, catalog["supino-reto-com-barra"], 2, 4, 10, 10, 75),
-                StudentWorkoutExercise.FromCatalog(workout.Id, catalog["remada-baixa"], 3, 3, 10, 10, 75),
-            });
-            dbContext.Add(workout);
-        }
+        await SeedDemoWorkoutsAsync(now, cancellationToken);
 
         if (!await dbContext.NutritionPlans.AnyAsync(x => x.StudentId == DemoIds.StudentId, cancellationToken))
         {
@@ -89,4 +76,76 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private async Task SeedDemoWorkoutsAsync(DateTimeOffset now, CancellationToken cancellationToken)
+    {
+        var catalog = await dbContext.Exercises
+            .Where(x => x.IsActive)
+            .ToDictionaryAsync(x => x.Slug, cancellationToken);
+        var seededIds = DemoWorkoutSeed.Workouts.Select(x => DemoWorkoutSeed.IdFor($"workout:{x.Key}")).ToHashSet();
+        var existing = await dbContext.StudentWorkouts
+            .Include(x => x.Exercises)
+            .Where(x => x.TrainerId == DemoIds.TrainerId && x.StudentId == DemoIds.StudentId)
+            .ToListAsync(cancellationToken);
+
+        // The original M3 seed used this one workout. It is known demo data,
+        // so only its recommendation flag is migrated; sessions and exercise
+        // edits remain untouched. User-created workouts are never changed.
+        foreach (var legacy in existing.Where(x => !seededIds.Contains(x.Id) && IsLegacyWorkout(x)))
+            legacy.IsRecommended = false;
+
+        // Never create a second recommendation while upgrading a database
+        // that already contains an unknown (possibly user-edited) one. This
+        // flag only controls newly added seeded rows; existing rows are kept.
+        var recommendationAlreadyExists = existing.Any(x => x.IsRecommended);
+
+        foreach (var seed in DemoWorkoutSeed.Workouts)
+        {
+            var workoutId = DemoWorkoutSeed.IdFor($"workout:{seed.Key}");
+            if (existing.Any(x => x.Id == workoutId))
+                continue;
+
+            // A partially provisioned local database may not have the full
+            // catalog yet. Leave that workout for the next seed run instead
+            // of creating a partial prescription or overwriting user data.
+            if (seed.Exercises.Any(x => !catalog.ContainsKey(x.Slug)))
+                continue;
+
+            var workout = new StudentWorkout
+            {
+                Id = workoutId,
+                TrainerId = DemoIds.TrainerId,
+                StudentId = DemoIds.StudentId,
+                Name = seed.Name,
+                Notes = seed.Notes,
+                RecommendedDay = seed.RecommendedDay,
+                IsRecommended = seed.IsRecommended && !recommendationAlreadyExists,
+                CreatedAt = now,
+            };
+
+            foreach (var (exercise, sequence) in seed.Exercises.Select((x, i) => (x, i + 1)))
+            {
+                var catalogExercise = catalog[exercise.Slug];
+
+                var snapshot = StudentWorkoutExercise.FromCatalog(workout.Id, catalogExercise, sequence, exercise.Sets, exercise.RepetitionsMin, exercise.RepetitionsMax, exercise.RestSeconds, exercise.Notes);
+                snapshot.Id = DemoWorkoutSeed.IdFor($"workout:{seed.Key}:exercise:{exercise.Slug}");
+                workout.Exercises.Add(snapshot);
+            }
+
+            dbContext.StudentWorkouts.Add(workout);
+            recommendationAlreadyExists |= workout.IsRecommended;
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool IsLegacyWorkout(StudentWorkout workout) =>
+        workout.Name == "Força · Treino A" &&
+        workout.Exercises.Count == 3 &&
+        workout.Exercises.OrderBy(x => x.Sequence).Select(x => (x.Name, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds)).SequenceEqual(
+        [
+            ("Agachamento livre", 1, 4, 8, 8, 90),
+            ("Supino reto com barra", 2, 4, 10, 10, 75),
+            ("Remada baixa", 3, 3, 10, 10, 75),
+        ]);
 }

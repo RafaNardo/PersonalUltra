@@ -111,9 +111,9 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
 
         Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
         var list = await listResponse.Content.ReadFromJsonAsync<StudentWorkoutListResponse>();
-        var summary = Assert.Single(list!.Workouts);
-        Assert.Equal("Força · Treino A", summary.Name);
-        Assert.Equal(3, summary.ExerciseCount);
+        Assert.Equal(4, list!.Workouts.Count);
+        var summary = Assert.Single(list.Workouts, workout => workout.Name == "Upper A");
+        Assert.Equal(6, summary.ExerciseCount);
 
         var detailResponse = await client.GetAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{summary.Id}");
 
@@ -121,7 +121,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var detail = await detailResponse.Content.ReadFromJsonAsync<StudentWorkoutDetailResponse>();
         Assert.NotNull(detail);
         Assert.Equal(DemoIds.StudentId, detail!.StudentId);
-        Assert.Equal([1, 2, 3], detail.Exercises.Select(x => x.Sequence));
+        Assert.Equal([1, 2, 3, 4, 5, 6], detail.Exercises.Select(x => x.Sequence));
         Assert.All(detail.Exercises, exercise =>
         {
             Assert.NotEqual(Guid.Empty, exercise.ExerciseId);
