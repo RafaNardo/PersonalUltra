@@ -166,7 +166,7 @@ export function StudentHomeScreen() {
               <View style={styles.cardTitleGroup}><Text style={styles.meta}>TREINO CONCLUÍDO</Text><Text style={styles.primaryTitle}>Você já concluiu um treino hoje</Text></View>
             </View>
             <Text style={styles.copy}>Mandou bem! Seu registro de {completedToday.workoutName} já faz parte da sua evolução.</Text>
-            <Button accessibilityHint="Abre o resumo do treino mais recente concluído hoje" onPress={() => router.push({ pathname: '/student/training/summary/[sessionId]', params: { sessionId: completedToday.sessionId } })}>Ver resumo do treino</Button>
+            <Button variant="success" accessibilityHint="Abre o resumo do treino mais recente concluído hoje" onPress={() => router.push({ pathname: '/student/training/summary/[sessionId]', params: { sessionId: completedToday.sessionId } })}>Ver resumo do treino</Button>
           </> : <>
             <View style={styles.contextualHeader}>
               <View accessible={false} style={styles.contextualIcon}><Ionicons name="sparkles" size={22} color={colors.background} /></View>

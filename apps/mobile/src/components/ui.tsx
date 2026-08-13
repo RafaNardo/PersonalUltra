@@ -3,11 +3,11 @@ import type { PropsWithChildren, ReactNode } from 'react';
 import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type AccessibilityRole, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 
-type ButtonProps = PropsWithChildren<{ onPress?: () => void; disabled?: boolean; loading?: boolean; variant?: 'primary' | 'secondary' | 'ghost'; style?: StyleProp<ViewStyle>; accessibilityLabel?: string; accessibilityHint?: string; accessibilityRole?: AccessibilityRole }>;
+type ButtonProps = PropsWithChildren<{ onPress?: () => void; disabled?: boolean; loading?: boolean; variant?: 'primary' | 'success' | 'secondary' | 'ghost'; style?: StyleProp<ViewStyle>; accessibilityLabel?: string; accessibilityHint?: string; accessibilityRole?: AccessibilityRole }>;
 
 export function Button({ children, onPress, disabled, loading, variant = 'primary', style, accessibilityLabel, accessibilityHint, accessibilityRole }: ButtonProps) {
   return <Pressable disabled={disabled || loading} onPress={onPress} accessibilityRole={accessibilityRole ?? 'button'} accessibilityLabel={accessibilityLabel} accessibilityHint={accessibilityHint} style={({ pressed }) => [styles.button, styles[variant], (disabled || loading) && styles.disabled, pressed && !disabled && styles.pressed, style]}>
-    {loading ? <ActivityIndicator color={variant === 'primary' ? colors.textPrimary : colors.primary} /> : <Text style={[styles.buttonText, variant !== 'primary' && styles.buttonTextSecondary]}>{children}</Text>}
+    {loading ? <ActivityIndicator color={variant === 'primary' || variant === 'success' ? colors.background : colors.primary} /> : <Text style={[styles.buttonText, (variant === 'secondary' || variant === 'ghost') && styles.buttonTextSecondary, variant === 'success' && styles.buttonTextSuccess]}>{children}</Text>}
   </Pressable>;
 }
 
@@ -90,8 +90,9 @@ export function EmptyState({ title, message, status = 'PRÓXIMO PASSO', symbol =
 
 const styles = StyleSheet.create({
   button: { minHeight: 54, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, paddingHorizontal: spacing.xl },
-  primary: { backgroundColor: colors.primary }, secondary: { backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border }, ghost: { backgroundColor: 'transparent' },
+  primary: { backgroundColor: colors.primary }, success: { backgroundColor: colors.success }, secondary: { backgroundColor: colors.surfaceElevated, borderWidth: 1, borderColor: colors.border }, ghost: { backgroundColor: 'transparent' },
   buttonText: { ...typography.bodyLG, color: colors.textPrimary, fontWeight: '700' }, buttonTextSecondary: { color: colors.textPrimary },
+  buttonTextSuccess: { color: colors.background },
   disabled: { opacity: 0.45 }, pressed: { transform: [{ scale: 0.98 }] },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
   listItem: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },

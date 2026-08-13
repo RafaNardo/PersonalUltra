@@ -94,7 +94,8 @@ function FocusedExercise({ session, exercise, authToken, studentId, isOfflineSna
       const completedSets = Math.max(setNumber, response.completedSets);
       const performance = { setNumber, ...parsed.value, completedAt: new Date().toISOString() };
       onRestTransition();
-      if (await pendingSetCount(session.sessionId, studentId) === 0) setOfflineSnapshot(false);
+      const hasPending = await pendingSetCount(session.sessionId, studentId).then((count) => count > 0).catch(() => true);
+      if (!hasPending) setOfflineSnapshot(false);
       updateExerciseProgress(exercise.id, completedSets, performance);
       await updateCachedExerciseProgress(session.sessionId, studentId, exercise.id, completedSets, performance).catch(() => undefined);
       router.replace({ pathname: '/student/rest/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });

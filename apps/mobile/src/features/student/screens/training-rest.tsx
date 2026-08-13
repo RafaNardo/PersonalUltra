@@ -7,8 +7,9 @@ import { colors, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { ApiError } from '@/src/api/shared-http';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { cacheWorkout, cachedSession, pendingSetDetails } from '@/src/features/student/offline/training-db';
+import { cacheWorkout, cachedSession, clearCachedSession, pendingSetCount, pendingSetDetails, syncPendingSets } from '@/src/features/student/offline/training-db';
 import { currentExercise, orderedExercises, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
+import { useQueryClient, useMutation } from '@tanstack/react-query';
 
 /**
  * Rest is deliberately UI-only. The set has already been persisted (or
@@ -54,7 +55,6 @@ export function StudentTrainingRestScreen() {
 
   const ordered = orderedExercises(session);
   const exercise = session.exercises.find((item) => item.id === exerciseId);
-  const next = currentExercise(session);
   // A rest route is valid only after the origin exercise has recorded a set.
   // Exercise order is a suggestion, so a later exercise may legitimately be
   // the origin when the Student chose it from the session overview.
@@ -63,21 +63,47 @@ export function StudentTrainingRestScreen() {
     return <ErrorView message="Este descanso não corresponde à sequência atual da sessão." onRetry={() => router.replace({ pathname: '/student/training/[id]', params: { id: session.workoutId } })} />;
   }
 
-  return <RestTimer session={session} exercise={exercise} next={next} isOfflineSnapshot={isOfflineSnapshot} />;
+  return <RestTimer session={session} exercise={exercise} isOfflineSnapshot={isOfflineSnapshot} authToken={authSession.accessToken} studentId={authSession.studentId} />;
 }
 
-function RestTimer({ session, exercise, next, isOfflineSnapshot }: { session: StudentSession; exercise: StudentSession['exercises'][number]; next?: StudentSession['exercises'][number]; isOfflineSnapshot: boolean }) {
+function RestTimer({ session, exercise, isOfflineSnapshot, authToken, studentId }: { session: StudentSession; exercise: StudentSession['exercises'][number]; isOfflineSnapshot: boolean; authToken: string; studentId: string }) {
   const restSeconds = Math.max(0, Math.floor(Number(exercise.restSeconds) || 0));
-  const continuation = exercise.completedSets < exercise.sets ? exercise : next;
+  const pendingExercises = orderedExercises(session).filter((item) => item.completedSets < item.sets);
+  const exerciseComplete = exercise.completedSets >= exercise.sets;
+  const sessionComplete = pendingExercises.length === 0;
+  const queryClient = useQueryClient();
+  const clearSession = useStudentTrainingSessionStore((state) => state.clearSession);
+  const [completionError, setCompletionError] = useState<string>();
+  const complete = useMutation({
+    onMutate: () => setCompletionError(undefined),
+    mutationFn: async () => {
+      const sync = await synchronizePendingSets(authToken, studentId);
+      if (sync.failed > 0) throw new Error('Conecte-se e aguarde a sincronização das séries pendentes antes de concluir.');
+      if (await pendingSetCount(session.sessionId, studentId) > 0) throw new Error('Há séries pendentes de sincronização. Conecte-se e tente novamente.');
+      const authoritative = await inviteApi.session(authToken, session.sessionId);
+      if (authoritative.exercises.some((item) => item.completedSets < item.sets)) throw new Error('A sessão ainda não está completa no servidor.');
+      return inviteApi.completeWorkout(authToken, session.sessionId);
+    },
+    onSuccess: async () => {
+      await clearCachedSession(session.sessionId, studentId).catch(() => undefined);
+      await queryClient.invalidateQueries({ queryKey: ['student', studentId, 'training'] });
+      clearSession();
+      router.replace({ pathname: '/student/training/summary/[sessionId]', params: { sessionId: session.sessionId } });
+    },
+    onError: (error: Error) => setCompletionError(error instanceof ApiError && error.status === 0 ? 'Conecte-se à internet para concluir o treino.' : error.message),
+  });
   const [targetAt, setTargetAt] = useState<number>();
   const [clock, setClock] = useState(() => Date.now());
+  const latestPerformance = exercise.performances?.find((item) => item.setNumber === exercise.completedSets) ?? exercise.performances?.at(-1);
 
   useEffect(() => {
-    setTargetAt(Date.now() + restSeconds * 1000);
-  }, [exercise.id, restSeconds]);
+    if (sessionComplete) return;
+    const completedAt = latestPerformance ? new Date(latestPerformance.completedAt).getTime() : Date.now();
+    setTargetAt((Number.isNaN(completedAt) ? Date.now() : completedAt) + restSeconds * 1000);
+  }, [exercise.id, exercise.completedSets, latestPerformance?.completedAt, restSeconds, sessionComplete]);
 
   useEffect(() => {
-    if (targetAt === undefined) return;
+    if (targetAt === undefined || sessionComplete) return;
     const tick = () => setClock(Date.now());
     tick();
     const interval = setInterval(tick, 250);
@@ -92,39 +118,50 @@ function RestTimer({ session, exercise, next, isOfflineSnapshot }: { session: St
 
   const remaining = targetAt === undefined ? restSeconds : Math.max(0, Math.ceil((targetAt - clock) / 1000));
   const finished = remaining === 0;
-  const continueFromRest = () => {
-    const latest = useStudentTrainingSessionStore.getState().session;
-    const destinationSession = latest?.sessionId === session.sessionId ? latest : session;
-    const origin = destinationSession.exercises.find((item) => item.id === exercise.id);
-    const destination = origin && origin.completedSets < origin.sets ? origin : currentExercise(destinationSession);
-    if (destination) {
-      router.replace({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: destinationSession.sessionId, exerciseId: destination.id } });
-    } else {
-      router.replace({ pathname: '/student/training/[id]', params: { id: destinationSession.workoutId } });
-    }
-  };
   const addThirtySeconds = () => {
     setTargetAt((current) => Math.max(current ?? Date.now(), Date.now()) + 30_000);
     setClock(Date.now());
   };
 
+  if (sessionComplete) return <SessionReady session={session} isOfflineSnapshot={isOfflineSnapshot} complete={complete} completionError={completionError} />;
+
+  const continueFromRest = () => {
+    const latest = useStudentTrainingSessionStore.getState().session;
+    const destinationSession = latest?.sessionId === session.sessionId ? latest : session;
+    const origin = destinationSession.exercises.find((item) => item.id === exercise.id);
+    const destination = origin && origin.completedSets < origin.sets ? origin : currentExercise(destinationSession);
+    if (destination) router.replace({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: destinationSession.sessionId, exerciseId: destination.id } });
+  };
+
   return <Screen style={styles.page}>
-    <TopBar eyebrow="DESCANSO" title="Recupere o fôlego" onBack={() => router.back()} />
+    <TopBar eyebrow={exerciseComplete ? 'EXERCÍCIO CONCLUÍDO' : 'DESCANSO'} title={exerciseComplete ? 'Você terminou este exercício' : 'Recupere o fôlego'} onBack={() => router.back()} />
     {isOfflineSnapshot ? <Card style={styles.offlineCard}><Text style={styles.offlineTitle}>Modo offline</Text><Text style={styles.copy}>A série anterior está salva neste dispositivo e será sincronizada quando a conexão voltar.</Text></Card> : null}
     <Card style={styles.timerCard}>
-      <Text style={styles.completedLabel}>SÉRIE REGISTRADA</Text>
+      <Text style={styles.completedLabel}>{isOfflineSnapshot ? 'SÉRIE SALVA NESTE DISPOSITIVO' : 'SÉRIE REGISTRADA'}</Text>
       <Text style={styles.exerciseName}>{exercise.name}</Text>
-      <Text accessibilityRole="timer" accessibilityLiveRegion="polite" style={styles.timer}>{formatTime(remaining)}</Text>
-      <Text style={styles.copy}>{finished ? (continuation ? `Descanso concluído. Próximo sugerido: ${continuation.name}.` : 'Descanso concluído. Volte à visão geral para finalizar.') : 'Use este intervalo conforme a prescrição do seu personal.'}</Text>
+      <Text accessibilityRole="timer" accessibilityLabel={`Descanso: ${formatTime(remaining)} restantes`} style={styles.timer}>{formatTime(remaining)}</Text>
+      <Text style={styles.copy}>{finished ? (exerciseComplete ? 'Escolha qualquer exercício pendente para continuar. A sequência do personal é uma sugestão.' : 'Descanso concluído. Continue quando estiver pronto.') : 'Use este intervalo conforme a prescrição do seu personal.'}</Text>
     </Card>
-    <View style={styles.actions}>
-      <Button variant="secondary" onPress={addThirtySeconds}>+30 segundos</Button>
-      <Button variant="secondary" onPress={continueFromRest}>Pular descanso</Button>
-      <Button variant="secondary" onPress={() => router.replace({ pathname: '/student/training/[id]', params: { id: session.workoutId } })}>Escolher outro exercício</Button>
-      <Button disabled={!finished} onPress={continueFromRest}>{continuation ? (continuation.id === exercise.id ? 'Próxima série' : `Próximo sugerido: ${continuation.name}`) : 'Ver visão geral'}</Button>
-    </View>
+    {exerciseComplete ? <PendingExerciseList session={session} exercises={pendingExercises} restFinished={finished} /> : null}
+    <View style={styles.actions}>{exerciseComplete ? <><Button variant="secondary" onPress={addThirtySeconds}>+30 segundos</Button><Button variant="secondary" onPress={continueFromRest}>Pular descanso</Button></> : <><Button variant="secondary" onPress={addThirtySeconds}>+30 segundos</Button><Button variant="secondary" onPress={continueFromRest}>Pular descanso</Button><Button disabled={!finished} onPress={continueFromRest}>Próxima série</Button></>}</View>
   </Screen>;
 }
+
+function PendingExerciseList({ session, exercises, restFinished }: { session: StudentSession; exercises: StudentSession['exercises']; restFinished: boolean }) {
+  const openExercise = (exerciseId: string) => {
+    const latest = useStudentTrainingSessionStore.getState().session;
+    const source = latest?.sessionId === session.sessionId ? latest : session;
+    const selected = source.exercises.find((item) => item.id === exerciseId && item.completedSets < item.sets) ?? currentExercise(source);
+    if (selected) router.replace({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: source.sessionId, exerciseId: selected.id } });
+  };
+  return <View style={styles.pendingList}><Text style={styles.pendingTitle}>Escolha o próximo exercício</Text>{exercises.map((item, index) => <Card key={item.id} style={styles.pendingCard}><View style={styles.pendingCopy}><Text style={styles.pendingName}>{item.name}</Text><Text style={styles.copy}>{item.completedSets}/{item.sets} séries · {item.repetitionsMin}–{item.repetitionsMax} reps{index === 0 ? ' · próximo sugerido' : ''}</Text></View><Button variant="secondary" accessibilityLabel={`${restFinished ? 'Escolher' : 'Escolher e pular descanso'} ${item.name}`} onPress={() => openExercise(item.id)} accessibilityHint={`Abre ${item.name} para registrar a próxima série`}>{restFinished ? 'Escolher' : 'Escolher e pular descanso'}</Button></Card>)}</View>;
+}
+
+function SessionReady({ session, isOfflineSnapshot, complete, completionError }: { session: StudentSession; isOfflineSnapshot: boolean; complete: { isPending: boolean; reset: () => void; mutate: () => void }; completionError?: string }) {
+  return <Screen style={styles.page}><TopBar eyebrow="SESSÃO PRONTA" title="Treino concluído" onBack={() => router.back()} />{isOfflineSnapshot ? <Card style={styles.offlineCard}><Text style={styles.offlineTitle}>Você está sem conexão</Text><Text style={styles.copy}>A conclusão precisa ser confirmada pelo servidor quando a conexão voltar.</Text></Card> : null}<Card style={styles.readyCard}><Text style={styles.completedLabel}>VOCÊ TERMINOU ESSA SESSÃO</Text><Text style={styles.readyTitle}>Mandou bem.</Text><Text style={styles.copy}>Todas as séries de {session.exercises.length} exercícios foram registradas. Quando estiver online, confirme a conclusão para abrir seu resumo.</Text></Card><Button variant="success" loading={complete.isPending} onPress={() => { complete.reset(); complete.mutate(); }}>Concluir treino</Button>{completionError ? <Text accessibilityRole="alert" style={styles.error}>{completionError}</Text> : null}</Screen>;
+}
+
+async function synchronizePendingSets(token: string, studentId: string) { return syncPendingSets(studentId, async (item) => { await inviteApi.completeSet(token, item.sessionId, item.exerciseId, item.input); }); }
 
 function formatTime(seconds: number) {
   const minutes = Math.floor(seconds / 60);
@@ -142,4 +179,12 @@ const styles = StyleSheet.create({
   exerciseName: { ...typography.headingLG, color: colors.textPrimary, textAlign: 'center' },
   timer: { ...typography.displayLG, color: colors.primary, fontVariant: ['tabular-nums'] },
   actions: { gap: spacing.sm },
+  pendingList: { gap: spacing.sm },
+  pendingTitle: { ...typography.headingMD, color: colors.textPrimary },
+  pendingCard: { gap: spacing.sm },
+  pendingCopy: { gap: spacing.xxs },
+  pendingName: { ...typography.bodyLG, color: colors.textPrimary },
+  readyCard: { gap: spacing.md, borderColor: colors.primary },
+  readyTitle: { ...typography.displayLG, color: colors.textPrimary },
+  error: { ...typography.caption, color: colors.danger },
 });
