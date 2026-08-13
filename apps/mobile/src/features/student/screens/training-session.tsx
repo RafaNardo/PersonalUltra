@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useEffect, useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { AppState, Image, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/src/api/shared-http';
@@ -18,12 +18,13 @@ export function StudentTrainingSessionScreen() {
   const session = useStudentTrainingSessionStore((state) => state.session);
   const ownerStudentId = useStudentTrainingSessionStore((state) => state.studentId);
   const ownerMatches = ownerStudentId === authSession?.studentId;
-  const activeSession = ownerMatches && session?.workoutId === id ? session : undefined;
+  const activeSession = ownerMatches && sameIdentifier(session?.workoutId, id) ? session : undefined;
   const isOfflineSnapshot = useStudentTrainingSessionStore((state) => state.isOfflineSnapshot);
   const setSession = useStudentTrainingSessionStore((state) => state.setSession);
   const [error, setError] = useState<string>();
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
   const [snapshotAttempted, setSnapshotAttempted] = useState(false);
+  const automaticStartAttempt = useRef<string | undefined>(undefined);
 
   const startWorkout = useMutation({
     mutationFn: async () => {
@@ -66,6 +67,9 @@ export function StudentTrainingSessionScreen() {
 
   useEffect(() => {
     if (!authSession || !id || activeSession || start !== '1' || startWorkout.isPending || startWorkout.isError) return;
+    const attemptKey = `${authSession.studentId}:${id}`.toLowerCase();
+    if (automaticStartAttempt.current === attemptKey) return;
+    automaticStartAttempt.current = attemptKey;
     startWorkout.mutate();
   }, [authSession, id, activeSession, start, startWorkout.isPending, startWorkout.isError]);
 
@@ -102,10 +106,14 @@ export function StudentTrainingSessionScreen() {
 
   if (!authSession) { router.replace('/login'); return null; }
   if (!activeSession && (startWorkout.isPending || loadingSnapshot)) return <LoadingView message="Preparando seu treino…" />;
-  if (!activeSession && (startWorkout.isError || error)) return <ErrorView message={error ?? startWorkout.error?.message ?? 'Não foi possível abrir este treino.'} onRetry={() => { setError(undefined); startWorkout.reset(); if (start === '1') startWorkout.mutate(); else router.back(); }} />;
+  if (!activeSession && (startWorkout.isError || error)) return <ErrorView message={error ?? startWorkout.error?.message ?? 'Não foi possível abrir este treino.'} onRetry={() => { setError(undefined); startWorkout.reset(); if (start === '1') { automaticStartAttempt.current = `${authSession.studentId}:${id}`.toLowerCase(); startWorkout.mutate(); } else router.back(); }} />;
   if (!activeSession) return <LoadingView message="Preparando seu treino…" />;
 
   return <SessionOverview session={activeSession} isOfflineSnapshot={isOfflineSnapshot} authToken={authSession.accessToken} />;
+}
+
+function sameIdentifier(left: string | undefined, right: string | undefined) {
+  return Boolean(left && right && left.toLowerCase() === right.toLowerCase());
 }
 
 function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: StudentSession; isOfflineSnapshot: boolean; authToken: string }) {
