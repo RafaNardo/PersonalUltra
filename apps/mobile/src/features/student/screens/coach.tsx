@@ -1,0 +1,19 @@
+import { router } from 'expo-router';
+import { useState } from 'react';
+import { StyleSheet, Text, TextInput } from 'react-native';
+import { useMutation } from '@tanstack/react-query';
+import { Button, Card, ErrorView } from '@/src/components/ui';
+import { Screen, TopBar } from '@/src/components/layout';
+import { colors, spacing, typography } from '@/src/design/tokens';
+import { inviteApi } from '@/src/features/student/invite/api';
+import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
+
+export function StudentCoachScreen() {
+  const session = useInviteSessionStore((state) => state.session);
+  const [question, setQuestion] = useState('');
+  const answer = useMutation({ mutationFn: () => inviteApi.coachAnswer(session!.accessToken, question) });
+  if (!session) { router.replace('/login'); return null; }
+  return <Screen style={styles.page}><TopBar eyebrow="COACH" title="Tire suas dúvidas" onBack={() => router.back()} /><Text style={styles.copy}>O Coach explica o que já foi prescrito pelo seu personal. Ele não altera seu plano nem recomenda carga.</Text><TextInput value={question} onChangeText={setQuestion} multiline placeholder="Ex.: qual treino é recomendado?" placeholderTextColor={colors.textMuted} style={styles.input} /><Button loading={answer.isPending} disabled={!question.trim()} onPress={() => answer.mutate()}>Perguntar</Button>{answer.error && <ErrorView message={answer.error.message} onRetry={() => answer.mutate()} />}{answer.data && <Card style={styles.card}><Text style={styles.answer}>{answer.data.answer}</Text><Text style={styles.source}>Baseado no que já está registrado no seu acompanhamento.</Text></Card>}</Screen>;
+}
+
+const styles = StyleSheet.create({ page: { paddingVertical: spacing.xl, gap: spacing.lg }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, input: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 100, borderWidth: 1, borderColor: colors.border, borderRadius: 12, padding: spacing.md, textAlignVertical: 'top' }, card: { gap: spacing.sm }, answer: { ...typography.bodyLG, color: colors.textPrimary, lineHeight: 24 }, source: { ...typography.caption, color: colors.textMuted } });

@@ -13,6 +13,7 @@ export default function StudentAccessScreen() {
   useEffect(() => {
     if (!session) { router.replace('/login'); return; }
     if (anamnesis.data && !anamnesis.data.isCompleted) router.replace('/invite/resume/anamnesis');
+    if (anamnesis.data?.isCompleted) router.replace('/student');
   }, [anamnesis.data, session]);
 
   if (!session || anamnesis.isLoading) return <LoadingView message="Abrindo seu acompanhamento…" />;
