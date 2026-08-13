@@ -1,6 +1,15 @@
 # Student Training UX Restoration — M3RR
 
-Status: **approved direction**
+Status: **implemented and validated (M3RR, 2026-08-13)**
+
+The superseded condensed execution implementation remains recoverable from Git
+commit `99df898` (`feat(m3r-010): adapt student workout execution`). The old
+Expo paths are compatibility redirects only; the live Student tree has one
+implementation for the hub, preview, session overview, focused execution,
+rest and summary routes. Validation passed with mobile typecheck, .NET build,
+46 integration tests and Android Expo export. Podman was installed but its
+local machine/socket did not respond, so container-backed live flow validation
+was not available in this gate.
 
 ## Why this corrective track exists
 

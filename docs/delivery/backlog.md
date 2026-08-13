@@ -100,6 +100,10 @@ A revisão pós-M3R constatou que catálogo, snapshots, execução e offline for
 
 **DoD M3RR:** Student navega por uma árvore própria, vê dados reais na Home, abre um treino sem iniciá-lo, inicia ou retoma uma sessão, executa uma série por vez com descanso e suporte offline, conclui em um resumo real e o Trainer vê o histórico resultante.
 
+**Status M3RR (2026-08-13): concluído.** A validação integrada confirmou login/Home/tabs, hub e prévia read-only, início/retomada, visão geral da sessão, execução focada por série, descanso com pulo e acréscimo de 30 segundos, resumo/histórico Student e leitura do histórico real no Trainer. O typecheck Expo, `dotnet build`, 46 testes de integração e `npx expo export --platform android` passaram. A conexão local do Podman não respondeu, portanto o fluxo ao vivo com os containers não foi executado nesta etapa.
+
+As rotas legadas `student-training*`, `student-coach`, `student-nutrition` e `student-progress` permanecem somente como redirects de compatibilidade; não são implementações concorrentes. A tela condensada substituída pode ser recuperada para comparação pelo commit Git `99df898` (`feat(m3r-010): adapt student workout execution`), principalmente nos arquivos listados em `docs/design/student-training-ux-restoration.md`. O estado offline posterior não deve ser revertido ao consultar esse commit.
+
 ## M4 — Nutrition, Progress, Coach & Polish
 - `PU-M4-001`: adaptar domínio nutrição.
 - `PU-M4-002`: editor de alimentação Trainer.

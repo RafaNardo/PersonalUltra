@@ -118,7 +118,7 @@ function RestTimer({ session, exercise, next, isOfflineSnapshot }: { session: St
     </Card>
     <View style={styles.actions}>
       <Button variant="secondary" onPress={addThirtySeconds}>+30 segundos</Button>
-      <Button variant="secondary" onPress={continueFromRest} disabled={finished}>Pular descanso</Button>
+      <Button variant="secondary" onPress={continueFromRest}>Pular descanso</Button>
       <Button disabled={!finished} onPress={continueFromRest}>{next ? (next.id === exercise.id ? 'Próxima série' : 'Próximo exercício') : 'Ver visão geral'}</Button>
     </View>
   </Screen>;

@@ -1,7 +1,7 @@
 import * as SQLite from 'expo-sqlite';
 import { stripLegacyToken, syncSequentially, type SyncResult } from './sync-queue';
 
-export type CompleteSetInput = { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number; repsInReserve?: number | null };
+export type CompleteSetInput = { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number };
 export type CachedWorkoutSnapshot = {
   studentId?: string;
   sessionId: string;
