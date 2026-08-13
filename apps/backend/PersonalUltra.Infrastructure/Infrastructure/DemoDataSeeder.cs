@@ -8,6 +8,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
     public async Task SeedAsync(CancellationToken cancellationToken)
     {
         var now = timeProvider.GetUtcNow();
+        await SeedExercisesAsync(cancellationToken);
         var trainer = await dbContext.Trainers.Include(x => x.Branding).SingleOrDefaultAsync(x => x.Id == DemoIds.TrainerId, cancellationToken);
         if (trainer is null)
         {
@@ -58,6 +59,24 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
             var extra = await dbContext.Students.SingleOrDefaultAsync(x => x.Email == email, cancellationToken);
             if (extra is null) { extra = new Student { Id = Guid.NewGuid(), FirstName = first, LastName = last, Email = email, CreatedAt = now }; dbContext.Add(extra); }
             if (!await dbContext.TrainerStudents.AnyAsync(x => x.TrainerId == DemoIds.TrainerId && x.StudentId == extra.Id, cancellationToken)) dbContext.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = extra.Id, StartedAt = now });
+        }
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private async Task SeedExercisesAsync(CancellationToken cancellationToken)
+    {
+        var existingSlugs = await dbContext.Exercises
+            .AsNoTracking()
+            .Select(x => x.Slug)
+            .ToHashSetAsync(cancellationToken);
+
+        foreach (var seed in ExerciseCatalogSeed.Exercises)
+        {
+            // Slug is the stable seed key. Existing catalog rows are left
+            // untouched so a demo reset cannot overwrite real data.
+            if (!existingSlugs.Contains(seed.Slug))
+                dbContext.Exercises.Add(seed.ToEntity());
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
