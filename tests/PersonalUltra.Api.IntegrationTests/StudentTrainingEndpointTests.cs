@@ -161,10 +161,56 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         await cleanupDb.SaveChangesAsync();
     }
 
+    [Fact]
+    public async Task Workout_preview_is_read_only_and_returns_ordered_student_snapshot()
+    {
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
+        var workoutId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var catalog = await db.Exercises.AsNoTracking().Where(x => x.IsActive).Take(2).ToArrayAsync();
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Preview read-only", RecommendedDay = 6, CreatedAt = DateTimeOffset.UtcNow };
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, catalog[1], 2, 3, 10, 12, 60, "Segundo"));
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, catalog[0], 1, 4, 8, 10, 90, "Primeiro"));
+            db.StudentWorkouts.Add(workout);
+            await db.SaveChangesAsync();
+        }
+
+        var before = await CountSessions(workoutId);
+        var response = await client.GetAsync($"/api/v1/training/{workoutId}");
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var preview = await response.Content.ReadFromJsonAsync<PreviewResponse>();
+        Assert.Equal("Available", preview!.State);
+        Assert.Null(preview.ActiveSessionId);
+        Assert.Collection(preview.Exercises,
+            first => { Assert.Equal(1, first.Sequence); Assert.Equal(4, first.Sets); Assert.Equal("Primeiro", first.Notes); },
+            second => { Assert.Equal(2, second.Sequence); Assert.Equal(3, second.Sets); Assert.Equal("Segundo", second.Notes); });
+        Assert.Equal(before, await CountSessions(workoutId));
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        cleanupDb.StudentWorkoutExercises.RemoveRange(cleanupDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == workoutId));
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == workoutId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
+    private async Task<int> CountSessions(Guid workoutId)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        return await db.WorkoutSessions.CountAsync(x => x.StudentWorkoutId == workoutId);
+    }
+
     private sealed record LoginResponse(string AccessToken);
     private sealed record SessionResponse(Guid SessionId, IReadOnlyList<SessionExerciseResponse> Exercises);
     private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets);
     private sealed record TrainingResponse(IReadOnlyList<TrainingHistoryItem> History);
     private sealed record TrainingHistoryItem(Guid SessionId, string Status, int CompletedSets);
+    private sealed record PreviewResponse(Guid Id, string State, Guid? ActiveSessionId, IReadOnlyList<PreviewExerciseResponse> Exercises);
+    private sealed record PreviewExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
     private sealed record CompletionResponse(Guid Id, string Status, DateTimeOffset? CompletedAt);
 }
