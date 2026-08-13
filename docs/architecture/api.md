@@ -58,10 +58,10 @@ superfícies Student até os gates de compatibilidade seguintes.
 - `GET /coach/conversation`
 - `POST /coach/messages`
 
-As respostas de lista e preview de treino Student também incluem
-`suggestedOrder` de forma aditiva. Neste primeiro gate, a composição legada de
-`recommended`/`available` e seus campos antigos permanece intacta; sua
-neutralização pertence a `PU-M3RF-003`.
+As respostas de lista e preview de treino Student usam `suggestedOrder` e uma
+coleção neutra `workouts`. Não expõem dia recomendado, indicador de recomendação
+nem separam treinos em `recommended`/`available`. A preparação e a prévia são
+read-only; somente uma confirmação explícita inicia ou retoma a sessão.
 
 ## Fronteiras
 Student API não expõe mutations de prescrição.

@@ -496,7 +496,7 @@ public static class TrainingEndpointExtensions
     private static async Task<int> NextSuggestedOrder(PersonalUltraDbContext db, Guid studentId, CancellationToken cancellationToken)
     {
         var currentMaximum = await db.StudentWorkouts
-            .Where(x => x.StudentId == studentId)
+            .Where(x => x.StudentId == studentId && x.IsActive)
             .Select(x => (int?)x.SuggestedOrder)
             .MaxAsync(cancellationToken);
         return checked((currentMaximum ?? 0) + 1);

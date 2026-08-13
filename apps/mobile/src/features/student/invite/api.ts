@@ -7,9 +7,9 @@ export type Invite = { trainerName: string; email?: string; expiresAt: string };
 export type InviteSession = { accessToken: string; studentId: string; firstName: string; lastName: string; email: string; phone: string; trainerId: string };
 export type AnamnesisAnswers = { goal: string; experienceLevel: string; trainingDaysPerWeek: number; sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number; weightKg: number; healthConditions: string; movementRestrictions: string; currentPainDescription: string; nutritionPreferences: string; nutritionRestrictions: string };
 export type ActiveTrainerMessage = { id: string; message: string; startsAt: string; expiresAt?: string };
-export type StudentWorkout = { id: string; name: string; notes: string; recommendedDay: number; isRecommended: boolean; exerciseCount: number; prescribedSets: number; state: 'Recommended' | 'Available' | 'InProgress' | 'Completed'; activeSessionId?: string; lastCompletedAt?: string };
-export type StudentTraining = { recommended?: StudentWorkout; available: StudentWorkout[]; history: Array<{ sessionId: string; workoutId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number }> };
-export type StudentWorkoutPreview = { id: string; name: string; notes: string; recommendedDay: number; isRecommended: boolean; state: StudentWorkout['state']; activeSessionId?: string; lastCompletedAt?: string; exercises: Array<{ id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string }> };
+export type StudentWorkout = { id: string; name: string; notes: string; suggestedOrder: number; exerciseCount: number; prescribedSets: number; state: 'Ready' | 'InProgress' | 'Completed'; activeSessionId?: string; lastCompletedAt?: string };
+export type StudentTraining = { workouts: StudentWorkout[]; history: Array<{ sessionId: string; workoutId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number }> };
+export type StudentWorkoutPreview = { id: string; name: string; notes: string; suggestedOrder: number; state: StudentWorkout['state']; activeSessionId?: string; lastCompletedAt?: string; exercises: Array<{ id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string }> };
 export type StudentSetPerformance = { setNumber: number; weightKg: number; repetitions: number; completedAt: string };
 export type StudentSessionExercise = { id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string; completedSets: number; previousPerformance?: StudentSetPerformance; performances?: StudentSetPerformance[] };
 export type StudentSession = { sessionId: string; workoutId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; exercises: StudentSessionExercise[] };
@@ -54,7 +54,7 @@ export const inviteApi = {
   session: (token: string, sessionId: string) => request<StudentSessionDetail>(`/training/sessions/${sessionId}`, {}, token),
   activeSession: async (token: string, workoutId: string) => {
     const training = await request<StudentTraining>('/training', {}, token);
-    const workout = [training.recommended, ...training.available].find((item) => item?.id === workoutId);
+    const workout = training.workouts.find((item) => item.id === workoutId);
     return workout?.activeSessionId ? request<StudentSessionDetail>(`/training/sessions/${workout.activeSessionId}`, {}, token) : undefined;
   },
   completeSet: (token: string, sessionId: string, exerciseId: string, input: { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number }) => request<{ saved: boolean; completedSets: number }>(`/training/sessions/${sessionId}/exercises/${exerciseId}/sets`, { method: 'POST', body: JSON.stringify(input) }, token),

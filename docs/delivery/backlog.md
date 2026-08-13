@@ -119,7 +119,7 @@ execução está em `docs/delivery/m3rf-codex-handoff.md`.
 - `PU-M3RF-006`: refatorar o calendário/Home Student para mostrar somente sessões reais realizadas ou em andamento; remover workouts futuros por dia e qualquer linguagem de agenda obrigatória.
 - `PU-M3RF-007`: remover `RecommendedDay`/`IsRecommended` legados de domínio, contratos, seed, Coach e banco; revisar histórico, empty/error/loading/accessibility e validar Trainer → Student → execução → calendário end-to-end.
 
-**Status M3RF:** `PU-M3RF-001` e `PU-M3RF-002` concluídas com ordem sugerida persistida, backfill
+**Status M3RF:** `PU-M3RF-001`, `PU-M3RF-002` e `PU-M3RF-003` concluídas com ordem sugerida persistida, backfill
 determinístico, contratos aditivos e campos legados preservados. Os gates de UI
 e a remoção física continuam pendentes na sequência documentada.
 

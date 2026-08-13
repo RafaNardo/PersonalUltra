@@ -880,6 +880,41 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         Assert.Equal(HttpStatusCode.OK, restore.StatusCode);
     }
 
+    [Fact]
+    public async Task Trainer_new_workout_appends_after_active_workouts_not_deleted_history()
+    {
+        Guid inactiveId;
+        int expectedOrder;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            expectedOrder = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId && x.IsActive).MaxAsync(x => x.SuggestedOrder) + 1;
+            var inactive = new StudentWorkout
+            {
+                Id = Guid.NewGuid(),
+                TrainerId = DemoIds.TrainerId,
+                StudentId = DemoIds.StudentId,
+                Name = "Histórico fora da lista",
+                SuggestedOrder = expectedOrder + 100,
+                IsActive = false,
+                CreatedAt = DateTimeOffset.UtcNow,
+            };
+            inactiveId = inactive.Id;
+            db.StudentWorkouts.Add(inactive);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PostAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts", new { name = "Treino após histórico" });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var created = await response.Content.ReadFromJsonAsync<StudentWorkoutDetailResponse>();
+        Assert.Equal(expectedOrder, created!.SuggestedOrder);
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == created.Id || x.Id == inactiveId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
     private async Task<Exercise> GetActiveExercise()
     {
         using var scope = factory.Services.CreateScope();

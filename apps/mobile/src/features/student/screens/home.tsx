@@ -1,26 +1,11 @@
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
+import { Button, Card, EmptyState, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
-import { inviteApi, type StudentWorkout } from '@/src/features/student/invite/api';
+import { inviteApi } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-
-const weekDays = [
-  { number: 1, label: 'Segunda' },
-  { number: 2, label: 'Terça' },
-  { number: 3, label: 'Quarta' },
-  { number: 4, label: 'Quinta' },
-  { number: 5, label: 'Sexta' },
-  { number: 6, label: 'Sábado' },
-  { number: 7, label: 'Domingo' },
-] as const;
-
-function currentDayNumber() {
-  const day = new Date().getDay();
-  return day === 0 ? 7 : day;
-}
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(value));
@@ -45,12 +30,12 @@ export function StudentHomeScreen() {
   if (training.isError) return <ErrorView message={training.error.message} onRetry={() => training.refetch()} />;
 
   const data = training.data!;
-  const workouts = uniqueWorkouts([data.recommended, ...data.available]);
+  const workouts = data.workouts;
   const inProgress = data.history.find((item) => item.status === 'InProgress');
-  const inProgressWorkout = inProgress ? workouts.find((workout) => workout.id === inProgress.workoutId) : undefined;
-  const primaryWorkout = inProgress ? inProgressWorkout : data.recommended;
-  const primaryTitle = inProgress?.workoutName ?? primaryWorkout?.name;
-  const today = currentDayNumber();
+  const inProgressWorkout = (inProgress ? workouts.find((workout) => workout.id === inProgress.workoutId) : undefined)
+    ?? workouts.find((workout) => workout.state === 'InProgress');
+  const primaryWorkout = inProgressWorkout ?? workouts[0];
+  const primaryTitle = inProgressWorkout?.name ?? primaryWorkout?.name;
   const latestWeight = weight.data?.length ? weight.data[weight.data.length - 1] : undefined;
 
   return (
@@ -67,38 +52,26 @@ export function StudentHomeScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{inProgress ? 'Continue de onde parou' : 'Seu próximo treino'}</Text>
+        <Text style={styles.sectionTitle}>{inProgressWorkout ? 'Continue de onde parou' : 'Iniciar treino'}</Text>
         {primaryTitle ? (
           <Card style={styles.primaryCard}>
             <View style={styles.cardHeader}>
               <View style={styles.cardTitleGroup}>
                 <Text style={styles.primaryTitle}>{primaryTitle}</Text>
-                <Text style={styles.meta}>{inProgress ? 'Sessão em andamento' : `${dayLabel(primaryWorkout!.recommendedDay)} · treino recomendado`}</Text>
+                <Text style={styles.meta}>{inProgressWorkout ? 'Sessão em andamento' : 'Escolha um treino para hoje'}</Text>
               </View>
-              <Tag tone={inProgress ? 'success' : 'primary'}>{inProgress ? 'EM ANDAMENTO' : 'RECOMENDADO'}</Tag>
             </View>
-            {!inProgress && primaryWorkout?.notes ? <Text style={styles.copy}>{primaryWorkout.notes}</Text> : null}
-            {primaryWorkout ? <Text style={styles.detail}>{primaryWorkout.exerciseCount} {primaryWorkout.exerciseCount === 1 ? 'exercício prescrito' : 'exercícios prescritos'}{inProgress && inProgress.completedSets > 0 ? ` · ${inProgress.completedSets} séries registradas` : ''}</Text> : inProgress?.completedSets ? <Text style={styles.detail}>{inProgress.completedSets} séries registradas</Text> : null}
-            <Button onPress={() => router.push('/student/training')}>{inProgress ? 'Abrir treino em andamento' : 'Ver treino recomendado'}</Button>
+            {!inProgressWorkout && primaryWorkout?.notes ? <Text style={styles.copy}>{primaryWorkout.notes}</Text> : null}
+            {primaryWorkout ? <Text style={styles.detail}>{primaryWorkout.exerciseCount} {primaryWorkout.exerciseCount === 1 ? 'exercício prescrito' : 'exercícios prescritos'}{inProgress?.completedSets ? ` · ${inProgress.completedSets} séries registradas` : ''}</Text> : null}
+            <Button onPress={() => inProgressWorkout
+              ? router.push({ pathname: '/student/training/[id]', params: { id: inProgressWorkout.id, start: '1' } })
+              : router.push('/student/training/start')}>{inProgressWorkout ? 'Continuar treino' : 'Escolher treino'}</Button>
           </Card>
         ) : (
-          <EmptyState status={workouts.length ? 'TREINOS DISPONÍVEIS' : 'AGUARDANDO SEU PERSONAL'} symbol="●" title={workouts.length ? 'Escolha o treino que combina com seu dia.' : 'Seu próximo treino aparecerá aqui.'} message={workouts.length ? 'Seu personal liberou treinos para a semana, mas ainda não marcou um como recomendado.' : 'Quando seu personal publicar a prescrição, você verá a sessão recomendada e toda a sequência de exercícios.'} actionLabel={workouts.length ? 'Ver treinos' : undefined} onAction={workouts.length ? () => router.push('/student/training') : undefined} />
+          <EmptyState status={workouts.length ? 'TREINOS DISPONÍVEIS' : 'AGUARDANDO SEU PERSONAL'} symbol="●" title={workouts.length ? 'Escolha o treino que combina com seu dia.' : 'Seus treinos aparecerão aqui.'} message={workouts.length ? 'Seu personal liberou a rotina. Escolha uma sessão quando estiver pronto.' : 'Quando seu personal publicar a prescrição, você poderá escolher a sessão por aqui.'} actionLabel={workouts.length ? 'Escolher treino' : undefined} onAction={workouts.length ? () => router.push('/student/training/start') : undefined} />
         )}
       </View>
-
-      <View style={styles.section}>
-        <View style={styles.sectionHeader}>
-          <Text style={styles.sectionTitle}>Sua semana</Text>
-          <Text style={styles.sectionHint}>Hoje: {dayLabel(today)}</Text>
-        </View>
-        <Card style={styles.scheduleCard}>
-          {weekDays.map((day) => {
-            const dayWorkouts = workouts.filter((workout) => workout.recommendedDay === day.number);
-            return <View key={day.number} style={[styles.dayRow, day.number === today && styles.todayRow]}><Text style={[styles.dayLabel, day.number === today && styles.todayLabel]}>{day.label}{day.number === today ? ' · hoje' : ''}</Text><View style={styles.dayWorkouts}>{dayWorkouts.length ? dayWorkouts.map((workout) => <Text key={workout.id} style={styles.workoutName}>{workout.name}{workout.isRecommended ? ' · recomendado' : ''}</Text>) : <Text style={styles.emptyDay}>Sem treino prescrito</Text>}</View></View>;
-          })}
-          <Button variant="secondary" onPress={() => router.push('/student/training')}>Abrir todos os treinos</Button>
-        </Card>
-      </View>
+      <Button variant="secondary" onPress={() => router.push('/student/training/start')}>Ver todos os treinos</Button>
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Seu acompanhamento</Text>
@@ -126,16 +99,6 @@ export function StudentHomeScreen() {
   );
 }
 
-function uniqueWorkouts(items: Array<StudentWorkout | undefined>) {
-  const byId = new Map<string, StudentWorkout>();
-  items.forEach((item) => { if (item) byId.set(item.id, item); });
-  return Array.from(byId.values());
-}
-
-function dayLabel(day: number) {
-  return weekDays.find((item) => item.number === day)?.label ?? 'dia não definido';
-}
-
 const styles = StyleSheet.create({
   page: { paddingVertical: spacing.xl },
   header: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.md },
@@ -145,9 +108,7 @@ const styles = StyleSheet.create({
   copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 },
   contextAction: { ...typography.caption, color: colors.primary, textAlign: 'right' },
   section: { gap: spacing.sm },
-  sectionHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm },
   sectionTitle: { ...typography.headingMD, color: colors.textPrimary },
-  sectionHint: { ...typography.caption, color: colors.textMuted },
   primaryCard: { gap: spacing.md, borderColor: colors.primary },
   card: { gap: spacing.sm },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
@@ -158,13 +119,5 @@ const styles = StyleSheet.create({
   meta: { ...typography.caption, color: colors.primary },
   detail: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
   message: { ...typography.bodyLG, color: colors.textPrimary, lineHeight: 24 },
-  scheduleCard: { gap: spacing.xs },
-  dayRow: { flexDirection: 'row', gap: spacing.md, paddingVertical: spacing.sm, borderBottomWidth: 1, borderBottomColor: colors.border },
-  todayRow: { borderLeftWidth: 2, borderLeftColor: colors.primary, paddingLeft: spacing.sm },
-  dayLabel: { ...typography.caption, color: colors.textSecondary, width: 82 },
-  todayLabel: { color: colors.primary },
-  dayWorkouts: { flex: 1, gap: spacing.xxs },
-  workoutName: { ...typography.bodyMD, color: colors.textPrimary },
-  emptyDay: { ...typography.bodyMD, color: colors.textMuted },
   supportCards: { gap: spacing.sm },
 });

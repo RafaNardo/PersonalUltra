@@ -20,13 +20,13 @@ export function StudentTrainingPreviewScreen() {
 
   const workout = preview.data;
   const isContinuing = workout.state === 'InProgress' && Boolean(workout.activeSessionId);
-  const state = workout.state === 'Recommended' ? { label: 'Recomendado', tone: 'primary' as const } : workout.state === 'InProgress' ? { label: 'Em andamento', tone: 'success' as const } : workout.state === 'Completed' ? { label: 'Concluído anteriormente', tone: 'success' as const } : { label: 'Disponível', tone: 'neutral' as const };
+  const state = workout.state === 'InProgress' ? { label: 'Em andamento', tone: 'success' as const } : workout.state === 'Completed' ? { label: 'Concluído anteriormente', tone: 'success' as const } : undefined;
 
   return <Screen style={styles.page}>
     <TopBar eyebrow="PRÉVIA DO TREINO" title={workout.name} onBack={() => router.back()} />
-    <View style={styles.headingMeta}><Tag tone={state.tone}>{state.label}</Tag><Text style={styles.meta}>{workout.exercises.length} exercícios · Dia {workout.recommendedDay}</Text></View>
+    <View style={styles.headingMeta}>{state ? <Tag tone={state.tone}>{state.label}</Tag> : null}<Text style={styles.meta}>{workout.exercises.length} exercícios · {workout.exercises.reduce((total, exercise) => total + exercise.sets, 0)} séries</Text></View>
     {workout.notes ? <Text style={styles.copy}>{workout.notes}</Text> : null}
-    <Text style={styles.intro}>{isContinuing ? 'Você já tem uma sessão em andamento. Continue quando estiver pronto.' : 'Confira a sequência, a prescrição e as orientações antes de começar.'}</Text>
+    <Text style={styles.intro}>{isContinuing ? 'Você já tem uma sessão em andamento. Continue quando estiver pronto.' : 'Confira a sequência, a prescrição e as orientações antes de começar. Nada será iniciado nesta tela.'}</Text>
     {workout.exercises.length === 0 ? <EmptyState status="PRESCRIÇÃO INCOMPLETA" symbol="●" title="Este treino ainda não possui exercícios." message="Seu personal precisa adicionar a sequência antes que você possa iniciar a sessão." /> : workout.exercises.map((exercise) => <PreviewExercise key={exercise.id} exercise={exercise} />)}
     <Button disabled={workout.exercises.length === 0} onPress={() => router.replace({ pathname: '/student/training/[id]', params: { id: workout.id, start: '1' } })}>{isContinuing ? 'Continuar treino' : 'Iniciar treino'}</Button>
   </Screen>;

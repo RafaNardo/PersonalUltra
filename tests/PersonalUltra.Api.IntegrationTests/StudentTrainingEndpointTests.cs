@@ -1,6 +1,7 @@
 using System.Net;
 using System.Net.Http.Headers;
 using System.Net.Http.Json;
+using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
 using PersonalUltra.Domain;
@@ -21,26 +22,39 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     }
 
     [Fact]
-    public async Task Training_list_and_preview_expose_suggested_order_without_removing_legacy_fields()
+    public async Task Training_list_and_preview_are_neutral_and_ordered_by_suggested_order()
     {
         var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
         var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
 
-        var training = await client.GetFromJsonAsync<StudentTrainingListResponse>("/api/v1/training/");
-        var workouts = training!.Available
-            .Append(training.Recommended!)
-            .OrderBy(workout => workout.SuggestedOrder)
-            .ToArray();
+        var trainingResponse = await client.GetAsync("/api/v1/training/");
+        var trainingJson = await trainingResponse.Content.ReadAsStringAsync();
+        using var trainingDocument = JsonDocument.Parse(trainingJson);
+        Assert.False(trainingDocument.RootElement.TryGetProperty("recommended", out _));
+        Assert.False(trainingDocument.RootElement.TryGetProperty("available", out _));
+        foreach (var item in trainingDocument.RootElement.GetProperty("workouts").EnumerateArray())
+        {
+            Assert.False(item.TryGetProperty("recommendedDay", out _));
+            Assert.False(item.TryGetProperty("isRecommended", out _));
+        }
+        var training = JsonSerializer.Deserialize<StudentTrainingListResponse>(trainingJson, new JsonSerializerOptions(JsonSerializerDefaults.Web));
+        var workouts = training!.Workouts.ToArray();
 
         Assert.Equal([1, 2, 3, 4], workouts.Select(workout => workout.SuggestedOrder));
-        Assert.All(workouts, workout => Assert.InRange(workout.RecommendedDay, 1, 7));
+        Assert.DoesNotContain("Recommended", workouts.Select(workout => workout.State));
+        Assert.DoesNotContain("Available", workouts.Select(workout => workout.State));
 
         var selected = workouts[0];
-        var preview = await client.GetFromJsonAsync<PreviewResponse>($"/api/v1/training/{selected.Id}");
+        var previewResponse = await client.GetAsync($"/api/v1/training/{selected.Id}");
+        var previewJson = await previewResponse.Content.ReadAsStringAsync();
+        using var previewDocument = JsonDocument.Parse(previewJson);
+        Assert.False(previewDocument.RootElement.TryGetProperty("recommendedDay", out _));
+        Assert.False(previewDocument.RootElement.TryGetProperty("isRecommended", out _));
+        var preview = JsonSerializer.Deserialize<PreviewResponse>(previewJson, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(selected.SuggestedOrder, preview!.SuggestedOrder);
-        Assert.Equal(selected.RecommendedDay, preview.RecommendedDay);
+        Assert.Equal("Ready", preview.State);
     }
 
     [Fact]
@@ -61,8 +75,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         var preview = await client.GetAsync($"/api/v1/training/{workoutId}");
         var start = await client.PostAsync($"/api/v1/training/{workoutId}/start", null);
 
-        Assert.DoesNotContain(training!.Available, workout => workout.Id == workoutId);
-        Assert.NotEqual(workoutId, training.Recommended?.Id);
+        Assert.DoesNotContain(training!.Workouts, workout => workout.Id == workoutId);
         Assert.Equal(HttpStatusCode.NotFound, preview.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, start.StatusCode);
 
@@ -93,7 +106,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         var preview = await client.GetAsync($"/api/v1/training/{workoutId}");
         var start = await client.PostAsync($"/api/v1/training/{workoutId}/start", null);
 
-        Assert.DoesNotContain(training!.Available, workout => workout.Id == workoutId);
+        Assert.DoesNotContain(training!.Workouts, workout => workout.Id == workoutId);
         Assert.Equal(HttpStatusCode.NotFound, preview.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, start.StatusCode);
 
@@ -242,10 +255,16 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         var setResponse = await client.PostAsJsonAsync($"/api/v1/training/sessions/{sessionId}/exercises/{sessionExerciseId}/sets", new { clientOperationId = $"ownership-{Guid.NewGuid():N}", setNumber = 1, weightKg = 20m, repetitions = 10 });
         var completionResponse = await client.PostAsync($"/api/v1/training/sessions/{sessionId}/complete", null);
         var detailResponse = await client.GetAsync($"/api/v1/training/sessions/{sessionId}");
+        var listResponse = await client.GetFromJsonAsync<StudentTrainingListResponse>("/api/v1/training/");
+        var previewResponse = await client.GetAsync($"/api/v1/training/{workoutId}");
+        var startResponse = await client.PostAsync($"/api/v1/training/{workoutId}/start", null);
 
         Assert.Equal(HttpStatusCode.NotFound, setResponse.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, completionResponse.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, detailResponse.StatusCode);
+        Assert.DoesNotContain(listResponse!.Workouts, workout => workout.Id == workoutId);
+        Assert.Equal(HttpStatusCode.NotFound, previewResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, startResponse.StatusCode);
 
         using var cleanupScope = factory.Services.CreateScope();
         var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
@@ -332,7 +351,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         var response = await client.GetAsync($"/api/v1/training/{workoutId}");
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
         var preview = await response.Content.ReadFromJsonAsync<PreviewResponse>();
-        Assert.Equal("Available", preview!.State);
+        Assert.Equal("Ready", preview!.State);
         Assert.Null(preview.ActiveSessionId);
         Assert.Collection(preview.Exercises,
             first => { Assert.Equal(1, first.Sequence); Assert.Equal(4, first.Sets); Assert.Equal("Primeiro", first.Notes); },
@@ -354,13 +373,13 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     }
 
     private sealed record LoginResponse(string AccessToken);
-    private sealed record StudentTrainingListResponse(StudentWorkoutSummary? Recommended, IReadOnlyList<StudentWorkoutSummary> Available);
-    private sealed record StudentWorkoutSummary(Guid Id, int RecommendedDay, int SuggestedOrder);
+    private sealed record StudentTrainingListResponse(IReadOnlyList<StudentWorkoutSummary> Workouts, IReadOnlyList<TrainingHistoryItem> History);
+    private sealed record StudentWorkoutSummary(Guid Id, int SuggestedOrder, string State);
     private sealed record SessionResponse(Guid SessionId, IReadOnlyList<SessionExerciseResponse> Exercises);
     private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets, SessionDetailPerformanceResponse? PreviousPerformance);
     private sealed record TrainingResponse(IReadOnlyList<TrainingHistoryItem> History);
     private sealed record TrainingHistoryItem(Guid SessionId, string Status, int CompletedSets);
-    private sealed record PreviewResponse(Guid Id, int RecommendedDay, int SuggestedOrder, string State, Guid? ActiveSessionId, IReadOnlyList<PreviewExerciseResponse> Exercises);
+    private sealed record PreviewResponse(Guid Id, int SuggestedOrder, string State, Guid? ActiveSessionId, DateTimeOffset? LastCompletedAt, IReadOnlyList<PreviewExerciseResponse> Exercises);
     private sealed record PreviewExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
     private sealed record CompletionResponse(Guid Id, string Status, DateTimeOffset? CompletedAt);
     private sealed record SessionDetailResponse(Guid SessionId, Guid WorkoutId, string WorkoutName, string Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt, IReadOnlyList<SessionDetailExerciseResponse> Exercises);
