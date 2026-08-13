@@ -28,13 +28,15 @@ public sealed class WorkoutTemplateExercise
 {
     public Guid Id { get; set; }
     public Guid WorkoutTemplateId { get; set; }
-    public string Name { get; set; } = null!;
+    public Guid ExerciseId { get; set; }
     public int Sequence { get; set; }
     public int Sets { get; set; }
-    public int Repetitions { get; set; }
+    public int RepetitionsMin { get; set; }
+    public int RepetitionsMax { get; set; }
     public int RestSeconds { get; set; }
     public string Notes { get; set; } = "";
     public WorkoutTemplate WorkoutTemplate { get; set; } = null!;
+    public Exercise Exercise { get; set; } = null!;
 }
 
 public sealed class StudentWorkout

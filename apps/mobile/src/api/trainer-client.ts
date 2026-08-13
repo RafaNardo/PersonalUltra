@@ -29,8 +29,9 @@ export type TrainerStudent = TrainerDashboard['recentStudents'][number];
 export type TrainerMessage = { id: string; studentId: string; message: string; startsAt: string; expiresAt?: string; createdAt: string };
 export type TrainerAnamnesis = { goal: string; experienceLevel: string; trainingDaysPerWeek: number; sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number; weightKg: number; healthConditions: string; movementRestrictions: string; currentPainDescription: string; nutritionPreferences: string; nutritionRestrictions: string; completedAt: string };
 export type StudentInvite = { id: string; token: string; inviteCode: string; inviteUrl: string; email?: string; expiresAt: string; replacedPendingInvite: boolean };
-export type WorkoutTemplate = { id: string; name: string; notes: string; exerciseCount?: number; updatedAt?: string; exercises?: WorkoutExerciseInput[] };
-export type WorkoutExerciseInput = { name: string; sequence: number; sets: number; repetitions: number; restSeconds: number; notes?: string };
+export type WorkoutTemplate = { id: string; name: string; notes: string; exerciseCount?: number; updatedAt?: string; exercises?: WorkoutExercise[] };
+export type WorkoutExercise = { exerciseId: string; name: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string };
+export type WorkoutExerciseInput = Omit<WorkoutExercise, 'name'>;
 export type TrainerNutrition = { id: string; name: string; notes: string; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ foodName: string; quantityGrams: number }> }> };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {

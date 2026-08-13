@@ -181,6 +181,8 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
 
 public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Program>
 {
+    private readonly string databaseName = $"trainer-api-tests-{Guid.NewGuid():N}";
+
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
@@ -189,7 +191,7 @@ public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Progra
             services.RemoveAll<DbContextOptions<PersonalUltraDbContext>>();
             services.RemoveAll<DbContextOptions>();
             services.RemoveAll<IDbContextOptionsConfiguration<PersonalUltraDbContext>>();
-            services.AddDbContext<PersonalUltraDbContext>(options => options.UseInMemoryDatabase("trainer-dashboard-tests"));
+            services.AddDbContext<PersonalUltraDbContext>(options => options.UseInMemoryDatabase(databaseName));
         });
     }
 }
