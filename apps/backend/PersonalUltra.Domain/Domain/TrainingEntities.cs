@@ -1,5 +1,17 @@
 namespace PersonalUltra.Domain;
 
+public sealed class Exercise
+{
+    public Guid Id { get; set; }
+    public string Name { get; set; } = null!;
+    public string Slug { get; set; } = null!;
+    public string PrimaryMuscleGroup { get; set; } = null!;
+    public string? Equipment { get; set; }
+    public string ImageRef { get; set; } = null!;
+    public string? Instructions { get; set; }
+    public bool IsActive { get; set; } = true;
+}
+
 public sealed class WorkoutTemplate
 {
     public Guid Id { get; set; }

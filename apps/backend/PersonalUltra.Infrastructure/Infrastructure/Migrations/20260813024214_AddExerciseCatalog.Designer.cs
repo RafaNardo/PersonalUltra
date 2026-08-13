@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using Npgsql.EntityFrameworkCore.PostgreSQL.Metadata;
 using PersonalUltra.Infrastructure;
@@ -11,9 +12,11 @@ using PersonalUltra.Infrastructure;
 namespace PersonalUltra.Infrastructure.Infrastructure.Migrations
 {
     [DbContext(typeof(PersonalUltraDbContext))]
-    partial class PersonalUltraDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260813024214_AddExerciseCatalog")]
+    partial class AddExerciseCatalog
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder
