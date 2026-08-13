@@ -83,6 +83,23 @@ A direção aprovada está em `docs/design/trainer-training-refactor.md` e no ad
 
 **Status M3R (2026-08-13): concluído.** O catálogo global seeded, snapshots históricos, busca Trainer, fluxo student-centric, editor multi-exercício, templates opcionais, execução Student com mídia e carga/repetições reais, sincronização offline idempotente e quatro treinos completos do Student demo foram implementados e validados. O catálogo continua system-owned e sem administração na V1.
 
+### M3RR — Restauração corretiva da experiência Student
+
+A revisão pós-M3R constatou que catálogo, snapshots, execução e offline foram entregues, porém a UX Student consolidada do donor SVR não foi preservada como exigido por `PU-M3R-010`: a execução ficou condensada em uma tela longa com todos os exercícios. A direção corretiva aprovada está em `docs/design/student-training-ux-restoration.md`.
+
+- `PU-M3RR-001`: criar shell e árvore de navegação Student independentes, com tabs Início, Treino, Coach, Nutrição e Progresso; detalhes, execução, descanso e resumo devem ser rotas internas sem tab bar.
+- `PU-M3RR-002`: restaurar Home Student orientada ao dia, com treino recomendado/em andamento, cronograma semanal e cartões reais de mensagem, alimentação e progresso, sem fabricar métricas ausentes.
+- `PU-M3RR-003`: restaurar hub e preview de treino com recomendado, alternativas, imagens e prescrição; consultar detalhes não pode iniciar uma sessão, e iniciar/continuar devem ser ações distintas.
+- `PU-M3RR-004`: restaurar execução guiada, mostrando um exercício e uma série por vez, registrando somente carga e repetições reais e respeitando a sequência persistida; preservar a utilidade da tela condensada como visão geral consultiva da sessão.
+- `PU-M3RR-005`: restaurar descanso e transições com timer local baseado em `RestSeconds`, pular descanso, adicionar 30 segundos e avançar corretamente entre séries/exercícios.
+- `PU-M3RR-006`: restaurar conclusão e histórico Student com resumo derivado da sessão real e sem alegações de ajuste automático de plano, carga ou metodologia.
+- `PU-M3RR-007`: endurecer retomada/offline para restaurar sessão, exercício e próxima série após navegação/reinício, sincronizando a fila SQLite sem duplicação.
+- `PU-M3RR-008`: validar o fluxo integrado Student → execução → histórico Trainer, remover a superfície condensada substituída e revisar loading/error/empty/accessibility sem alterar regras de negócio.
+
+**Non-goals M3RR:** sem recommended load, RIR obrigatório, substituição automática, Coach mutation, geração de plano, catálogo admin, vídeos, métricas inventadas no mobile ou regras SVR reintroduzidas no domínio.
+
+**DoD M3RR:** Student navega por uma árvore própria, vê dados reais na Home, abre um treino sem iniciá-lo, inicia ou retoma uma sessão, executa uma série por vez com descanso e suporte offline, conclui em um resumo real e o Trainer vê o histórico resultante.
+
 ## M4 — Nutrition, Progress, Coach & Polish
 - `PU-M4-001`: adaptar domínio nutrição.
 - `PU-M4-002`: editor de alimentação Trainer.
