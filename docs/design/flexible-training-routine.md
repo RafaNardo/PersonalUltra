@@ -70,6 +70,12 @@ O calendário da Home marca apenas dias com sessão real. Ao tocar ou ler um dia
 o Student vê treino executado e estado real. Não renderizar treinos futuros por
 `RecommendedDay`, `Sem treino prescrito` ou linguagem semelhante.
 
+Na demo, a Home apresenta atividade factual limitada às 20 sessões mais
+recentes retornadas pelo Student API. Sessões em andamento usam `StartedAt`;
+sessões concluídas usam `CompletedAt`, sempre agrupadas no fuso local do
+dispositivo. A interface não promete cobertura mensal completa e dias vazios
+não significam ausência, atraso ou obrigação perdida.
+
 Uma sessão em andamento pode aparecer no dia em que foi iniciada. Sessões
 concluídas usam seu registro real. Alterar a escolha do treino não exige editar
 calendário.

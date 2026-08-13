@@ -28,16 +28,16 @@ export function StudentTrainingScreen({ withinTabs = false }: { withinTabs?: boo
   const active = (activeSession ? workouts.find((workout) => workout.id === activeSession.workoutId) : undefined)
     ?? workouts.find((workout) => workout.state === 'InProgress');
 
-  const visibleHistory = training.data!.history.filter((item) => item.status === 'Completed' || workouts.some((workout) => workout.id === item.workoutId));
+  const visibleHistory = training.data!.history.filter((item) => item.status === 'Completed' || item.status === 'InProgress');
 
   return <Screen withinTabs={withinTabs} style={styles.page}>
     <TopBar eyebrow="PREPARAÇÃO" title="Escolha seu treino" onBack={withinTabs ? undefined : () => router.back()} />
     <Text style={styles.intro}>Escolha o treino que faz sentido para hoje. A ordem foi organizada pelo seu personal, mas você decide quando começar.</Text>
-    {active ? <Card style={styles.activeCard}>
+    {activeSession ? <Card style={styles.activeCard}>
       <Text style={styles.activeEyebrow}>SESSÃO EM ANDAMENTO</Text>
-      <Text style={styles.activeTitle}>{active.name}</Text>
+      <Text style={styles.activeTitle}>{active?.name ?? activeSession.workoutName}</Text>
       <Text style={styles.copy}>Você pode continuar de onde parou.</Text>
-      <Button onPress={() => router.replace({ pathname: '/student/training/[id]', params: { id: active.id, start: '1' } })}>Continuar treino</Button>
+      <Button onPress={() => router.replace({ pathname: '/student/training/[id]', params: { id: activeSession.workoutId, start: '1' } })}>Continuar treino</Button>
     </Card> : null}
     {workouts.length === 0 ? <EmptyState status="AGUARDANDO PRESCRIÇÃO" symbol="●" title="Seu personal ainda não liberou treinos." message="Quando a rotina estiver disponível, você poderá escolher qualquer treino por aqui." /> : <View style={styles.list}>
       {workouts.map((workout) => <WorkoutPreparationItem key={workout.id} workout={workout} onPress={() => router.push({ pathname: '/student/training/preview/[id]', params: { id: workout.id } })} />)}

@@ -1,4 +1,5 @@
 import { router } from 'expo-router';
+import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView } from '@/src/components/ui';
@@ -9,6 +10,101 @@ import { useInviteSessionStore } from '@/src/features/student/invite/session-sto
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(value));
+}
+
+type TrainingHistoryItem = { sessionId: string; workoutId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number };
+type CalendarCell = { key: string; day: number; date: Date; sessions: TrainingHistoryItem[] };
+
+function localDateKey(value: string | Date) {
+  const date = value instanceof Date ? value : new Date(value);
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}-${String(date.getDate()).padStart(2, '0')}`;
+}
+
+function eventDate(item: TrainingHistoryItem) {
+  if (item.status === 'InProgress') return item.startedAt;
+  if (item.status === 'Completed') return item.completedAt ?? item.startedAt;
+  return undefined;
+}
+
+function monthTitle(date: Date) {
+  return new Intl.DateTimeFormat('pt-BR', { month: 'long', year: 'numeric' }).format(date);
+}
+
+function dateTitle(key: string) {
+  const [year, month, day] = key.split('-').map(Number);
+  return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'full' }).format(new Date(year, month - 1, day));
+}
+
+function buildCalendar(month: Date, history: TrainingHistoryItem[]) {
+  const first = new Date(month.getFullYear(), month.getMonth(), 1);
+  const offset = first.getDay();
+  const totalDays = new Date(month.getFullYear(), month.getMonth() + 1, 0).getDate();
+  const events = new Map<string, TrainingHistoryItem[]>();
+  history.forEach((item) => {
+    const factualDate = eventDate(item);
+    if (!factualDate || Number.isNaN(new Date(factualDate).getTime())) return;
+    const key = localDateKey(factualDate);
+    const current = events.get(key) ?? [];
+    current.push(item);
+    events.set(key, current);
+  });
+  return Array.from({ length: Math.ceil((offset + totalDays) / 7) * 7 }, (_, index): CalendarCell | undefined => {
+    const day = index - offset + 1;
+    if (day < 1 || day > totalDays) return undefined;
+    const date = new Date(month.getFullYear(), month.getMonth(), day);
+    const key = localDateKey(date);
+    return { key, day, date, sessions: events.get(key) ?? [] };
+  });
+}
+
+function FactualCalendar({ history }: { history: TrainingHistoryItem[] }) {
+  const factualHistory = useMemo(() => history.filter((item) => {
+    const factualDate = eventDate(item);
+    const date = factualDate ? new Date(factualDate) : undefined;
+    return Boolean(date) && !Number.isNaN(date!.getTime()) && date!.getTime() <= Date.now();
+  }), [history]);
+  const now = new Date();
+  const [month, setMonth] = useState(() => new Date(now.getFullYear(), now.getMonth(), 1));
+  const [selectedDate, setSelectedDate] = useState(() => localDateKey(now));
+  const cells = useMemo(() => buildCalendar(month, factualHistory), [month, factualHistory]);
+  const selectedSessions = useMemo(() => {
+    return factualHistory.filter((item) => localDateKey(eventDate(item)!) === selectedDate);
+  }, [factualHistory, selectedDate]);
+  const earliestEvent = factualHistory.reduce<Date | undefined>((earliest, item) => {
+    const date = new Date(eventDate(item)!);
+    return !earliest || date < earliest ? date : earliest;
+  }, undefined);
+  const earliestMonth = earliestEvent ? new Date(earliestEvent.getFullYear(), earliestEvent.getMonth(), 1) : month;
+  const canGoPrevious = month.getTime() > earliestMonth.getTime();
+  const canGoNext = month.getTime() < new Date(now.getFullYear(), now.getMonth(), 1).getTime();
+  const shiftMonth = (amount: number) => {
+    const next = new Date(month.getFullYear(), month.getMonth() + amount, 1);
+    setMonth(next);
+    setSelectedDate(localDateKey(next));
+  };
+
+  if (factualHistory.length === 0) return <Card style={styles.calendarEmpty}><Text style={styles.cardEyebrow}>ATIVIDADE RECENTE</Text><EmptyState variant="inline" status="SEM SESSÕES AINDA" symbol="●" title="Seu histórico começa quando você treinar." message="Os dias sem sessão ficam neutros. Escolha qualquer treino quando estiver pronto." /></Card>;
+
+  return <View style={styles.section}>
+    <View style={styles.calendarHeader}>
+      <View style={styles.calendarHeading}><Text style={styles.sectionTitle}>Atividade recente</Text><Text style={styles.detail}>Uma visão dos meses alcançados pelas suas 20 sessões mais recentes — sem metas ou dias obrigatórios.</Text></View>
+      <View style={styles.monthActions}>
+        <Pressable accessibilityRole="button" accessibilityLabel="Mês anterior" accessibilityState={{ disabled: !canGoPrevious }} disabled={!canGoPrevious} onPress={() => shiftMonth(-1)} style={styles.monthButton}><Text style={[styles.monthButtonText, !canGoPrevious && styles.disabledText]}>‹</Text></Pressable>
+        <Pressable accessibilityRole="button" accessibilityLabel="Próximo mês" accessibilityState={{ disabled: !canGoNext }} disabled={!canGoNext} onPress={() => shiftMonth(1)} style={styles.monthButton}><Text style={[styles.monthButtonText, !canGoNext && styles.disabledText]}>›</Text></Pressable>
+      </View>
+    </View>
+    <Card style={styles.calendarCard}>
+      <Text accessibilityRole="header" style={styles.monthTitle}>{monthTitle(month)}</Text>
+      <View style={styles.weekLabels}>{['D', 'S', 'T', 'Q', 'Q', 'S', 'S'].map((label, index) => <Text key={`${label}-${index}`} style={styles.weekLabel}>{label}</Text>)}</View>
+      <View style={styles.calendarGrid} accessibilityLabel={`Calendário de ${monthTitle(month)}`}>
+        {cells.map((cell, index) => cell ? <Pressable key={cell.key} accessibilityRole="button" accessibilityLabel={`${cell.day} de ${monthTitle(month)}${cell.sessions.length ? `, ${cell.sessions.length} ${cell.sessions.length === 1 ? 'sessão registrada' : 'sessões registradas'}` : ', nenhum treino registrado'}`} accessibilityState={{ selected: selectedDate === cell.key }} onPress={() => setSelectedDate(cell.key)} style={[styles.dayCell, selectedDate === cell.key && styles.selectedDay, cell.sessions.length > 0 && styles.eventDay]}><Text style={[styles.dayText, selectedDate === cell.key && styles.selectedDayText]}>{cell.day}</Text>{cell.sessions.length > 0 ? <View accessible={false} style={styles.eventDots}><View style={styles.eventDot} />{cell.sessions.length > 1 ? <Text style={styles.eventCount}>{cell.sessions.length}</Text> : null}</View> : null}</Pressable> : <View key={`empty-${index}`} style={styles.dayCell} />)}
+      </View>
+    </Card>
+    <Card style={styles.calendarDetails}>
+      <Text style={styles.cardEyebrow}>{dateTitle(selectedDate)}</Text>
+      {selectedSessions.length === 0 ? <Text style={styles.copy}>Nenhuma sessão registrada neste dia. Isso não representa atraso nem treino perdido.</Text> : selectedSessions.map((item) => <Pressable key={item.sessionId} accessibilityRole="button" accessibilityLabel={`${item.workoutName}, ${item.status === 'Completed' ? 'treino concluído' : 'sessão em andamento'}, ${item.completedSets} séries registradas`} accessibilityHint={item.status === 'Completed' ? 'Abre o resumo desta sessão' : 'Continua esta mesma sessão'} style={({ pressed }) => [styles.sessionItem, pressed && styles.pressed]} onPress={() => item.status === 'Completed' ? router.push({ pathname: '/student/training/summary/[sessionId]', params: { sessionId: item.sessionId } }) : router.push({ pathname: '/student/training/[id]', params: { id: item.workoutId, start: '1' } })}><View style={styles.sessionCopy}><Text style={styles.cardTitle}>{item.workoutName}</Text><Text style={styles.detail}>{item.status === 'Completed' ? `Concluído em ${formatDate(item.completedAt ?? item.startedAt)}` : `Em andamento desde ${formatDate(item.startedAt)}`} · {item.completedSets} séries</Text></View><Text style={styles.sessionAction}>{item.status === 'Completed' ? 'Ver resumo' : 'Continuar sessão'}</Text></Pressable>)}
+    </Card>
+  </View>;
 }
 
 export function StudentHomeScreen() {
@@ -31,11 +127,13 @@ export function StudentHomeScreen() {
 
   const data = training.data!;
   const workouts = data.workouts;
-  const inProgress = data.history.find((item) => item.status === 'InProgress');
+  const history = data.history as TrainingHistoryItem[];
+  const inProgress = history.find((item) => item.status === 'InProgress');
   const inProgressWorkout = (inProgress ? workouts.find((workout) => workout.id === inProgress.workoutId) : undefined)
     ?? workouts.find((workout) => workout.state === 'InProgress');
   const primaryWorkout = inProgressWorkout ?? workouts[0];
-  const primaryTitle = inProgressWorkout?.name ?? primaryWorkout?.name;
+  const activeWorkoutId = inProgress?.workoutId ?? inProgressWorkout?.id;
+  const primaryTitle = inProgress?.workoutName ?? primaryWorkout?.name;
   const latestWeight = weight.data?.length ? weight.data[weight.data.length - 1] : undefined;
 
   return (
@@ -62,16 +160,18 @@ export function StudentHomeScreen() {
               </View>
             </View>
             {!inProgressWorkout && primaryWorkout?.notes ? <Text style={styles.copy}>{primaryWorkout.notes}</Text> : null}
-            {primaryWorkout ? <Text style={styles.detail}>{primaryWorkout.exerciseCount} {primaryWorkout.exerciseCount === 1 ? 'exercício prescrito' : 'exercícios prescritos'}{inProgress?.completedSets ? ` · ${inProgress.completedSets} séries registradas` : ''}</Text> : null}
-            <Button onPress={() => inProgressWorkout
-              ? router.push({ pathname: '/student/training/[id]', params: { id: inProgressWorkout.id, start: '1' } })
-              : router.push('/student/training/start')}>{inProgressWorkout ? 'Continuar treino' : 'Escolher treino'}</Button>
+            {primaryWorkout ? <Text style={styles.detail}>{primaryWorkout.exerciseCount} {primaryWorkout.exerciseCount === 1 ? 'exercício prescrito' : 'exercícios prescritos'}{inProgress?.completedSets ? ` · ${inProgress.completedSets} séries registradas` : ''}</Text> : inProgress ? <Text style={styles.detail}>{inProgress.completedSets} séries registradas nesta sessão</Text> : null}
+            <Button onPress={() => inProgress
+              ? router.push({ pathname: '/student/training/[id]', params: { id: activeWorkoutId!, start: '1' } })
+              : router.push('/student/training/start')}>{inProgress ? 'Continuar treino' : 'Escolher treino'}</Button>
           </Card>
         ) : (
           <EmptyState status={workouts.length ? 'TREINOS DISPONÍVEIS' : 'AGUARDANDO SEU PERSONAL'} symbol="●" title={workouts.length ? 'Escolha o treino que combina com seu dia.' : 'Seus treinos aparecerão aqui.'} message={workouts.length ? 'Seu personal liberou a rotina. Escolha uma sessão quando estiver pronto.' : 'Quando seu personal publicar a prescrição, você poderá escolher a sessão por aqui.'} actionLabel={workouts.length ? 'Escolher treino' : undefined} onAction={workouts.length ? () => router.push('/student/training/start') : undefined} />
         )}
       </View>
       <Button variant="secondary" onPress={() => router.push('/student/training/start')}>Ver todos os treinos</Button>
+
+      {history.length === 0 ? <Card style={styles.calendarEmpty}><Text style={styles.cardEyebrow}>SEUS TREINOS REALIZADOS</Text><EmptyState variant="inline" status="SEM SESSÕES AINDA" symbol="●" title="Seu histórico começa quando você treinar." message="Os dias sem sessão ficam neutros. Escolha qualquer treino quando estiver pronto." /></Card> : <FactualCalendar history={history} />}
 
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>Seu acompanhamento</Text>
@@ -120,4 +220,29 @@ const styles = StyleSheet.create({
   detail: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
   message: { ...typography.bodyLG, color: colors.textPrimary, lineHeight: 24 },
   supportCards: { gap: spacing.sm },
+  calendarHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
+  calendarHeading: { flex: 1, gap: spacing.xxs },
+  monthActions: { flexDirection: 'row', gap: spacing.xs },
+  monthButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: spacing.sm },
+  monthButtonText: { fontSize: 28, lineHeight: 30, color: colors.primary },
+  disabledText: { color: colors.textMuted },
+  calendarCard: { gap: spacing.md },
+  monthTitle: { ...typography.headingMD, color: colors.textPrimary, textTransform: 'capitalize' },
+  weekLabels: { flexDirection: 'row' },
+  weekLabel: { flex: 1, textAlign: 'center', ...typography.caption, color: colors.textMuted },
+  calendarGrid: { flexDirection: 'row', flexWrap: 'wrap' },
+  dayCell: { width: '14.2857%', minHeight: 48, alignItems: 'center', justifyContent: 'center', gap: 2, borderRadius: spacing.sm },
+  selectedDay: { backgroundColor: colors.primary },
+  eventDay: { borderWidth: 1, borderColor: colors.border },
+  dayText: { ...typography.bodyMD, color: colors.textSecondary },
+  selectedDayText: { color: colors.background, fontWeight: '700' },
+  eventDots: { minHeight: 10, flexDirection: 'row', alignItems: 'center', gap: 2 },
+  eventDot: { width: 6, height: 6, borderRadius: 3, backgroundColor: colors.primary },
+  eventCount: { ...typography.caption, color: colors.primary, fontSize: 10 },
+  calendarDetails: { gap: spacing.sm },
+  sessionItem: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  sessionCopy: { flex: 1, gap: spacing.xxs },
+  sessionAction: { ...typography.caption, color: colors.primary, textAlign: 'right' },
+  pressed: { opacity: .7 },
+  calendarEmpty: { gap: spacing.sm },
 });
