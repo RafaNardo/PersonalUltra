@@ -44,17 +44,20 @@ export default function TrainerExerciseConfigurationScreen() {
   const update = (field: keyof ExercisePrescriptionDraft, value: string) => setDraft((current) => ({ ...current, [field]: value }));
   const invalid = hasPrescriptionErrors(errors);
   const atLimit = !editingExercise && editor!.exercises.length >= 30;
+  const workoutEditorRoute = { pathname: '/trainer/students/[studentId]/workouts/[workoutId]' as const, params: { studentId: studentId!, workoutId: workoutId! } };
+  const catalogRoute = { pathname: '/trainer/students/[studentId]/workouts/[workoutId]/catalog' as const, params: { studentId: studentId!, workoutId: workoutId! } };
+  const leaveConfiguration = () => router.replace(editingExercise ? workoutEditorRoute : catalogRoute);
   const saveDraft = () => {
     const changed = editingExercise
       ? updateExercise(key, editingExercise.clientId, draft)
       : catalogExercise ? addExercise(key, catalogExercise, draft) : false;
     if (!changed) return;
     feedback.success();
-    router.dismissTo({ pathname: '/trainer/students/[studentId]/workouts/[workoutId]', params: { studentId: studentId!, workoutId: workoutId! } });
+    router.replace(workoutEditorRoute);
   };
 
   return <Screen style={styles.page}>
-    <TopBar eyebrow={`${student.data!.firstName} ${student.data!.lastName} · ${workout.data!.name}`} title={exercise.name} onBack={() => router.back()} />
+    <TopBar eyebrow={`${student.data!.firstName} ${student.data!.lastName} · ${workout.data!.name}`} title={exercise.name} onBack={leaveConfiguration} />
     <Text style={styles.meta}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text>
     <View style={styles.heroFrame}>{source ? <Image source={source} accessibilityLabel={`Demonstração do exercício ${exercise.name}`} resizeMode="cover" style={styles.heroImage} /> : <View accessibilityLabel="Imagem indisponível" style={styles.heroFallback}><Text style={styles.heroFallbackText}>Imagem indisponível</Text></View>}</View>
     {exercise.instructions ? <Card style={styles.instructions}><Text style={styles.sectionEyebrow}>INSTRUÇÕES</Text><Text style={styles.instructionsCopy}>{exercise.instructions}</Text></Card> : null}
@@ -80,7 +83,7 @@ export default function TrainerExerciseConfigurationScreen() {
       <Text style={styles.transitionCopy}>{invalid ? 'Corrija os campos destacados antes de continuar.' : atLimit ? 'Este treino já possui o limite de 30 exercícios.' : 'A alteração ficará no editor e só chegará ao aluno após Publicar alterações.'}</Text>
     </Card>
     <Button disabled={invalid || atLimit} accessibilityHint="Mantém a configuração no editor até a publicação" onPress={saveDraft}>{editingExercise ? 'Atualizar configuração' : 'Adicionar ao treino'}</Button>
-    <Button variant="ghost" onPress={() => router.back()}>Voltar ao catálogo</Button>
+    <Button variant="ghost" onPress={leaveConfiguration}>{editingExercise ? 'Voltar ao treino' : 'Voltar ao catálogo'}</Button>
   </Screen>;
 }
 
