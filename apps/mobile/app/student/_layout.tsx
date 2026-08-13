@@ -11,6 +11,7 @@ export default function StudentLayout() {
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />
       <Stack.Screen name="training/preview/[id]" options={{ headerShown: false }} />
       <Stack.Screen name="training/[id]" options={{ headerShown: false }} />
+      <Stack.Screen name="training/summary/[sessionId]" options={{ headerShown: false }} />
       <Stack.Screen name="exercise/[sessionId]/[exerciseId]" options={{ headerShown: false }} />
       <Stack.Screen name="rest/[sessionId]/[exerciseId]" options={{ headerShown: false }} />
     </Stack>

@@ -100,6 +100,17 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         var afterCompletion = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId = $"test-{Guid.NewGuid():N}", setNumber = 2, weightKg = 40m, repetitions = 10 });
         Assert.Equal(HttpStatusCode.Conflict, afterCompletion.StatusCode);
 
+        var detailResponse = await client.GetAsync($"/api/v1/training/sessions/{started.SessionId}");
+        Assert.Equal(HttpStatusCode.OK, detailResponse.StatusCode);
+        var detail = await detailResponse.Content.ReadFromJsonAsync<SessionDetailResponse>();
+        Assert.Equal(started.SessionId, detail!.SessionId);
+        Assert.Equal("Completed", detail.Status);
+        Assert.NotNull(detail.CompletedAt);
+        var detailExercise = Assert.Single(detail.Exercises);
+        var detailPerformance = Assert.Single(detailExercise.Performances);
+        Assert.Equal(42.5m, detailPerformance.WeightKg);
+        Assert.Equal(11, detailPerformance.Repetitions);
+
         var trainingResponse = await client.GetAsync("/api/v1/training");
         var training = await trainingResponse.Content.ReadFromJsonAsync<TrainingResponse>();
         var history = Assert.Single(training!.History, x => x.SessionId == started.SessionId);
@@ -146,9 +157,11 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
 
         var setResponse = await client.PostAsJsonAsync($"/api/v1/training/sessions/{sessionId}/exercises/{sessionExerciseId}/sets", new { clientOperationId = $"ownership-{Guid.NewGuid():N}", setNumber = 1, weightKg = 20m, repetitions = 10 });
         var completionResponse = await client.PostAsync($"/api/v1/training/sessions/{sessionId}/complete", null);
+        var detailResponse = await client.GetAsync($"/api/v1/training/sessions/{sessionId}");
 
         Assert.Equal(HttpStatusCode.NotFound, setResponse.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, completionResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, detailResponse.StatusCode);
 
         using var cleanupScope = factory.Services.CreateScope();
         var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
@@ -213,4 +226,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     private sealed record PreviewResponse(Guid Id, string State, Guid? ActiveSessionId, IReadOnlyList<PreviewExerciseResponse> Exercises);
     private sealed record PreviewExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
     private sealed record CompletionResponse(Guid Id, string Status, DateTimeOffset? CompletedAt);
+    private sealed record SessionDetailResponse(Guid SessionId, Guid WorkoutId, string WorkoutName, string Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt, IReadOnlyList<SessionDetailExerciseResponse> Exercises);
+    private sealed record SessionDetailExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets, IReadOnlyList<SessionDetailPerformanceResponse> Performances);
+    private sealed record SessionDetailPerformanceResponse(int SetNumber, decimal WeightKg, int Repetitions, DateTimeOffset CompletedAt);
 }

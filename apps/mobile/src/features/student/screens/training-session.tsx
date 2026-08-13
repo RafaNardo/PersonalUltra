@@ -97,7 +97,7 @@ function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: S
     },
     onSuccess: () => {
       clearSession();
-      router.replace('/student/training');
+      router.replace({ pathname: '/student/training/summary/[sessionId]', params: { sessionId: session.sessionId } });
     },
     onError: (error: Error) => setCompletionError(error instanceof ApiError && error.status === 0 ? 'Conecte-se à internet para concluir o treino.' : error.message),
   });
