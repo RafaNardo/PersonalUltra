@@ -14,8 +14,8 @@ export function Card({ children, style }: PropsWithChildren<{ style?: StyleProp<
   return <View style={[styles.card, style]}>{children}</View>;
 }
 
-export function Tag({ children, tone = 'neutral' }: PropsWithChildren<{ tone?: 'neutral' | 'success' | 'primary' }>) {
-  return <View style={[styles.tag, tone === 'success' && styles.tagSuccess, tone === 'primary' && styles.tagPrimary]}><Text style={[styles.tagText, tone === 'success' && styles.tagSuccessText]}>{children}</Text></View>;
+export function Tag({ children, tone = 'neutral', style }: PropsWithChildren<{ tone?: 'neutral' | 'success' | 'primary'; style?: StyleProp<ViewStyle> }>) {
+  return <View style={[styles.tag, tone === 'success' && styles.tagSuccess, tone === 'primary' && styles.tagPrimary, style]}><Text style={[styles.tagText, tone === 'success' && styles.tagSuccessText]}>{children}</Text></View>;
 }
 
 export function ProgressBar({ value }: { value: number }) {

@@ -22,7 +22,7 @@ function NutritionEmptyState() {
     <TopBar eyebrow="ALIMENTAÇÃO" title="Seu plano alimentar" />
     <View style={styles.emptyHero}>
       <View style={styles.emptyMark}><Text style={styles.emptyMarkText}>✦</Text></View>
-      <Tag tone="primary">AGUARDANDO SEU PERSONAL</Tag>
+      <Tag tone="primary" style={styles.emptyStatus}>AGUARDANDO SEU PERSONAL</Tag>
       <Text style={styles.emptyTitle}>Sua alimentação também faz parte do processo.</Text>
       <Text style={styles.emptyCopy}>Seu cadastro está tudo certo. Quando o personal preparar suas orientações alimentares, elas aparecerão aqui de forma simples e organizada.</Text>
     </View>
@@ -53,6 +53,7 @@ const styles = StyleSheet.create({
   emptyHero: { alignItems: 'center', gap: spacing.md, paddingVertical: spacing.md },
   emptyMark: { width: 92, height: 92, borderRadius: 46, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   emptyMarkText: { ...typography.displayLG, color: colors.background },
+  emptyStatus: { alignSelf: 'center' },
   emptyTitle: { ...typography.displayLG, color: colors.textPrimary, textAlign: 'center' },
   emptyCopy: { ...typography.bodyLG, color: colors.textSecondary, lineHeight: 25, textAlign: 'center' },
   previewCard: { gap: spacing.md, backgroundColor: colors.surfaceElevated },
