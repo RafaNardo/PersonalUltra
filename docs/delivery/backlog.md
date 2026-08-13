@@ -104,6 +104,25 @@ A revisão pós-M3R constatou que catálogo, snapshots, execução e offline for
 
 As rotas legadas `student-training*`, `student-coach`, `student-nutrition` e `student-progress` permanecem somente como redirects de compatibilidade; não são implementações concorrentes. A tela condensada substituída pode ser recuperada para comparação pelo commit Git `99df898` (`feat(m3r-010): adapt student workout execution`), principalmente nos arquivos listados em `docs/design/student-training-ux-restoration.md`. O estado offline posterior não deve ser revertido ao consultar esse commit.
 
+### M3RF — Rotina flexível de treino
+
+A revisão de produto pós-M3RR concluiu que dia da semana e treino
+`recomendado` tornam uma prescrição flexível parecida com agenda obrigatória. A
+direção aprovada está em `docs/design/flexible-training-routine.md`, e o loop de
+execução está em `docs/delivery/m3rf-codex-handoff.md`.
+
+- `PU-M3RF-001`: introduzir ordem sugerida persistida no `StudentWorkout`, com backfill determinístico e contratos aditivos; manter temporariamente os campos legados apenas para compatibilidade entre gates.
+- `PU-M3RF-002`: adaptar Trainer API/mobile para criação, aplicação, listagem e reordenação por ordem sugerida; remover da UX badges `ATIVO`/`RECOMENDADO` e qualquer seleção/exibição de dia da semana.
+- `PU-M3RF-003`: neutralizar Student API e criar preparação de sessão: Home oferece `Iniciar treino`, a tela intermediária explica a escolha e mostra uma lista compacta ordenada com resumos reais; nenhum treino é obrigatório ou recomendado.
+- `PU-M3RF-004`: permitir escolher qualquer exercício pendente na visão geral da sessão, preservando a ordem prescrita apenas como sugestão e sem alterar permanentemente a prescrição do Trainer.
+- `PU-M3RF-005`: adaptar execução guiada, descanso, retomada e offline para ordem de execução livre, mantendo séries idempotentes, conclusão correta e indicação clara do próximo exercício sugerido.
+- `PU-M3RF-006`: refatorar o calendário/Home Student para mostrar somente sessões reais realizadas ou em andamento; remover workouts futuros por dia e qualquer linguagem de agenda obrigatória.
+- `PU-M3RF-007`: remover `RecommendedDay`/`IsRecommended` legados de domínio, contratos, seed, Coach e banco; revisar histórico, empty/error/loading/accessibility e validar Trainer → Student → execução → calendário end-to-end.
+
+**Non-goals M3RF:** sem frequência semanal, calendário prescritivo, algoritmo de recomendação, metodologia automática, alteração da prescrição pelo Student, exclusão de histórico, IA ou recommended load.
+
+**DoD M3RF:** Trainer ordena treinos disponíveis sem amarrá-los a dias; Student inicia pela Home, escolhe livremente um treino, pode executar exercícios pendentes em outra ordem, conclui com suporte offline e vê no calendário somente o que realmente executou.
+
 ## Critério transversal de UI — M4 em diante
 
 Toda task da M4 ou posterior que crie ou refatore uma tela deve identificar os estados válidos sem dados e tratá-los conforme o guia de `docs/design/design-system.md`. Esse é um critério de aceite da própria task, não um polish opcional para uma etapa posterior.
