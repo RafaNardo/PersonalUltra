@@ -365,6 +365,66 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         await cleanupDb.SaveChangesAsync();
     }
 
+    [Fact]
+    public async Task Student_can_record_a_later_sequence_before_the_first_without_changing_prescription_order()
+    {
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
+
+        var workoutId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var catalog = await db.Exercises.AsNoTracking().Where(x => x.IsActive).Take(2).ToArrayAsync();
+            var suggestedOrder = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId).Select(x => (int?)x.SuggestedOrder).MaxAsync() ?? 0;
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Ordem livre", SuggestedOrder = suggestedOrder + 1, CreatedAt = DateTimeOffset.UtcNow };
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, catalog[0], 1, 2, 8, 12, 60));
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, catalog[1], 2, 2, 8, 12, 60));
+            db.StudentWorkouts.Add(workout);
+            await db.SaveChangesAsync();
+        }
+
+        var startResponse = await client.PostAsync($"/api/v1/training/{workoutId}/start", null);
+        Assert.Equal(HttpStatusCode.OK, startResponse.StatusCode);
+        var started = await startResponse.Content.ReadFromJsonAsync<SessionResponse>();
+        Assert.Equal(2, started!.Exercises.Count);
+        var sequenceOne = started.Exercises.Single(x => x.Sequence == 1);
+        var sequenceTwo = started.Exercises.Single(x => x.Sequence == 2);
+        var operationTwo = $"free-order-two-{Guid.NewGuid():N}";
+        var operationOne = $"free-order-one-{Guid.NewGuid():N}";
+
+        var secondSet = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{sequenceTwo.Id}/sets", new { clientOperationId = operationTwo, setNumber = 1, weightKg = 30m, repetitions = 10 });
+        Assert.Equal(HttpStatusCode.OK, secondSet.StatusCode);
+
+        var afterSecond = await client.GetFromJsonAsync<SessionDetailResponse>($"/api/v1/training/sessions/{started.SessionId}");
+        Assert.Collection(afterSecond!.Exercises.OrderBy(x => x.Sequence),
+            item => { Assert.Equal(1, item.Sequence); Assert.Equal(0, item.CompletedSets); },
+            item => { Assert.Equal(2, item.Sequence); Assert.Equal(1, item.CompletedSets); });
+
+        var firstSet = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{sequenceOne.Id}/sets", new { clientOperationId = operationOne, setNumber = 1, weightKg = 25m, repetitions = 12 });
+        Assert.Equal(HttpStatusCode.OK, firstSet.StatusCode);
+
+        var replay = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{sequenceTwo.Id}/sets", new { clientOperationId = operationTwo, setNumber = 1, weightKg = 30m, repetitions = 10 });
+        var conflictingReplay = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{sequenceTwo.Id}/sets", new { clientOperationId = $"different-{Guid.NewGuid():N}", setNumber = 1, weightKg = 35m, repetitions = 8 });
+        Assert.Equal(HttpStatusCode.OK, replay.StatusCode);
+        Assert.Equal(HttpStatusCode.Conflict, conflictingReplay.StatusCode);
+
+        var detail = await client.GetFromJsonAsync<SessionDetailResponse>($"/api/v1/training/sessions/{started.SessionId}");
+        Assert.Collection(detail!.Exercises.OrderBy(x => x.Sequence),
+            item => { Assert.Equal(1, item.Sequence); Assert.Equal(1, item.CompletedSets); },
+            item => { Assert.Equal(2, item.Sequence); Assert.Equal(1, item.CompletedSets); });
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        cleanupDb.SetPerformances.RemoveRange(cleanupDb.SetPerformances.Where(x => x.WorkoutSessionExercise.WorkoutSessionId == started.SessionId));
+        cleanupDb.WorkoutSessionExercises.RemoveRange(cleanupDb.WorkoutSessionExercises.Where(x => x.WorkoutSessionId == started.SessionId));
+        cleanupDb.WorkoutSessions.RemoveRange(cleanupDb.WorkoutSessions.Where(x => x.Id == started.SessionId));
+        cleanupDb.StudentWorkoutExercises.RemoveRange(cleanupDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == workoutId));
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == workoutId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
     private async Task<int> CountSessions(Guid workoutId)
     {
         using var scope = factory.Services.CreateScope();
@@ -376,7 +436,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     private sealed record StudentTrainingListResponse(IReadOnlyList<StudentWorkoutSummary> Workouts, IReadOnlyList<TrainingHistoryItem> History);
     private sealed record StudentWorkoutSummary(Guid Id, int SuggestedOrder, string State);
     private sealed record SessionResponse(Guid SessionId, IReadOnlyList<SessionExerciseResponse> Exercises);
-    private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets, SessionDetailPerformanceResponse? PreviousPerformance);
+    private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets, SessionDetailPerformanceResponse? PreviousPerformance);
     private sealed record TrainingResponse(IReadOnlyList<TrainingHistoryItem> History);
     private sealed record TrainingHistoryItem(Guid SessionId, string Status, int CompletedSets);
     private sealed record PreviewResponse(Guid Id, int SuggestedOrder, string State, Guid? ActiveSessionId, DateTimeOffset? LastCompletedAt, IReadOnlyList<PreviewExerciseResponse> Exercises);

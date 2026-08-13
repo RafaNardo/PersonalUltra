@@ -55,11 +55,10 @@ export function StudentTrainingRestScreen() {
   const ordered = orderedExercises(session);
   const exercise = session.exercises.find((item) => item.id === exerciseId);
   const next = currentExercise(session);
-  const requestedIndex = exercise ? ordered.findIndex((item) => item.id === exercise.id) : -1;
-  const nextIndex = next ? ordered.findIndex((item) => item.id === next.id) : ordered.length;
   // A rest route is valid only after the origin exercise has recorded a set.
-  // This prevents a crafted parameter from selecting a future exercise.
-  const invalidOrigin = !exercise || exercise.completedSets < 1 || requestedIndex < 0 || requestedIndex > nextIndex;
+  // Exercise order is a suggestion, so a later exercise may legitimately be
+  // the origin when the Student chose it from the session overview.
+  const invalidOrigin = !exercise || exercise.completedSets < 1 || !ordered.some((item) => item.id === exercise.id);
   if (invalidOrigin) {
     return <ErrorView message="Este descanso não corresponde à sequência atual da sessão." onRetry={() => router.replace({ pathname: '/student/training/[id]', params: { id: session.workoutId } })} />;
   }
@@ -69,6 +68,7 @@ export function StudentTrainingRestScreen() {
 
 function RestTimer({ session, exercise, next, isOfflineSnapshot }: { session: StudentSession; exercise: StudentSession['exercises'][number]; next?: StudentSession['exercises'][number]; isOfflineSnapshot: boolean }) {
   const restSeconds = Math.max(0, Math.floor(Number(exercise.restSeconds) || 0));
+  const continuation = exercise.completedSets < exercise.sets ? exercise : next;
   const [targetAt, setTargetAt] = useState<number>();
   const [clock, setClock] = useState(() => Date.now());
 
@@ -95,7 +95,8 @@ function RestTimer({ session, exercise, next, isOfflineSnapshot }: { session: St
   const continueFromRest = () => {
     const latest = useStudentTrainingSessionStore.getState().session;
     const destinationSession = latest?.sessionId === session.sessionId ? latest : session;
-    const destination = currentExercise(destinationSession);
+    const origin = destinationSession.exercises.find((item) => item.id === exercise.id);
+    const destination = origin && origin.completedSets < origin.sets ? origin : currentExercise(destinationSession);
     if (destination) {
       router.replace({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: destinationSession.sessionId, exerciseId: destination.id } });
     } else {
@@ -119,7 +120,8 @@ function RestTimer({ session, exercise, next, isOfflineSnapshot }: { session: St
     <View style={styles.actions}>
       <Button variant="secondary" onPress={addThirtySeconds}>+30 segundos</Button>
       <Button variant="secondary" onPress={continueFromRest}>Pular descanso</Button>
-      <Button disabled={!finished} onPress={continueFromRest}>{next ? (next.id === exercise.id ? 'Próxima série' : 'Próximo exercício') : 'Ver visão geral'}</Button>
+      <Button variant="secondary" onPress={() => router.replace({ pathname: '/student/training/[id]', params: { id: session.workoutId } })}>Escolher outro exercício</Button>
+      <Button disabled={!finished} onPress={continueFromRest}>{continuation ? (continuation.id === exercise.id ? 'Próxima série' : 'Próximo exercício') : 'Ver visão geral'}</Button>
     </View>
   </Screen>;
 }

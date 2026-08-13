@@ -8,7 +8,7 @@ import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
 import { cacheWorkout, cachedSession, pendingSetNumbers, queueSet, updateCachedExerciseProgress } from '@/src/features/student/offline/training-db';
-import { currentExercise, orderedExercises, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
+import { orderedExercises, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
 import { parseActualSetPerformance } from '@/src/features/student/training/set-performance';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
 
@@ -46,18 +46,12 @@ export function StudentTrainingExerciseScreen() {
     })().finally(() => setLoading(false));
   }, [session?.sessionId, ownerStudentId, sessionId, authSession, setSession]);
 
-  const requested = session?.exercises.find((exercise) => exercise.id === exerciseId);
-  const exercise = session ? currentExercise(session) : undefined;
-  const shouldOpenCurrentExercise = Boolean(requested && exercise && requested.id !== exercise.id);
+  const requested = session?.exercises.find((item) => item.id === exerciseId);
+  const exercise = requested && requested.completedSets < requested.sets ? requested : undefined;
 
   useEffect(() => {
     if (!authSession) router.replace('/login');
   }, [authSession]);
-
-  useEffect(() => {
-    if (loading || error || isNavigatingToRest || session?.sessionId !== sessionId || !shouldOpenCurrentExercise || !exercise) return;
-    router.replace({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });
-  }, [loading, error, isNavigatingToRest, session?.sessionId, sessionId, shouldOpenCurrentExercise, exercise?.id]);
 
   if (!authSession) return null;
   if (loading) return <LoadingView message="Abrindo seu exercício…" />;
@@ -65,8 +59,8 @@ export function StudentTrainingExerciseScreen() {
   if (isNavigatingToRest) return <LoadingView message="Série registrada…" />;
 
   const ordered = orderedExercises(session);
-  if (!requested || !exercise) return <CompletedExercise session={session} />;
-  if (shouldOpenCurrentExercise) return <LoadingView message="Abrindo o exercício atual…" />;
+  if (!requested) return <ErrorView message="Este exercício não pertence à sessão atual." onRetry={() => router.replace({ pathname: '/student/training/[id]', params: { id: session.workoutId } })} />;
+  if (!exercise) return <CompletedExercise session={session} />;
   return <FocusedExercise session={session} exercise={exercise} authToken={authSession.accessToken} studentId={authSession.studentId} isOfflineSnapshot={isOfflineSnapshot} position={ordered.findIndex((item) => item.id === exercise.id) + 1} onRestTransition={() => setIsNavigatingToRest(true)} />;
 }
 
