@@ -9,6 +9,7 @@ export type WorkoutEditorExercise = Omit<TrainerStudentWorkoutExercise, 'id' | '
 };
 
 type WorkoutDraft = {
+  name: string;
   exercises: WorkoutEditorExercise[];
   dirty: boolean;
 };
@@ -17,6 +18,7 @@ type WorkoutEditorState = {
   drafts: Record<string, WorkoutDraft>;
   initialize: (key: string, workout: TrainerStudentWorkout) => void;
   resetFromServer: (key: string, workout: TrainerStudentWorkout) => void;
+  setName: (key: string, name: string) => void;
   addExercise: (key: string, exercise: TrainerExerciseCatalogItem, prescription: ExercisePrescriptionDraft) => boolean;
   updateExercise: (key: string, clientId: string, prescription: ExercisePrescriptionDraft) => boolean;
   removeExercise: (key: string, clientId: string) => void;
@@ -29,6 +31,11 @@ export const useWorkoutEditorStore = create<WorkoutEditorState>((set) => ({
   drafts: {},
   initialize: (key, workout) => set((state) => state.drafts[key]?.dirty ? state : ({ drafts: { ...state.drafts, [key]: fromServer(workout) } })),
   resetFromServer: (key, workout) => set((state) => ({ drafts: { ...state.drafts, [key]: fromServer(workout) } })),
+  setName: (key, name) => set((state) => {
+    const current = state.drafts[key];
+    if (!current || current.name === name) return state;
+    return { drafts: { ...state.drafts, [key]: { ...current, name, dirty: true } } };
+  }),
   addExercise: (key, exercise, draft) => {
     const prescription = parseExercisePrescription(draft);
     if (!prescription) return false;
@@ -47,7 +54,7 @@ export const useWorkoutEditorStore = create<WorkoutEditorState>((set) => ({
         instructions: exercise.instructions,
         ...prescription,
       };
-      return { drafts: { ...state.drafts, [key]: { exercises: [...current.exercises, item], dirty: true } } };
+      return { drafts: { ...state.drafts, [key]: { ...current, exercises: [...current.exercises, item], dirty: true } } };
     });
     return added;
   },
@@ -59,7 +66,7 @@ export const useWorkoutEditorStore = create<WorkoutEditorState>((set) => ({
       const current = state.drafts[key];
       if (!current || !current.exercises.some((item) => item.clientId === clientId)) return state;
       updated = true;
-      return { drafts: { ...state.drafts, [key]: { exercises: current.exercises.map((item) => item.clientId === clientId ? { ...item, ...prescription } : item), dirty: true } } };
+      return { drafts: { ...state.drafts, [key]: { ...current, exercises: current.exercises.map((item) => item.clientId === clientId ? { ...item, ...prescription } : item), dirty: true } } };
     });
     return updated;
   },
@@ -68,7 +75,7 @@ export const useWorkoutEditorStore = create<WorkoutEditorState>((set) => ({
     if (!current) return state;
     const exercises = current.exercises.filter((item) => item.clientId !== clientId);
     if (exercises.length === current.exercises.length) return state;
-    return { drafts: { ...state.drafts, [key]: { exercises, dirty: true } } };
+    return { drafts: { ...state.drafts, [key]: { ...current, exercises, dirty: true } } };
   }),
   moveExercise: (key, from, to) => set((state) => {
     const current = state.drafts[key];
@@ -76,7 +83,7 @@ export const useWorkoutEditorStore = create<WorkoutEditorState>((set) => ({
     const exercises = [...current.exercises];
     const [moved] = exercises.splice(from, 1);
     exercises.splice(to, 0, moved);
-    return { drafts: { ...state.drafts, [key]: { exercises, dirty: true } } };
+    return { drafts: { ...state.drafts, [key]: { ...current, exercises, dirty: true } } };
   }),
 }));
 
@@ -86,6 +93,7 @@ export function workoutEditorKey(studentId: string, workoutId: string) {
 
 function fromServer(workout: TrainerStudentWorkout): WorkoutDraft {
   return {
+    name: workout.name,
     exercises: workout.exercises
       .slice()
       .sort((a, b) => a.sequence - b.sequence)

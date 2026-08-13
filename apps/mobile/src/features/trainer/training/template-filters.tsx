@@ -13,7 +13,7 @@ export function filterTemplates(templates: WorkoutTemplate[], search: string, mu
 
 export function TemplateMuscleFilters({ groups, selected, onSelect }: { groups: string[]; selected?: string; onSelect: (group?: string) => void }) {
   if (groups.length === 0) return null;
-  return <ScrollView horizontal showsHorizontalScrollIndicator={false} contentContainerStyle={styles.filters} accessibilityRole="tablist">
+  return <ScrollView horizontal showsHorizontalScrollIndicator={false} style={styles.scroller} contentContainerStyle={styles.filters} accessibilityRole="tablist">
     <Filter label="Todos" selected={!selected} onPress={() => onSelect(undefined)} />
     {groups.map((group) => <Filter key={group} label={group} selected={selected === group} onPress={() => onSelect(group)} />)}
   </ScrollView>;
@@ -24,9 +24,10 @@ function Filter({ label, selected, onPress }: { label: string; selected: boolean
 }
 
 const styles = StyleSheet.create({
+  scroller: { flexGrow: 0 },
   filters: { gap: spacing.xs, paddingRight: spacing.lg },
-  filter: { minHeight: 40, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  filter: { width: 104, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   filterSelected: { borderColor: colors.primary, backgroundColor: '#3A1D0C' },
-  filterText: { ...typography.caption, color: colors.textSecondary },
+  filterText: { ...typography.caption, width: '100%', color: colors.textSecondary, textAlign: 'center' },
   filterTextSelected: { color: colors.primary },
 });

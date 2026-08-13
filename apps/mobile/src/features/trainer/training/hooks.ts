@@ -24,7 +24,7 @@ export function useTrainerStudentWorkout(studentId: string, workoutId: string) {
 export function useUpdateTrainerStudentWorkout(studentId: string, workoutId: string) {
   const client = useQueryClient();
   return useMutation({
-    mutationFn: (exercises: Parameters<typeof trainerClient.updateStudentWorkout>[2]) => trainerClient.updateStudentWorkout(studentId, workoutId, exercises),
+    mutationFn: (input: Parameters<typeof trainerClient.updateStudentWorkout>[2]) => trainerClient.updateStudentWorkout(studentId, workoutId, input),
     onSuccess: (workout) => {
       client.setQueryData(['trainer', 'students', studentId, 'workouts', workoutId], workout);
       void client.invalidateQueries({ queryKey: ['trainer', 'students', studentId, 'workouts'], exact: true });

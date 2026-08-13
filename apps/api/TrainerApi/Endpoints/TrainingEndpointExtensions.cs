@@ -370,6 +370,9 @@ public static class TrainingEndpointExtensions
 
             try
             {
+                if (request.Name is not null)
+                    workout.Name = request.Name.Trim();
+
                 if (transaction is not null)
                 {
                     // Free the unique (workout, sequence) slots before arbitrary reorder.
@@ -541,6 +544,8 @@ public static class TrainingEndpointExtensions
 
     private static string? ValidateStudentWorkout(TrainerStudentWorkoutUpdateRequest request)
     {
+        if (request.Name is not null && (string.IsNullOrWhiteSpace(request.Name) || request.Name.Trim().Length > 200))
+            return "O nome do treino deve ter entre 1 e 200 caracteres.";
         if (request.Exercises is null || request.Exercises.Count > 30)
             return "O treino deve ter no máximo 30 exercícios.";
         if (!request.Exercises.Select(x => x.Sequence).Order().SequenceEqual(Enumerable.Range(1, request.Exercises.Count)))

@@ -338,6 +338,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
 
         var response = await client.PutAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{workoutId}", new
         {
+            name = "  Treino superior atualizado  ",
             exercises = new object[]
             {
                 new { id = originalSecond.Id, exerciseId = originalSecond.ExerciseId, sequence = 1, sets = 5, repetitionsMin = 6, repetitionsMax = 9, restSeconds = 120, notes = "Editado" },
@@ -349,7 +350,8 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         Assert.True(response.IsSuccessStatusCode, await response.Content.ReadAsStringAsync());
         var updated = await response.Content.ReadFromJsonAsync<StudentWorkoutDetailResponse>();
         Assert.NotNull(updated);
-        Assert.Equal([1, 2, 3], updated!.Exercises.Select(x => x.Sequence));
+        Assert.Equal("Treino superior atualizado", updated!.Name);
+        Assert.Equal([1, 2, 3], updated.Exercises.Select(x => x.Sequence));
         Assert.Equal(originalSecond.Id, updated.Exercises[0].Id);
         Assert.Equal(5, updated.Exercises[0].Sets);
         Assert.Equal("Editado", updated.Exercises[0].Notes);
@@ -363,6 +365,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var historical = await db.WorkoutSessionExercises.AsNoTracking().Where(x => x.WorkoutSessionId == sessionId).OrderBy(x => x.Sequence).ToListAsync();
+            Assert.Equal("Treino superior atualizado", (await db.StudentWorkouts.AsNoTracking().SingleAsync(x => x.Id == workoutId)).Name);
             Assert.Equal(3, historical.Count);
             Assert.Equal([catalog[0].Name, catalog[1].Name, catalog[2].Name], historical.Select(x => x.Name));
             Assert.Equal([3, 4, 2], historical.Select(x => x.Sets));
@@ -390,6 +393,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         }
 
         var invalidSequence = await client.PutAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{workoutId}", new { exercises = new[] { new { id = existing.Id, exerciseId = existing.ExerciseId, sequence = 2, sets = 3, repetitionsMin = 8, repetitionsMax = 12, restSeconds = 60 } } });
+        var invalidName = await client.PutAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{workoutId}", new { name = "   ", exercises = new[] { new { id = existing.Id, exerciseId = existing.ExerciseId, sequence = 1, sets = 3, repetitionsMin = 8, repetitionsMax = 12, restSeconds = 60 } } });
         var invalidRange = await client.PutAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{workoutId}", new { exercises = new[] { new { id = existing.Id, exerciseId = existing.ExerciseId, sequence = 1, sets = 3, repetitionsMin = 15, repetitionsMax = 8, restSeconds = 60 } } });
         var unknownAddition = await client.PutAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{workoutId}", new
         {
@@ -410,6 +414,8 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
 
         Assert.Equal(HttpStatusCode.BadRequest, invalidSequence.StatusCode);
         Assert.Equal("VALIDATION_ERROR", (await invalidSequence.Content.ReadFromJsonAsync<ErrorResponse>())!.Code);
+        Assert.Equal(HttpStatusCode.BadRequest, invalidName.StatusCode);
+        Assert.Equal("VALIDATION_ERROR", (await invalidName.Content.ReadFromJsonAsync<ErrorResponse>())!.Code);
         Assert.Equal(HttpStatusCode.BadRequest, invalidRange.StatusCode);
         Assert.Equal("VALIDATION_ERROR", (await invalidRange.Content.ReadFromJsonAsync<ErrorResponse>())!.Code);
         Assert.Equal(HttpStatusCode.BadRequest, unknownAddition.StatusCode);
@@ -420,6 +426,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            Assert.Equal("Validação editor", (await db.StudentWorkouts.AsNoTracking().SingleAsync(x => x.Id == workoutId)).Name);
             var persisted = await db.StudentWorkoutExercises.AsNoTracking().SingleAsync(x => x.StudentWorkoutId == workoutId);
             Assert.Equal(existing.Id, persisted.Id);
             Assert.Equal(1, persisted.Sequence);
@@ -986,7 +993,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     private sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? Instructions, bool IsActive);
     private sealed record StudentWorkoutListResponse(IReadOnlyList<StudentWorkoutSummaryResponse> Workouts);
     private sealed record StudentWorkoutSummaryResponse(Guid Id, string Name, int SuggestedOrder, int ExerciseCount);
-    private sealed record StudentWorkoutDetailResponse(Guid Id, Guid StudentId, int SuggestedOrder, IReadOnlyList<StudentWorkoutExerciseResponse> Exercises);
+    private sealed record StudentWorkoutDetailResponse(Guid Id, Guid StudentId, string Name, int SuggestedOrder, IReadOnlyList<StudentWorkoutExerciseResponse> Exercises);
     private sealed record StudentWorkoutExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? ImageRef, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
     private sealed record TrainingHistoryResponse(IReadOnlyList<TrainingHistoryItemResponse> Sessions);
     private sealed record TrainingHistoryItemResponse(Guid SessionId, string Status, int CompletedSets, IReadOnlyList<TrainingHistoryExerciseResponse> Exercises);

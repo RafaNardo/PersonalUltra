@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
@@ -21,6 +21,7 @@ export default function TrainerStudentWorkoutScreen() {
   const draft = useWorkoutEditorStore((state) => state.drafts[key]);
   const initialize = useWorkoutEditorStore((state) => state.initialize);
   const resetFromServer = useWorkoutEditorStore((state) => state.resetFromServer);
+  const setName = useWorkoutEditorStore((state) => state.setName);
   const removeExercise = useWorkoutEditorStore((state) => state.removeExercise);
   const moveExercise = useWorkoutEditorStore((state) => state.moveExercise);
 
@@ -33,6 +34,8 @@ export default function TrainerStudentWorkoutScreen() {
   const studentData = student.data!;
   const workoutData = workout.data!;
   const editor = draft!;
+  const normalizedName = editor.name.trim();
+  const nameError = normalizedName.length === 0 ? 'Informe um nome para o treino.' : normalizedName.length > 200 ? 'Use no máximo 200 caracteres.' : null;
   const addExercise = () => router.push({ pathname: '/trainer/students/[studentId]/workouts/[workoutId]/catalog', params: { studentId: studentId!, workoutId: workoutId! } });
   const editExercise = (exercise: WorkoutEditorExercise) => router.push({ pathname: '/trainer/students/[studentId]/workouts/[workoutId]/catalog/[exerciseId]', params: { studentId: studentId!, workoutId: workoutId!, exerciseId: exercise.exerciseId ?? 'snapshot', workoutExerciseId: exercise.clientId } });
   const confirmRemoval = (exercise: WorkoutEditorExercise) => Alert.alert('Remover exercício?', `${exercise.name} será removido quando você publicar as alterações.`, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Remover', style: 'destructive', onPress: () => { removeExercise(key, exercise.clientId); feedback.warning(); } }]);
@@ -50,7 +53,8 @@ export default function TrainerStudentWorkoutScreen() {
   };
   const publish = async () => {
     try {
-      const saved = await updateWorkout.mutateAsync(editor.exercises.map((exercise, index) => ({
+      if (nameError) return;
+      const saved = await updateWorkout.mutateAsync({ name: normalizedName, exercises: editor.exercises.map((exercise, index) => ({
         id: exercise.id,
         exerciseId: exercise.exerciseId,
         sequence: index + 1,
@@ -59,7 +63,7 @@ export default function TrainerStudentWorkoutScreen() {
         repetitionsMax: exercise.repetitionsMax,
         restSeconds: exercise.restSeconds,
         notes: exercise.notes,
-      })));
+      })) });
       resetFromServer(key, saved);
       feedback.success();
       Alert.alert('Treino atualizado', 'As alterações já estão disponíveis para o aluno nas próximas sessões.');
@@ -69,8 +73,9 @@ export default function TrainerStudentWorkoutScreen() {
   };
 
   return <Screen withinTabs style={styles.page}>
-    <TopBar eyebrow={`${studentData.firstName} ${studentData.lastName}`} title={workoutData.name} onBack={() => router.back()} />
+    <TopBar eyebrow={`${studentData.firstName} ${studentData.lastName}`} title={normalizedName || 'Treino sem nome'} onBack={() => router.back()} />
     <View style={styles.metaRow}><Text style={styles.schedule}>Ordem sugerida {workoutData.suggestedOrder} · {editor.exercises.length} {editor.exercises.length === 1 ? 'exercício' : 'exercícios'}</Text>{editor.dirty ? <Tag tone="primary">NÃO PUBLICADO</Tag> : <Tag tone="success">PUBLICADO</Tag>}</View>
+    <View style={styles.nameField}><Text style={styles.fieldLabel}>Nome do treino</Text><TextInput accessibilityLabel="Nome do treino" value={editor.name} onChangeText={(value) => setName(key, value)} maxLength={200} returnKeyType="done" selectTextOnFocus style={[styles.input, nameError && styles.inputError]} />{nameError ? <Text accessibilityRole="alert" style={styles.validation}>{nameError}</Text> : <Text style={styles.fieldHelp}>Use um nome curto e fácil de reconhecer na rotina do aluno.</Text>}</View>
     {workoutData.notes ? <Text style={styles.copy}>{workoutData.notes}</Text> : null}
     <View style={styles.sectionHeader}><View style={styles.sectionCopy}><Text style={styles.sectionTitle}>Exercícios prescritos</Text><Text style={styles.copy}>Edite, remova ou reorganize antes de publicar.</Text></View><Text style={styles.count}>{editor.exercises.length}</Text></View>
     {editor.exercises.length > 0 ? <Button variant="secondary" disabled={editor.exercises.length >= 30} accessibilityHint="Abre a busca no catálogo" onPress={addExercise}>+ Adicionar exercício</Button> : null}
@@ -79,7 +84,7 @@ export default function TrainerStudentWorkoutScreen() {
     {editor.exercises.length === 0 ? <EmptyState status="TREINO EM CONSTRUÇÃO" symbol="+" title="Comece pela primeira escolha do catálogo." message="Adicione exercícios, configure a prescrição e organize a sequência antes de salvar." actionLabel="Abrir catálogo" onAction={addExercise} /> : <View style={styles.list}>{editor.exercises.map((exercise, index) => <ExerciseCard key={exercise.clientId} exercise={exercise} index={index} count={editor.exercises.length} onMove={(to) => { moveExercise(key, index, to); feedback.selection(); }} onEdit={() => editExercise(exercise)} onRemove={() => confirmRemoval(exercise)} />)}</View>}
 
     {updateWorkout.isError ? <Card style={styles.errorCard}><Text accessibilityRole="alert" style={styles.errorTitle}>Não foi possível publicar</Text><Text style={styles.copy}>{updateWorkout.error.message} Revise o treino ou tente novamente.</Text></Card> : null}
-    <Button loading={updateWorkout.isPending} disabled={!editor.dirty} accessibilityHint="Salva a lista completa de exercícios para o aluno" onPress={() => void publish()}>Publicar alterações</Button>
+    <Button loading={updateWorkout.isPending} disabled={!editor.dirty || Boolean(nameError)} accessibilityHint="Salva o nome e a lista completa de exercícios para o aluno" onPress={() => void publish()}>Publicar alterações</Button>
     {editor.dirty ? <Button variant="ghost" disabled={updateWorkout.isPending} onPress={discard}>Descartar alterações</Button> : null}
     <Text style={styles.concurrencyNote}>As alterações chegam ao aluno após a publicação. Treinos já iniciados continuam como estavam.</Text>
     <Pressable disabled={deleteWorkout.isPending || updateWorkout.isPending} accessibilityRole="button" accessibilityLabel="Excluir treino do aluno" onPress={confirmDelete} style={({ pressed }) => [styles.deleteButton, pressed && styles.deletePressed, (deleteWorkout.isPending || updateWorkout.isPending) && styles.disabled]}><Ionicons name="trash-outline" size={19} color={colors.danger} /><Text style={styles.deleteText}>{deleteWorkout.isPending ? 'Excluindo…' : 'Excluir treino'}</Text></Pressable>
@@ -104,5 +109,5 @@ function ExerciseCard({ exercise, index, count, onMove, onEdit, onRemove }: { ex
 }
 
 const styles = StyleSheet.create({
-  page: { paddingVertical: spacing.xl, gap: spacing.md }, metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }, schedule: { ...typography.caption, color: colors.titanium, flex: 1 }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.sm }, sectionCopy: { flex: 1 }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, count: { ...typography.caption, color: colors.primary, backgroundColor: colors.surfaceElevated, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.pill }, limit: { ...typography.caption, color: colors.warning }, list: { gap: spacing.sm }, exercise: { gap: spacing.md }, exerciseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, thumbnail: { width: 82, height: 82, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallback: { width: 82, height: 82, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallbackText: { ...typography.headingMD, color: colors.primary }, exerciseIdentity: { flex: 1, gap: spacing.xxs }, exerciseName: { ...typography.headingMD, color: colors.textPrimary }, context: { ...typography.caption, color: colors.textMuted }, prescription: { ...typography.bodyMD, color: colors.primary }, actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }, orderButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, disabled: { opacity: .3 }, textButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs }, editText: { ...typography.caption, color: colors.primary }, removeText: { ...typography.caption, color: colors.danger }, errorCard: { gap: spacing.xs, borderColor: colors.danger, backgroundColor: '#251216' }, errorTitle: { ...typography.caption, color: colors.danger }, concurrencyNote: { ...typography.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 18 }, deleteButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.sm, paddingTop: spacing.lg }, deletePressed: { opacity: .7 }, deleteText: { ...typography.bodyMD, color: colors.danger, fontFamily: 'MontserratSemiBold' },
+  page: { paddingVertical: spacing.xl, gap: spacing.md }, metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }, schedule: { ...typography.caption, color: colors.titanium, flex: 1 }, nameField: { gap: spacing.xs }, fieldLabel: { ...typography.caption, color: colors.textPrimary }, input: { ...typography.bodyMD, minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface, color: colors.textPrimary, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }, inputError: { borderColor: colors.danger }, validation: { ...typography.caption, color: colors.danger }, fieldHelp: { ...typography.caption, color: colors.textMuted }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.sm }, sectionCopy: { flex: 1 }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, count: { ...typography.caption, color: colors.primary, backgroundColor: colors.surfaceElevated, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.pill }, limit: { ...typography.caption, color: colors.warning }, list: { gap: spacing.sm }, exercise: { gap: spacing.md }, exerciseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, thumbnail: { width: 82, height: 82, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallback: { width: 82, height: 82, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallbackText: { ...typography.headingMD, color: colors.primary }, exerciseIdentity: { flex: 1, gap: spacing.xxs }, exerciseName: { ...typography.headingMD, color: colors.textPrimary }, context: { ...typography.caption, color: colors.textMuted }, prescription: { ...typography.bodyMD, color: colors.primary }, actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }, orderButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, disabled: { opacity: .3 }, textButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs }, editText: { ...typography.caption, color: colors.primary }, removeText: { ...typography.caption, color: colors.danger }, errorCard: { gap: spacing.xs, borderColor: colors.danger, backgroundColor: '#251216' }, errorTitle: { ...typography.caption, color: colors.danger }, concurrencyNote: { ...typography.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 18 }, deleteButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.sm, paddingTop: spacing.lg }, deletePressed: { opacity: .7 }, deleteText: { ...typography.bodyMD, color: colors.danger, fontFamily: 'MontserratSemiBold' },
 });
