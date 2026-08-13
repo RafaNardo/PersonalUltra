@@ -17,6 +17,7 @@ export default function TrainerLayout() {
     <Tabs.Screen name="students/[studentId]/workouts/[workoutId]/catalog/index" options={{ href: null }} />
     <Tabs.Screen name="students/[studentId]/workouts/[workoutId]/catalog/[exerciseId]" options={{ href: null }} />
     <Tabs.Screen name="training/templates" options={{ href: null }} />
+    <Tabs.Screen name="training/templates/[id]" options={{ href: null }} />
     <Tabs.Screen name="training/[id]" options={{ href: null }} />
   </Tabs>;
 }

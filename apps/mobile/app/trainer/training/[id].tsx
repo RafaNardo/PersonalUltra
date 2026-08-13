@@ -6,18 +6,18 @@ import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/com
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { useTrainerPrescriptionSettings } from '@/src/features/trainer/settings/hooks';
-import { useCreateTrainerTemplate, useDuplicateTrainerTemplate, useTrainerExerciseCatalog, useTrainerTemplate, useUpdateTrainerTemplate } from '@/src/features/trainer/training/hooks';
+import { useCreateTrainerTemplate, useTrainerExerciseCatalog, useTrainerTemplate, useUpdateTrainerTemplate } from '@/src/features/trainer/training/hooks';
 import { initialExercisePrescription, parseExercisePrescription, prescriptionDraftFromDefaults, validateExercisePrescription, type ExercisePrescriptionDraft } from '@/src/features/trainer/training/prescription';
+import { loadTemplateDraft, removeTemplateDraft, saveTemplateDraft } from '@/src/features/trainer/training/template-draft-storage';
 import { feedback } from '@/src/platform/feedback';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
 
 export default function TrainerTemplateEditorScreen() {
-  const { id } = useLocalSearchParams<{ id: string }>();
+  const { id, draftId } = useLocalSearchParams<{ id: string; draftId?: string }>();
   const isNew = id === 'new';
   const template = useTrainerTemplate(id, !isNew);
   const create = useCreateTrainerTemplate();
   const update = useUpdateTrainerTemplate(id);
-  const duplicate = useDuplicateTrainerTemplate();
   const [name, setName] = useState('');
   const [notes, setNotes] = useState('');
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
@@ -27,6 +27,10 @@ export default function TrainerTemplateEditorScreen() {
   const [configuration, setConfiguration] = useState<{ catalog?: TrainerExerciseCatalogItem; index?: number }>();
   const [prescription, setPrescription] = useState<ExercisePrescriptionDraft>({ ...initialExercisePrescription });
   const initialized = useRef(false);
+  const draftWrite = useRef<Promise<unknown>>(Promise.resolve());
+  const draftPersistenceDisabled = useRef(false);
+  const [localDraftId, setLocalDraftId] = useState<string>();
+  const [draftLoading, setDraftLoading] = useState(Boolean(isNew && draftId));
   const catalog = useTrainerExerciseCatalog(search, undefined, showCatalog);
   const settings = useTrainerPrescriptionSettings();
 
@@ -38,8 +42,31 @@ export default function TrainerTemplateEditorScreen() {
     setExercises(template.data.exercises ?? []);
     setDirty(false);
   }, [template.data]);
+  useEffect(() => {
+    if (!isNew || !draftId || initialized.current) return;
+    void loadTemplateDraft(draftId).then((stored) => {
+      if (!stored) return;
+      initialized.current = true;
+      setLocalDraftId(stored.id);
+      setName(stored.name);
+      setNotes(stored.notes);
+      setExercises(stored.exercises);
+      setDirty(true);
+    }).finally(() => setDraftLoading(false));
+  }, [isNew, draftId]);
+  useEffect(() => {
+    if (!localDraftId || !draftId || !dirty) return;
+    const timeout = setTimeout(() => {
+      if (draftPersistenceDisabled.current) return;
+      draftWrite.current = draftWrite.current.then(async () => {
+        const stored = await loadTemplateDraft(draftId);
+        if (stored) await saveTemplateDraft({ ...stored, name, notes, exercises });
+      }).catch(() => undefined);
+    }, 250);
+    return () => clearTimeout(timeout);
+  }, [localDraftId, draftId, name, notes, exercises, dirty]);
 
-  if ((!isNew && template.isLoading) || settings.isLoading) return <LoadingView message="Abrindo modelo…" />;
+  if ((!isNew && template.isLoading) || settings.isLoading || draftLoading) return <LoadingView message="Abrindo modelo…" />;
   if (!isNew && template.isError) return <ErrorView message={template.error.message} onRetry={() => template.refetch()} />;
   if (settings.isError) return <ErrorView message={settings.error.message} onRetry={() => settings.refetch()} />;
 
@@ -87,24 +114,19 @@ export default function TrainerTemplateEditorScreen() {
   const save = async () => {
     const input = { name: name.trim(), notes: notes.trim(), exercises: exercises.map((exercise, index) => ({ exerciseId: exercise.exerciseId, sequence: index + 1, sets: exercise.sets, repetitionsMin: exercise.repetitionsMin, repetitionsMax: exercise.repetitionsMax, restSeconds: exercise.restSeconds, notes: exercise.notes })) };
     try {
+      draftPersistenceDisabled.current = true;
       const saved = isNew ? await create.mutateAsync(input) : await update.mutateAsync(input);
+      if (draftId) { await draftWrite.current; await removeTemplateDraft(draftId).catch(() => undefined); }
       setDirty(false);
       feedback.success();
       if (isNew) router.replace({ pathname: '/trainer/training/[id]', params: { id: saved.id } });
       else Alert.alert('Modelo salvo', 'A biblioteca foi atualizada. Treinos já aplicados aos alunos não foram alterados.');
     } catch (error) {
+      draftPersistenceDisabled.current = false;
       feedback.warning();
       Alert.alert('Não foi possível salvar', error instanceof Error ? error.message : 'Tente novamente.');
     }
   };
-  const duplicateCurrent = async () => {
-    try {
-      const copy = await duplicate.mutateAsync(id);
-      feedback.success();
-      router.replace({ pathname: '/trainer/training/[id]', params: { id: copy.id } });
-    } catch (error) { Alert.alert('Não foi possível duplicar', error instanceof Error ? error.message : 'Tente novamente.'); }
-  };
-
   return <Screen style={styles.page}>
     <TopBar eyebrow={isNew ? 'NOVO MODELO' : 'MODELO DE TREINO'} title={isNew ? 'Criar modelo' : name || 'Modelo'} onBack={() => router.back()} action={!isNew ? <Tag tone="neutral">MODELO</Tag> : undefined} />
     <Card style={styles.form}>
@@ -124,8 +146,6 @@ export default function TrainerTemplateEditorScreen() {
     {configuration && <PrescriptionPanel name={configuration.catalog?.name ?? exercises[configuration.index!]?.name ?? 'Exercício'} draft={prescription} errors={prescriptionErrors} onChange={setPrescription} onCancel={() => setConfiguration(undefined)} onSave={commitConfiguration} disabled={!prescriptionValid} />}
 
     <Button loading={saving} disabled={!canSave || saving} onPress={() => void save()}>{isNew ? 'Salvar modelo' : 'Salvar alterações do modelo'}</Button>
-    {!isNew && <Button variant="secondary" loading={duplicate.isPending} disabled={dirty || saving} onPress={() => void duplicateCurrent()}>Duplicar como novo modelo</Button>}
-
   </Screen>;
 }
 
