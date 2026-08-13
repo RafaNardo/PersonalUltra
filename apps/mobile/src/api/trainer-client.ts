@@ -33,7 +33,9 @@ export type WorkoutTemplate = { id: string; name: string; notes: string; exercis
 export type WorkoutExercise = { exerciseId: string; name: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string };
 export type WorkoutExerciseInput = Omit<WorkoutExercise, 'name'>;
 export type TrainerStudentWorkoutSummary = { id: string; name: string; notes: string; recommendedDay: number; isRecommended: boolean; exerciseCount: number; createdAt: string };
-export type TrainerStudentWorkout = Omit<TrainerStudentWorkoutSummary, 'exerciseCount'> & { studentId: string; exercises: Array<{ id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string }> };
+export type TrainerStudentWorkoutExercise = { id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string };
+export type TrainerStudentWorkout = Omit<TrainerStudentWorkoutSummary, 'exerciseCount'> & { studentId: string; exercises: TrainerStudentWorkoutExercise[] };
+export type TrainerStudentWorkoutExerciseInput = { id?: string; exerciseId?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string };
 export type TrainerExerciseCatalogItem = { id: string; name: string; slug: string; primaryMuscleGroup: string; equipment?: string; imageRef: string; instructions?: string; isActive: boolean };
 export type TrainerNutrition = { id: string; name: string; notes: string; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ foodName: string; quantityGrams: number }> }> };
 
@@ -44,7 +46,11 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   } catch {
     throw new ApiError(0, 'Sem conexão com a API do Trainer.');
   }
-  if (!response.ok) throw new ApiError(response.status, 'Não foi possível carregar os dados do Trainer.');
+  if (!response.ok) {
+    let error: { code?: string; message?: string } | undefined;
+    try { error = await response.json() as { code?: string; message?: string }; } catch { /* Keep the safe fallback below. */ }
+    throw new ApiError(response.status, error?.message ?? 'Não foi possível carregar os dados do Trainer.', error?.code);
+  }
   return response.json() as Promise<T>;
 }
 
@@ -72,6 +78,7 @@ export const trainerClient = {
   applyTemplate: (id: string, studentId: string, recommendedDay = 1, isRecommended = false) => request(`/training/templates/${id}/apply`, { method: 'POST', body: JSON.stringify({ studentId, recommendedDay, isRecommended }) }),
   studentWorkouts: async (studentId: string) => (await request<{ workouts: TrainerStudentWorkoutSummary[] }>(`/students/${studentId}/workouts`)).workouts,
   studentWorkout: (studentId: string, workoutId: string) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts/${workoutId}`),
+  updateStudentWorkout: (studentId: string, workoutId: string, exercises: TrainerStudentWorkoutExerciseInput[]) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts/${workoutId}`, { method: 'PUT', body: JSON.stringify({ exercises }) }),
   exerciseCatalog: ({ search, muscleGroup }: { search?: string; muscleGroup?: string } = {}) => {
     const query = new URLSearchParams();
     const normalizedSearch = search?.trim();

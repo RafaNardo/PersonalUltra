@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
@@ -7,27 +7,51 @@ import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { useTrainerStudent } from '@/src/features/trainer/students/hooks';
 import { useTrainerExerciseCatalog, useTrainerStudentWorkout } from '@/src/features/trainer/training/hooks';
 import { hasPrescriptionErrors, initialExercisePrescription, validateExercisePrescription, type ExercisePrescriptionDraft } from '@/src/features/trainer/training/prescription';
+import { useWorkoutEditorStore, workoutEditorKey } from '@/src/features/trainer/training/workout-editor-store';
+import { feedback } from '@/src/platform/feedback';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
 
 export default function TrainerExerciseConfigurationScreen() {
-  const { studentId, workoutId, exerciseId } = useLocalSearchParams<{ studentId: string; workoutId: string; exerciseId: string }>();
+  const { studentId, workoutId, exerciseId, workoutExerciseId } = useLocalSearchParams<{ studentId: string; workoutId: string; exerciseId: string; workoutExerciseId?: string }>();
+  const key = workoutEditorKey(studentId, workoutId);
   const student = useTrainerStudent(studentId);
   const workout = useTrainerStudentWorkout(studentId, workoutId);
-  const catalog = useTrainerExerciseCatalog();
+  const editor = useWorkoutEditorStore((state) => state.drafts[key]);
+  const initialize = useWorkoutEditorStore((state) => state.initialize);
+  const addExercise = useWorkoutEditorStore((state) => state.addExercise);
+  const updateExercise = useWorkoutEditorStore((state) => state.updateExercise);
+  const editingExercise = editor?.exercises.find((item) => item.clientId === workoutExerciseId);
+  const catalog = useTrainerExerciseCatalog('', undefined, !workoutExerciseId);
   const [draft, setDraft] = useState<ExercisePrescriptionDraft>({ ...initialExercisePrescription });
   const errors = useMemo(() => validateExercisePrescription(draft), [draft]);
 
-  if (student.isLoading || workout.isLoading || catalog.isLoading) return <LoadingView message="Carregando o exercício…" />;
+  useEffect(() => { if (workout.data) initialize(key, workout.data); }, [initialize, key, workout.data]);
+  useEffect(() => {
+    if (!editingExercise) return;
+    setDraft({ sets: String(editingExercise.sets), repetitionsMin: String(editingExercise.repetitionsMin), repetitionsMax: String(editingExercise.repetitionsMax), restSeconds: String(editingExercise.restSeconds), notes: editingExercise.notes });
+  }, [editingExercise?.clientId]);
+
+  if (student.isLoading || workout.isLoading || (!workoutExerciseId && catalog.isLoading) || (workout.data && !editor)) return <LoadingView message="Carregando o exercício…" />;
   if (student.isError) return <ErrorView message={student.error.message} onRetry={() => student.refetch()} />;
   if (workout.isError) return <ErrorView message={workout.error.message} onRetry={() => workout.refetch()} />;
-  if (catalog.isError) return <ErrorView message={catalog.error.message} onRetry={() => catalog.refetch()} />;
+  if (!workoutExerciseId && catalog.isError) return <ErrorView message={catalog.error.message} onRetry={() => catalog.refetch()} />;
 
-  const exercise = catalog.data?.find((item) => item.id === exerciseId);
-  if (!exercise) return <ErrorView message="Este exercício não está disponível no catálogo ativo." onRetry={() => catalog.refetch()} />;
+  const catalogExercise = catalog.data?.find((item) => item.id === exerciseId);
+  const exercise = editingExercise ?? catalogExercise;
+  if (!exercise) return <ErrorView message={workoutExerciseId ? 'Este item não está mais no rascunho do treino.' : 'Este exercício não está disponível no catálogo ativo.'} onRetry={workoutExerciseId ? undefined : () => catalog.refetch()} />;
 
   const source = exerciseMediaSource(exercise.imageRef);
   const update = (field: keyof ExercisePrescriptionDraft, value: string) => setDraft((current) => ({ ...current, [field]: value }));
   const invalid = hasPrescriptionErrors(errors);
+  const atLimit = !editingExercise && editor!.exercises.length >= 30;
+  const saveDraft = () => {
+    const changed = editingExercise
+      ? updateExercise(key, editingExercise.clientId, draft)
+      : catalogExercise ? addExercise(key, catalogExercise, draft) : false;
+    if (!changed) return;
+    feedback.success();
+    router.dismissTo({ pathname: '/trainer/students/[studentId]/workouts/[workoutId]', params: { studentId: studentId!, workoutId: workoutId! } });
+  };
 
   return <Screen style={styles.page}>
     <TopBar eyebrow={`${student.data!.firstName} ${student.data!.lastName} · ${workout.data!.name}`} title={exercise.name} onBack={() => router.back()} />
@@ -51,11 +75,11 @@ export default function TrainerExerciseConfigurationScreen() {
       </View>
     </Card>
 
-    <Card style={[styles.transition, invalid && styles.transitionInvalid]}>
-      <Text style={styles.transitionTitle}>{invalid ? 'Revise a configuração' : 'Configuração válida'}</Text>
-      <Text style={styles.transitionCopy}>{invalid ? 'Corrija os campos destacados antes de continuar.' : 'Revise os dados da prescrição. A inclusão será habilitada junto com a edição completa deste treino.'}</Text>
+    <Card style={[styles.transition, (invalid || atLimit) && styles.transitionInvalid]}>
+      <Text style={styles.transitionTitle}>{invalid ? 'Revise a configuração' : atLimit ? 'Limite do treino atingido' : editingExercise ? 'Pronto para atualizar' : 'Pronto para incluir'}</Text>
+      <Text style={styles.transitionCopy}>{invalid ? 'Corrija os campos destacados antes de continuar.' : atLimit ? 'Este treino já possui o limite de 30 exercícios.' : 'A alteração ficará no editor e só chegará ao aluno após Publicar alterações.'}</Text>
     </Card>
-    <Button disabled accessibilityHint="A inclusão ainda não está disponível nesta versão">Adicionar ao treino</Button>
+    <Button disabled={invalid || atLimit} accessibilityHint="Mantém a configuração no editor até a publicação" onPress={saveDraft}>{editingExercise ? 'Atualizar configuração' : 'Adicionar ao treino'}</Button>
     <Button variant="ghost" onPress={() => router.back()}>Voltar ao catálogo</Button>
   </Screen>;
 }

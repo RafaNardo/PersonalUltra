@@ -37,6 +37,17 @@ export function hasPrescriptionErrors(errors: ExercisePrescriptionErrors) {
   return Object.keys(errors).length > 0;
 }
 
+export function parseExercisePrescription(draft: ExercisePrescriptionDraft) {
+  if (hasPrescriptionErrors(validateExercisePrescription(draft))) return undefined;
+  return {
+    sets: Number(draft.sets.trim()),
+    repetitionsMin: Number(draft.repetitionsMin.trim()),
+    repetitionsMax: Number(draft.repetitionsMax.trim()),
+    restSeconds: Number(draft.restSeconds.trim()),
+    notes: draft.notes.trim(),
+  };
+}
+
 function integer(value: string) {
   const normalized = value.trim();
   if (!/^\d+$/.test(normalized)) return undefined;

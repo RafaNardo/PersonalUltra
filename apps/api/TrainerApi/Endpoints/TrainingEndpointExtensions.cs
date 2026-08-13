@@ -236,6 +236,96 @@ public static class TrainingEndpointExtensions
                 : Results.Ok(workout);
         }).RequireAuthorization();
 
+        app.MapPut("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, TrainerStudentWorkoutUpdateRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        {
+            var trainerId = TrainerId(user);
+            if (!await OwnsStudent(db, trainerId, studentId, ct))
+                return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+
+            var validation = ValidateStudentWorkout(request);
+            if (validation is not null)
+                return context.ApiError("VALIDATION_ERROR", validation, 400);
+
+            var workout = await db.StudentWorkouts
+                .Include(x => x.Exercises)
+                .SingleOrDefaultAsync(x => x.Id == workoutId && x.TrainerId == trainerId && x.StudentId == studentId, ct);
+            if (workout is null)
+                return context.ApiError("WORKOUT_NOT_FOUND", "Treino não encontrado para este aluno.", 404);
+
+            var existingById = workout.Exercises.ToDictionary(x => x.Id);
+            var requestedExisting = request.Exercises.Where(x => x.Id.HasValue).ToArray();
+            if (requestedExisting.Any(x => !existingById.TryGetValue(x.Id!.Value, out var existing) || x.ExerciseId != existing.ExerciseId))
+                return context.ApiError("VALIDATION_ERROR", "A lista de exercícios está desatualizada. Recarregue o treino.", 400);
+
+            var additions = request.Exercises.Where(x => !x.Id.HasValue).ToArray();
+            var additionIds = additions.Select(x => x.ExerciseId!.Value).Distinct().ToArray();
+            var activeCatalog = await db.Exercises
+                .Where(x => additionIds.Contains(x.Id) && x.IsActive)
+                .ToDictionaryAsync(x => x.Id, ct);
+            if (activeCatalog.Count != additionIds.Length)
+                return context.ApiError("EXERCISE_NOT_FOUND", "Um ou mais exercícios não existem ou estão inativos.", 400);
+
+            await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
+
+            try
+            {
+                if (transaction is not null)
+                {
+                    // Free the unique (workout, sequence) slots before arbitrary reorder.
+                    foreach (var (exercise, index) in workout.Exercises.Select((exercise, index) => (exercise, index)))
+                        exercise.Sequence = -(index + 1);
+                    await db.SaveChangesAsync(ct);
+                }
+
+                var retainedIds = requestedExisting.Select(x => x.Id!.Value).ToHashSet();
+                var removed = workout.Exercises.Where(x => !retainedIds.Contains(x.Id)).ToArray();
+                db.StudentWorkoutExercises.RemoveRange(removed);
+
+                foreach (var input in request.Exercises.OrderBy(x => x.Sequence))
+                {
+                    if (input.Id.HasValue)
+                    {
+                        var existing = existingById[input.Id.Value];
+                        existing.Sequence = input.Sequence;
+                        existing.Sets = input.Sets;
+                        existing.RepetitionsMin = input.RepetitionsMin;
+                        existing.RepetitionsMax = input.RepetitionsMax;
+                        existing.RestSeconds = input.RestSeconds;
+                        existing.Notes = input.Notes?.Trim() ?? "";
+                        continue;
+                    }
+
+                    var added = StudentWorkoutExercise.FromCatalog(
+                        workout.Id,
+                        activeCatalog[input.ExerciseId!.Value],
+                        input.Sequence,
+                        input.Sets,
+                        input.RepetitionsMin,
+                        input.RepetitionsMax,
+                        input.RestSeconds,
+                        input.Notes?.Trim() ?? "");
+                    db.StudentWorkoutExercises.Add(added);
+                    workout.Exercises.Add(added);
+                }
+
+                await db.SaveChangesAsync(ct);
+                if (transaction is not null)
+                    await transaction.CommitAsync(ct);
+            }
+            catch (DbUpdateConcurrencyException)
+            {
+                if (transaction is not null)
+                    await transaction.RollbackAsync(ct);
+                return context.ApiError("WORKOUT_CONFLICT", "O treino foi alterado em outro lugar. Recarregue antes de publicar novamente.", 409);
+            }
+
+            var updated = await db.StudentWorkouts
+                .AsNoTracking()
+                .Include(x => x.Exercises)
+                .SingleAsync(x => x.Id == workout.Id, ct);
+            return Results.Ok(ToStudentWorkoutDetail(updated));
+        }).RequireAuthorization();
+
         app.MapGet("/api/v1/students/{studentId:guid}/training-history", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
         {
             var trainerId = TrainerId(user);
@@ -280,6 +370,19 @@ public static class TrainingEndpointExtensions
             .Select(x => new WorkoutTemplateExerciseResponse(x.ExerciseId, x.Exercise.Name, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
             .ToArray());
 
+    private static TrainerStudentWorkoutDetail ToStudentWorkoutDetail(StudentWorkout workout) => new(
+        workout.Id,
+        workout.StudentId,
+        workout.Name,
+        workout.Notes,
+        workout.RecommendedDay,
+        workout.IsRecommended,
+        workout.CreatedAt,
+        workout.Exercises
+            .OrderBy(x => x.Sequence)
+            .Select(x => new TrainerStudentWorkoutExercise(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
+            .ToArray());
+
     private static async Task<Dictionary<Guid, Exercise>?> ResolveActiveExercises(
         IReadOnlyList<WorkoutTemplateExerciseInput> requested,
         PersonalUltraDbContext db,
@@ -305,6 +408,28 @@ public static class TrainingEndpointExtensions
         if (request.Exercises.Any(x =>
                 x.ExerciseId == Guid.Empty ||
                 x.Sequence is < 1 or > 30 ||
+                x.Sets is < 1 or > 20 ||
+                x.RepetitionsMin is < 1 or > 100 ||
+                x.RepetitionsMax is < 1 or > 100 ||
+                x.RepetitionsMin > x.RepetitionsMax ||
+                x.RestSeconds is < 0 or > 900 ||
+                x.Notes?.Length > 1000))
+            return "Revise exercício, ordem, séries, faixa de repetições, descanso e observações.";
+        return null;
+    }
+
+    private static string? ValidateStudentWorkout(TrainerStudentWorkoutUpdateRequest request)
+    {
+        if (request.Exercises is null || request.Exercises.Count > 30)
+            return "O treino deve ter no máximo 30 exercícios.";
+        if (!request.Exercises.Select(x => x.Sequence).Order().SequenceEqual(Enumerable.Range(1, request.Exercises.Count)))
+            return "As posições dos exercícios devem formar uma sequência contínua.";
+        if (request.Exercises.Where(x => x.Id.HasValue).Select(x => x.Id).Distinct().Count() != request.Exercises.Count(x => x.Id.HasValue))
+            return "Cada item existente deve aparecer apenas uma vez.";
+        if (request.Exercises.Any(x =>
+                x.Id == Guid.Empty ||
+                x.ExerciseId == Guid.Empty ||
+                (!x.Id.HasValue && !x.ExerciseId.HasValue) ||
                 x.Sets is < 1 or > 20 ||
                 x.RepetitionsMin is < 1 or > 100 ||
                 x.RepetitionsMax is < 1 or > 100 ||

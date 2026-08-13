@@ -13,4 +13,6 @@ public sealed record TrainerStudentWorkoutListResponse(IReadOnlyList<TrainerStud
 public sealed record TrainerStudentWorkoutSummary(Guid Id, string Name, string Notes, int RecommendedDay, bool IsRecommended, int ExerciseCount, DateTimeOffset CreatedAt);
 public sealed record TrainerStudentWorkoutDetail(Guid Id, Guid StudentId, string Name, string Notes, int RecommendedDay, bool IsRecommended, DateTimeOffset CreatedAt, IReadOnlyList<TrainerStudentWorkoutExercise> Exercises);
 public sealed record TrainerStudentWorkoutExercise(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
+public sealed record TrainerStudentWorkoutUpdateRequest(IReadOnlyList<TrainerStudentWorkoutExerciseInput> Exercises);
+public sealed record TrainerStudentWorkoutExerciseInput(Guid? Id, Guid? ExerciseId, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string? Notes);
 public sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? Instructions, bool IsActive);
