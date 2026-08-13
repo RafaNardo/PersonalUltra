@@ -1,14 +1,26 @@
 import { router } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
-import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
-import { useDuplicateTrainerTemplate, useTrainerTemplates } from '@/src/features/trainer/training/hooks';
+import { useTrainerStudents } from '@/src/features/trainer/students/hooks';
 
 export default function TrainerTrainingScreen() {
-  const templates = useTrainerTemplates(); const duplicate = useDuplicateTrainerTemplate();
-  if (templates.isLoading) return <LoadingView message="Carregando seus treinos…" />;
-  if (templates.isError) return <ErrorView message={templates.error.message} onRetry={() => templates.refetch()} />;
-  return <Screen style={styles.page}><TopBar eyebrow="PRESCRIÇÃO" title="Meus treinos" onBack={() => router.back()} /><Text style={styles.copy}>Modelos reutilizáveis com exercícios do catálogo.</Text><View style={styles.list}>{templates.data!.map((item) => <Card key={item.id} style={styles.item}><Text style={styles.itemTitle}>{item.name}</Text><Text style={styles.copy}>{item.exerciseCount ?? 0} exercícios</Text><View style={styles.actions}><Button variant="secondary" onPress={() => duplicate.mutate(item.id)}>Duplicar</Button><Button variant="ghost" onPress={() => router.push({ pathname: '/trainer/training/[id]', params: { id: item.id } })}>Editar</Button></View></Card>)}</View></Screen>;
+  const students = useTrainerStudents();
+  if (students.isLoading) return <LoadingView message="Carregando alunos…" />;
+  if (students.isError) return <ErrorView message={students.error.message} onRetry={() => students.refetch()} />;
+
+  return <Screen style={styles.page}>
+    <TopBar eyebrow="PRESCRIÇÃO" title="Treinos dos alunos" />
+    <Text style={styles.copy}>Escolha um aluno para consultar seus treinos e abrir uma prescrição.</Text>
+    {students.data!.length === 0 ? <EmptyState title="Nenhum aluno ativo" message="Convide um aluno para começar o acompanhamento de treinos." /> : <View style={styles.list}>{students.data!.map((student) => <Pressable key={student.studentId} accessibilityRole="button" accessibilityLabel={`Abrir treinos de ${student.firstName} ${student.lastName}`} onPress={() => router.push({ pathname: '/trainer/students/[id]', params: { id: student.studentId, section: 'training' } })} style={({ pressed }) => pressed && styles.pressed}>
+      <Card style={styles.student}>
+        <View style={styles.header}><Text style={styles.name}>{student.firstName} {student.lastName}</Text><Tag tone={student.anamnesisStatus === 'Completed' ? 'success' : 'neutral'}>{student.anamnesisStatus === 'Completed' ? 'ATIVO' : 'EM ONBOARDING'}</Tag></View>
+        {student.email ? <Text style={styles.copy}>{student.email}</Text> : null}
+        <Text style={styles.openLink}>Ver treinos ›</Text>
+      </Card>
+    </Pressable>)}</View>}
+  </Screen>;
 }
-const styles = StyleSheet.create({ page: { paddingVertical: spacing.xl, gap: spacing.lg }, copy: { ...typography.bodyMD, color: colors.textSecondary }, list: { gap: spacing.sm }, item: { gap: spacing.xs }, itemTitle: { ...typography.headingMD, color: colors.textPrimary }, actions: { flexDirection: 'row', gap: spacing.sm } });
+
+const styles = StyleSheet.create({ page: { paddingVertical: spacing.xl, gap: spacing.md }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, list: { gap: spacing.sm }, student: { gap: spacing.xs }, header: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }, name: { ...typography.headingMD, color: colors.textPrimary, flex: 1 }, openLink: { ...typography.caption, color: colors.primary, marginTop: spacing.xs }, pressed: { opacity: .78 } });

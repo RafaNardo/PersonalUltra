@@ -105,6 +105,68 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     }
 
     [Fact]
+    public async Task Trainer_lists_and_opens_owned_student_workouts_with_ordered_snapshot_details()
+    {
+        var listResponse = await client.GetAsync($"/api/v1/students/{DemoIds.StudentId}/workouts");
+
+        Assert.Equal(HttpStatusCode.OK, listResponse.StatusCode);
+        var list = await listResponse.Content.ReadFromJsonAsync<StudentWorkoutListResponse>();
+        var summary = Assert.Single(list!.Workouts);
+        Assert.Equal("Força · Treino A", summary.Name);
+        Assert.Equal(3, summary.ExerciseCount);
+
+        var detailResponse = await client.GetAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{summary.Id}");
+
+        Assert.Equal(HttpStatusCode.OK, detailResponse.StatusCode);
+        var detail = await detailResponse.Content.ReadFromJsonAsync<StudentWorkoutDetailResponse>();
+        Assert.NotNull(detail);
+        Assert.Equal(DemoIds.StudentId, detail!.StudentId);
+        Assert.Equal([1, 2, 3], detail.Exercises.Select(x => x.Sequence));
+        Assert.All(detail.Exercises, exercise =>
+        {
+            Assert.NotEqual(Guid.Empty, exercise.ExerciseId);
+            Assert.False(string.IsNullOrWhiteSpace(exercise.Name));
+            Assert.False(string.IsNullOrWhiteSpace(exercise.ImageRef));
+            Assert.True(exercise.RepetitionsMin <= exercise.RepetitionsMax);
+        });
+    }
+
+    [Fact]
+    public async Task Trainer_cannot_list_or_open_workouts_outside_an_active_student_link()
+    {
+        var otherTrainerId = Guid.NewGuid();
+        var otherStudentId = Guid.NewGuid();
+        var otherWorkoutId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            db.Trainers.Add(new Trainer { Id = otherTrainerId, Name = "Outro personal", CreatedAt = DateTimeOffset.UtcNow });
+            db.Students.Add(new Student { Id = otherStudentId, FirstName = "Aluno", LastName = "Privado", CreatedAt = DateTimeOffset.UtcNow });
+            db.TrainerStudents.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = otherTrainerId, StudentId = otherStudentId, StartedAt = DateTimeOffset.UtcNow });
+            db.StudentWorkouts.Add(new StudentWorkout { Id = otherWorkoutId, TrainerId = otherTrainerId, StudentId = otherStudentId, Name = "Treino privado", RecommendedDay = 1, CreatedAt = DateTimeOffset.UtcNow });
+            await db.SaveChangesAsync();
+        }
+
+        var listResponse = await client.GetAsync($"/api/v1/students/{otherStudentId}/workouts");
+        var detailResponse = await client.GetAsync($"/api/v1/students/{otherStudentId}/workouts/{otherWorkoutId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, listResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, detailResponse.StatusCode);
+        var listError = await listResponse.Content.ReadFromJsonAsync<ErrorResponse>();
+        var detailError = await detailResponse.Content.ReadFromJsonAsync<ErrorResponse>();
+        Assert.Equal("STUDENT_NOT_FOUND", listError!.Code);
+        Assert.Equal("STUDENT_NOT_FOUND", detailError!.Code);
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == otherWorkoutId));
+        cleanupDb.TrainerStudents.RemoveRange(cleanupDb.TrainerStudents.Where(x => x.StudentId == otherStudentId));
+        cleanupDb.Students.RemoveRange(cleanupDb.Students.Where(x => x.Id == otherStudentId));
+        cleanupDb.Trainers.RemoveRange(cleanupDb.Trainers.Where(x => x.Id == otherTrainerId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
+    [Fact]
     public async Task Trainer_creates_a_template_with_catalog_exercise_and_repetition_range()
     {
         var exercise = await GetActiveExercise();
@@ -331,4 +393,8 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     private sealed record AppliedWorkoutResponse(Guid Id);
     private sealed record ErrorResponse(string Code);
     private sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? Instructions, bool IsActive);
+    private sealed record StudentWorkoutListResponse(IReadOnlyList<StudentWorkoutSummaryResponse> Workouts);
+    private sealed record StudentWorkoutSummaryResponse(Guid Id, string Name, int ExerciseCount);
+    private sealed record StudentWorkoutDetailResponse(Guid Id, Guid StudentId, IReadOnlyList<StudentWorkoutExerciseResponse> Exercises);
+    private sealed record StudentWorkoutExerciseResponse(Guid? ExerciseId, string Name, string? ImageRef, int Sequence, int RepetitionsMin, int RepetitionsMax);
 }

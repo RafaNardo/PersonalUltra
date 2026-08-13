@@ -193,6 +193,49 @@ public static class TrainingEndpointExtensions
             return Results.Ok(new AppliedWorkoutResponse(applied.Id, applied.StudentId, applied.Name, applied.RecommendedDay, applied.IsRecommended, applied.Exercises.Count));
         });
 
+        app.MapGet("/api/v1/students/{studentId:guid}/workouts", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        {
+            var trainerId = TrainerId(user);
+            if (!await OwnsStudent(db, trainerId, studentId, ct))
+                return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+
+            var workouts = await db.StudentWorkouts
+                .AsNoTracking()
+                .Where(x => x.TrainerId == trainerId && x.StudentId == studentId)
+                .OrderBy(x => x.RecommendedDay)
+                .ThenBy(x => x.Name)
+                .Select(x => new TrainerStudentWorkoutSummary(x.Id, x.Name, x.Notes, x.RecommendedDay, x.IsRecommended, x.Exercises.Count, x.CreatedAt))
+                .ToListAsync(ct);
+            return Results.Ok(new TrainerStudentWorkoutListResponse(workouts));
+        }).RequireAuthorization();
+
+        app.MapGet("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        {
+            var trainerId = TrainerId(user);
+            if (!await OwnsStudent(db, trainerId, studentId, ct))
+                return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+
+            var workout = await db.StudentWorkouts
+                .AsNoTracking()
+                .Where(x => x.Id == workoutId && x.TrainerId == trainerId && x.StudentId == studentId)
+                .Select(x => new TrainerStudentWorkoutDetail(
+                    x.Id,
+                    x.StudentId,
+                    x.Name,
+                    x.Notes,
+                    x.RecommendedDay,
+                    x.IsRecommended,
+                    x.CreatedAt,
+                    x.Exercises
+                        .OrderBy(exercise => exercise.Sequence)
+                        .Select(exercise => new TrainerStudentWorkoutExercise(exercise.Id, exercise.ExerciseId, exercise.Name, exercise.PrimaryMuscleGroup, exercise.Equipment, exercise.ImageRef, exercise.Instructions, exercise.Sequence, exercise.Sets, exercise.RepetitionsMin, exercise.RepetitionsMax, exercise.RestSeconds, exercise.Notes))
+                        .ToArray()))
+                .SingleOrDefaultAsync(ct);
+            return workout is null
+                ? context.ApiError("WORKOUT_NOT_FOUND", "Treino não encontrado para este aluno.", 404)
+                : Results.Ok(workout);
+        }).RequireAuthorization();
+
         app.MapGet("/api/v1/students/{studentId:guid}/training-history", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
         {
             var trainerId = TrainerId(user);
@@ -210,6 +253,9 @@ public static class TrainingEndpointExtensions
     }
 
     private static Guid TrainerId(ClaimsPrincipal user) => Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+
+    private static Task<bool> OwnsStudent(PersonalUltraDbContext db, Guid trainerId, Guid studentId, CancellationToken cancellationToken) =>
+        db.TrainerStudents.AnyAsync(x => x.TrainerId == trainerId && x.StudentId == studentId && x.EndedAt == null, cancellationToken);
 
     private static WorkoutTemplateExercise ToEntity(Guid templateId, WorkoutTemplateExerciseInput input, Exercise exercise) => new()
     {
