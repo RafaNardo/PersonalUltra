@@ -74,6 +74,7 @@ export default function TrainerStudentDetailScreen() {
 
     {section === 'training' && <>
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Treinos da semana</Text><Text style={styles.copy}>Prescrições disponíveis para {data.firstName}.</Text></View></View>
+      <Button variant="secondary" onPress={() => router.push({ pathname: '/trainer/training/templates', params: { studentId: id! } })}>Aplicar a partir de um modelo</Button>
       {workouts.isLoading && <Card><Text style={styles.copy}>Carregando treinos…</Text></Card>}
       {workouts.isError && <Card style={styles.card}><Text style={styles.errorText}>Não foi possível carregar os treinos.</Text><Button variant="secondary" onPress={() => workouts.refetch()}>Tentar novamente</Button></Card>}
       {!workouts.isLoading && !workouts.isError && workouts.data?.length === 0 && <EmptyState title="Nenhum treino prescrito" message="Os treinos deste aluno aparecerão aqui quando forem disponibilizados." />}

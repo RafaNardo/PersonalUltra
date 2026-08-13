@@ -1,6 +1,6 @@
 import { router } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
-import { Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
+import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
 import { useTrainerStudents } from '@/src/features/trainer/students/hooks';
@@ -13,6 +13,7 @@ export default function TrainerTrainingScreen() {
   return <Screen style={styles.page}>
     <TopBar eyebrow="PRESCRIÇÃO" title="Treinos dos alunos" />
     <Text style={styles.copy}>Escolha um aluno para consultar seus treinos e abrir uma prescrição.</Text>
+    <Button variant="secondary" onPress={() => router.push('/trainer/training/templates')}>Biblioteca de modelos</Button>
     {students.data!.length === 0 ? <EmptyState title="Nenhum aluno ativo" message="Convide um aluno para começar o acompanhamento de treinos." /> : <View style={styles.list}>{students.data!.map((student) => <Pressable key={student.studentId} accessibilityRole="button" accessibilityLabel={`Abrir treinos de ${student.firstName} ${student.lastName}`} onPress={() => router.push({ pathname: '/trainer/students/[id]', params: { id: student.studentId, section: 'training' } })} style={({ pressed }) => pressed && styles.pressed}>
       <Card style={styles.student}>
         <View style={styles.header}><Text style={styles.name}>{student.firstName} {student.lastName}</Text><Tag tone={student.anamnesisStatus === 'Completed' ? 'success' : 'neutral'}>{student.anamnesisStatus === 'Completed' ? 'ATIVO' : 'EM ONBOARDING'}</Tag></View>

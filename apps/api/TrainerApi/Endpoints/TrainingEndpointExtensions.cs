@@ -117,11 +117,17 @@ public static class TrainingEndpointExtensions
             template.Name = request.Name.Trim();
             template.Notes = request.Notes?.Trim() ?? "";
             template.UpdatedAt = clock.GetUtcNow();
+            await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
             db.WorkoutTemplateExercises.RemoveRange(template.Exercises);
-            template.Exercises.Clear();
-            template.Exercises.AddRange(request.Exercises.Select(x => ToEntity(id, x, catalog[x.ExerciseId])));
             await db.SaveChangesAsync(ct);
-            return Results.Ok(ToResponse(template));
+            var replacements = request.Exercises.Select(x => ToEntity(id, x, catalog[x.ExerciseId])).ToArray();
+            db.WorkoutTemplateExercises.AddRange(replacements);
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null)
+                await transaction.CommitAsync(ct);
+
+            var updated = await db.WorkoutTemplates.AsNoTracking().Include(x => x.Exercises).ThenInclude(x => x.Exercise).SingleAsync(x => x.Id == id, ct);
+            return Results.Ok(ToResponse(updated));
         });
 
         templates.MapPost("/{id:guid}/duplicate", async (Guid id, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
@@ -174,6 +180,17 @@ public static class TrainingEndpointExtensions
                 return context.ApiError("TEMPLATE_NOT_FOUND", "Treino não encontrado.", 404);
             if (!await db.TrainerStudents.AnyAsync(x => x.TrainerId == trainerId && x.StudentId == request.StudentId && x.EndedAt == null, ct))
                 return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+            if (request.RecommendedDay is < 1 or > 7)
+                return context.ApiError("VALIDATION_ERROR", "Escolha um dia da semana válido.", 400);
+
+            if (request.IsRecommended)
+            {
+                var currentRecommendations = await db.StudentWorkouts
+                    .Where(x => x.TrainerId == trainerId && x.StudentId == request.StudentId && x.IsRecommended)
+                    .ToListAsync(ct);
+                foreach (var current in currentRecommendations)
+                    current.IsRecommended = false;
+            }
 
             var applied = new StudentWorkout
             {
@@ -182,7 +199,7 @@ public static class TrainingEndpointExtensions
                 StudentId = request.StudentId,
                 Name = source.Name,
                 Notes = source.Notes,
-                RecommendedDay = Math.Clamp(request.RecommendedDay, 1, 7),
+                RecommendedDay = request.RecommendedDay,
                 IsRecommended = request.IsRecommended,
                 CreatedAt = clock.GetUtcNow(),
             };
@@ -367,7 +384,7 @@ public static class TrainingEndpointExtensions
         item.Notes,
         item.Exercises
             .OrderBy(x => x.Sequence)
-            .Select(x => new WorkoutTemplateExerciseResponse(x.ExerciseId, x.Exercise.Name, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
+            .Select(x => new WorkoutTemplateExerciseResponse(x.ExerciseId, x.Exercise.Name, x.Exercise.PrimaryMuscleGroup, x.Exercise.Equipment, x.Exercise.ImageRef, x.Exercise.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
             .ToArray());
 
     private static TrainerStudentWorkoutDetail ToStudentWorkoutDetail(StudentWorkout workout) => new(
