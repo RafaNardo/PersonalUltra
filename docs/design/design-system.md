@@ -38,6 +38,28 @@ Trainer UI: mais operacional, densa e orientada a dashboard/atividade.
 
 Student UI: mais visual, emocional, com CTAs maiores e maior presença da marca do personal.
 
+## Princípio de experiência
+
+A interface deve ser autoexplicativa, confortável, motivadora e transmitir progresso. Uma capacidade existente não pode depender de o usuário descobrir que um card genérico é clicável ou interpretar jargão interno.
+
+Cada tela deve deixar evidentes, nesta ordem:
+
+1. onde o usuário está e para quem a ação será feita;
+2. o que o conteúdo representa;
+3. qual é o próximo passo principal;
+4. o que acontecerá depois da confirmação;
+5. como voltar, corrigir ou tentar novamente.
+
+Regras práticas:
+
+- ações importantes usam botões ou affordances explícitas; não dependem apenas de toque implícito no card;
+- fluxos contextuais não devem reutilizar uma tela de CRUD quando o objetivo e a linguagem forem diferentes;
+- títulos e botões usam linguagem de produto conhecida pelo usuário, evitando termos internos como `snapshot`, `mutation` ou `acelerador` sem explicação;
+- uma tela deve ter uma ação principal clara, mantendo ações administrativas como secundárias;
+- confirmações devem dizer o que foi criado/alterado e para quem;
+- dados reais e estados reais orientam a interface; não fabricar métricas, progresso ou promessas para preencher espaço;
+- toda revisão visual deve incluir tela pequena, loading, erro, empty state e conteúdo longo.
+
 ## Empty states
 
 Empty state é uma orientação de produto, não uma mensagem de erro. Ele deve confirmar o estado atual, explicar o que acontecerá e oferecer uma próxima ação somente quando ela for real.

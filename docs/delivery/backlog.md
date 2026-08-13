@@ -121,6 +121,9 @@ Para ser considerada concluída, a task de UI deve:
 Mensagens pontuais dentro de conteúdo existente — por exemplo, um dia sem treino dentro de uma agenda preenchida — podem continuar compactas. Endpoints, migrations, seeds e outras tasks sem superfície visual não precisam fabricar um empty state.
 
 ## M4 — Nutrition, Progress, Coach & Polish
+
+O refactor das superfícies Trainer da M4 deve seguir `docs/design/trainer-experience-review.md`, além do critério transversal de UI acima. A revisão prioriza clareza, contexto do aluno e ações explícitas sem adicionar regras de negócio.
+
 - `PU-M4-001`: adaptar domínio nutrição.
 - `PU-M4-002`: editor de alimentação Trainer, incluindo estado padrão para plano/refeições ainda não criados e CTA funcional de criação.
 - `PU-M4-003`: Student nutrition, incluindo estado `page` acolhedor quando o personal ainda não publicou o plano.

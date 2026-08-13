@@ -74,10 +74,10 @@ export default function TrainerStudentDetailScreen() {
 
     {section === 'training' && <>
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Treinos da semana</Text><Text style={styles.copy}>Prescrições disponíveis para {data.firstName}.</Text></View></View>
-      <Button variant="secondary" onPress={() => router.push({ pathname: '/trainer/training/templates', params: { studentId: id! } })}>Aplicar a partir de um modelo</Button>
+      <Button variant="secondary" onPress={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/from-template', params: { studentId: id! } })}>Adicionar a partir de um modelo</Button>
       {workouts.isLoading && <Card><Text style={styles.copy}>Carregando treinos…</Text></Card>}
       {workouts.isError && <Card style={styles.card}><Text style={styles.errorText}>Não foi possível carregar os treinos.</Text><Button variant="secondary" onPress={() => workouts.refetch()}>Tentar novamente</Button></Card>}
-      {!workouts.isLoading && !workouts.isError && workouts.data?.length === 0 && <EmptyState status="PRIMEIRA PRESCRIÇÃO" symbol="+" title="Prepare o primeiro treino deste aluno." message="Use um modelo para publicar uma prescrição com mais rapidez." actionLabel="Escolher um modelo" onAction={() => router.push({ pathname: '/trainer/training/templates', params: { studentId: id! } })} />}
+      {!workouts.isLoading && !workouts.isError && workouts.data?.length === 0 && <EmptyState status="PRIMEIRA PRESCRIÇÃO" symbol="+" title="Prepare o primeiro treino deste aluno." message="Use um modelo para publicar uma prescrição com mais rapidez." actionLabel="Escolher um modelo" onAction={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/from-template', params: { studentId: id! } })} />}
       {workouts.data?.map((workout) => <Pressable key={workout.id} accessibilityRole="button" accessibilityLabel={`Abrir treino ${workout.name}`} accessibilityHint="Mostra os exercícios prescritos para este aluno" onPress={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/[workoutId]', params: { studentId: id!, workoutId: workout.id } })} style={({ pressed }) => pressed && styles.pressed}>
         <Card style={styles.workoutCard}>
           <View style={styles.workoutHeader}><Text style={styles.workoutName}>{workout.name}</Text>{workout.isRecommended && <Tag tone="success">RECOMENDADO</Tag>}</View>
