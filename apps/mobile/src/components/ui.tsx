@@ -1,5 +1,6 @@
-import type { PropsWithChildren } from 'react';
-import { ActivityIndicator, Pressable, StyleSheet, Text, View, type AccessibilityRole, type StyleProp, type ViewStyle } from 'react-native';
+import Ionicons from '@expo/vector-icons/Ionicons';
+import type { PropsWithChildren, ReactNode } from 'react';
+import { ActivityIndicator, Pressable, StyleSheet, Text, TextInput, View, type AccessibilityRole, type StyleProp, type ViewStyle } from 'react-native';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 
 type ButtonProps = PropsWithChildren<{ onPress?: () => void; disabled?: boolean; loading?: boolean; variant?: 'primary' | 'secondary' | 'ghost'; style?: StyleProp<ViewStyle>; accessibilityLabel?: string; accessibilityHint?: string; accessibilityRole?: AccessibilityRole }>;
@@ -12,6 +13,39 @@ export function Button({ children, onPress, disabled, loading, variant = 'primar
 
 export function Card({ children, style }: PropsWithChildren<{ style?: StyleProp<ViewStyle> }>) {
   return <View style={[styles.card, style]}>{children}</View>;
+}
+
+type ListItemProps = {
+  title: string;
+  metadata?: string;
+  description?: string;
+  leading?: ReactNode;
+  badge?: ReactNode;
+  actionLabel?: string;
+  onPress?: () => void;
+  disabled?: boolean;
+  accessibilityLabel?: string;
+  accessibilityHint?: string;
+};
+
+export function ListItem({ title, metadata, description, leading, badge, actionLabel = 'Ver detalhes', onPress, disabled = false, accessibilityLabel, accessibilityHint }: ListItemProps) {
+  const content = <>
+    {leading}
+    <View style={styles.listItemIdentity}>
+      <View style={styles.listItemHeader}><Text numberOfLines={2} style={styles.listItemTitle}>{title}</Text>{badge}</View>
+      {metadata ? <Text numberOfLines={1} style={styles.listItemMetadata}>{metadata}</Text> : null}
+      {description ? <Text numberOfLines={2} style={styles.listItemDescription}>{description}</Text> : null}
+      {onPress ? <Text style={styles.listItemActionText}>{actionLabel}</Text> : null}
+    </View>
+    {onPress ? <Ionicons name="chevron-forward" size={19} color={colors.primary} /> : null}
+  </>;
+
+  if (!onPress) return <View style={styles.listItem}>{content}</View>;
+  return <Pressable disabled={disabled} accessibilityRole="button" accessibilityState={{ disabled }} accessibilityLabel={accessibilityLabel ?? title} accessibilityHint={accessibilityHint} onPress={onPress} style={({ pressed }) => [styles.listItem, disabled && styles.disabled, pressed && !disabled && styles.listItemPressed]}>{content}</Pressable>;
+}
+
+export function SearchField({ value, onChangeText, placeholder, accessibilityLabel }: { value: string; onChangeText: (value: string) => void; placeholder: string; accessibilityLabel: string }) {
+  return <View style={styles.searchField}><Ionicons name="search-outline" size={21} color={colors.textMuted} /><TextInput value={value} onChangeText={onChangeText} autoCapitalize="none" autoCorrect={false} placeholder={placeholder} placeholderTextColor={colors.textMuted} accessibilityLabel={accessibilityLabel} style={styles.searchInput} /></View>;
 }
 
 export function Tag({ children, tone = 'neutral', style }: PropsWithChildren<{ tone?: 'neutral' | 'success' | 'primary'; style?: StyleProp<ViewStyle> }>) {
@@ -61,6 +95,16 @@ const styles = StyleSheet.create({
   buttonText: { ...typography.bodyLG, color: colors.textPrimary, fontWeight: '700' }, buttonTextSecondary: { color: colors.textPrimary },
   disabled: { opacity: 0.45 }, pressed: { transform: [{ scale: 0.98 }] },
   card: { backgroundColor: colors.surface, borderRadius: radius.lg, padding: spacing.lg, borderWidth: 1, borderColor: colors.border },
+  listItem: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  listItemPressed: { opacity: .76, transform: [{ scale: .99 }] },
+  listItemIdentity: { flex: 1, gap: spacing.xxs },
+  listItemHeader: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: spacing.sm },
+  listItemTitle: { ...typography.bodyLG, color: colors.textPrimary, fontFamily: 'MontserratSemiBold', flexShrink: 1 },
+  listItemMetadata: { ...typography.caption, color: colors.titanium },
+  listItemDescription: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 },
+  listItemActionText: { ...typography.caption, color: colors.primary, marginTop: spacing.xxs },
+  searchField: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
+  searchInput: { ...typography.bodyMD, color: colors.textPrimary, flex: 1, minHeight: 48 },
   tag: { alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.pill, backgroundColor: colors.surfaceElevated },
   tagSuccess: { backgroundColor: '#123D2B' }, tagPrimary: { backgroundColor: '#4D1520' }, tagText: { ...typography.caption, color: colors.textSecondary }, tagSuccessText: { color: colors.success },
   progressTrack: { height: 6, overflow: 'hidden', borderRadius: radius.pill, backgroundColor: colors.surfaceElevated }, progressValue: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.primary },

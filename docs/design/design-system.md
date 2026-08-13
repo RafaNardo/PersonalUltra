@@ -90,3 +90,11 @@ Regras de conteúdo:
 - Trainer deve receber linguagem operacional (`Convide`, `Adicione`, `Crie`);
 - Student deve receber linguagem acolhedora e explicar quando o conteúdo depende do personal;
 - loading, erro e empty state são estados distintos e não devem compartilhar copy.
+
+## Listagens
+
+Listas de navegação e gestão seguem o padrão compacto descrito em
+[`list-patterns.md`](./list-patterns.md). Use o primitive compartilhado
+`ListItem` para tornar densidade, hierarquia, affordance e acessibilidade
+consistentes. Catálogos visuais, editores ordenáveis e históricos detalhados
+são variantes funcionais e não devem ser reduzidos artificialmente a uma linha.
