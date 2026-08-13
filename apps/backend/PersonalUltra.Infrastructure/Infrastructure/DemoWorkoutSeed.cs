@@ -13,7 +13,7 @@ internal static class DemoWorkoutSeed
 {
     internal static readonly IReadOnlyList<WorkoutSeed> Workouts =
     [
-        new("upper-a", "Upper A", 1, true, "Peito, costas e braços.",
+        new("upper-a", "Upper A", "Peito, costas e braços.",
         [
             new("supino-reto-com-barra", 4, 8, 12, 90, "Escápulas retraídas."),
             new("remada-baixa", 4, 8, 12, 90, "Conduzir o cotovelo para trás."),
@@ -22,7 +22,7 @@ internal static class DemoWorkoutSeed
             new("triceps-na-polia-com-corda", 3, 10, 15, 60, "Cotovelos próximos ao corpo."),
             new("rosca-direta-com-barra", 3, 10, 12, 60, "Sem impulsionar o corpo."),
         ]),
-        new("lower-a", "Lower A", 2, false, "Quadríceps, posteriores e glúteos.",
+        new("lower-a", "Lower A", "Quadríceps, posteriores e glúteos.",
         [
             new("agachamento-livre", 4, 8, 10, 120, "Joelhos acompanham a linha dos pés."),
             new("leg-press-45", 4, 10, 12, 90, "Manter a lombar apoiada."),
@@ -31,7 +31,7 @@ internal static class DemoWorkoutSeed
             new("stiff-com-barra", 3, 8, 12, 90, "Levar o quadril para trás."),
             new("elevacao-pelvica-com-barra", 4, 8, 12, 90, "Contrair os glúteos no topo."),
         ]),
-        new("upper-b", "Upper B", 4, false, "Variação de tronco e braços.",
+        new("upper-b", "Upper B", "Variação de tronco e braços.",
         [
             new("supino-reto-com-barra", 3, 10, 12, 75, "Descer a barra com controle."),
             new("puxada-dorsal-na-maquina", 4, 8, 12, 90, "Puxar em direção ao peito."),
@@ -40,7 +40,7 @@ internal static class DemoWorkoutSeed
             new("triceps-na-polia-com-corda", 3, 12, 15, 60, "Estender sem mover os cotovelos."),
             new("rosca-direta-com-barra", 3, 8, 12, 60, "Punhos alinhados."),
         ]),
-        new("lower-b", "Lower B", 5, false, "Glúteos e cadeia posterior.",
+        new("lower-b", "Lower B", "Glúteos e cadeia posterior.",
         [
             new("levantamento-terra-romeno", 4, 8, 10, 120, "Barra próxima às pernas."),
             new("passada-com-halteres", 3, 10, 12, 90, "Passo firme e controlado."),
@@ -59,6 +59,6 @@ internal static class DemoWorkoutSeed
         return new Guid(bytes);
     }
 
-    internal sealed record WorkoutSeed(string Key, string Name, int RecommendedDay, bool IsRecommended, string Notes, IReadOnlyList<ExerciseSeed> Exercises);
+    internal sealed record WorkoutSeed(string Key, string Name, string Notes, IReadOnlyList<ExerciseSeed> Exercises);
     internal sealed record ExerciseSeed(string Slug, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
 }

@@ -35,8 +35,6 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         Assert.False(trainingDocument.RootElement.TryGetProperty("available", out _));
         foreach (var item in trainingDocument.RootElement.GetProperty("workouts").EnumerateArray())
         {
-            Assert.False(item.TryGetProperty("recommendedDay", out _));
-            Assert.False(item.TryGetProperty("isRecommended", out _));
         }
         var training = JsonSerializer.Deserialize<StudentTrainingListResponse>(trainingJson, new JsonSerializerOptions(JsonSerializerDefaults.Web));
         var workouts = training!.Workouts.ToArray();
@@ -49,8 +47,6 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         var previewResponse = await client.GetAsync($"/api/v1/training/{selected.Id}");
         var previewJson = await previewResponse.Content.ReadAsStringAsync();
         using var previewDocument = JsonDocument.Parse(previewJson);
-        Assert.False(previewDocument.RootElement.TryGetProperty("recommendedDay", out _));
-        Assert.False(previewDocument.RootElement.TryGetProperty("isRecommended", out _));
         var preview = JsonSerializer.Deserialize<PreviewResponse>(previewJson, new JsonSerializerOptions(JsonSerializerDefaults.Web));
 
         Assert.Equal(selected.SuggestedOrder, preview!.SuggestedOrder);
@@ -67,7 +63,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
-            db.StudentWorkouts.Add(new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Rascunho Trainer", RecommendedDay = 4, CreatedAt = DateTimeOffset.UtcNow });
+            db.StudentWorkouts.Add(new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Rascunho Trainer", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
         }
 
@@ -96,7 +92,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var exercise = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
-            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino excluído", RecommendedDay = 2, IsActive = false, CreatedAt = DateTimeOffset.UtcNow };
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino excluído", SuggestedOrder = 1, IsActive = false, CreatedAt = DateTimeOffset.UtcNow };
             workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, exercise, 1, 3, 8, 12, 60));
             db.StudentWorkouts.Add(workout);
             await db.SaveChangesAsync();
@@ -132,7 +128,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             catalogExercise = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
             workoutId = Guid.NewGuid();
-            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Sessão snapshot", RecommendedDay = 3, CreatedAt = DateTimeOffset.UtcNow };
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Sessão snapshot", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow };
             var prescription = StudentWorkoutExercise.FromCatalog(workoutId, catalogExercise, 1, 4, 8, 12, 75, "Nota original");
             studentWorkoutExerciseId = prescription.Id;
             workout.Exercises.Add(prescription);
@@ -250,7 +246,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var catalog = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
-            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Sessão protegida", RecommendedDay = 1, CreatedAt = DateTimeOffset.UtcNow };
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Sessão protegida", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow };
             var prescription = StudentWorkoutExercise.FromCatalog(workoutId, catalog, 1, 3, 8, 12, 60);
             workout.Exercises.Add(prescription);
             var protectedSession = new WorkoutSession { Id = sessionId, StudentId = DemoIds.StudentId, StudentWorkoutId = workoutId, StartedAt = DateTimeOffset.UtcNow, Status = "InProgress" };
@@ -307,7 +303,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var catalog = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
-            var previousWorkout = new StudentWorkout { Id = previousWorkoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino anterior", RecommendedDay = 1, CreatedAt = DateTimeOffset.UtcNow.AddDays(-8) };
+            var previousWorkout = new StudentWorkout { Id = previousWorkoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino anterior", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow.AddDays(-8) };
             var previousPrescription = StudentWorkoutExercise.FromCatalog(previousWorkoutId, catalog, 1, 3, 8, 12, 60);
             previousWorkout.Exercises.Add(previousPrescription);
             var previousSession = new WorkoutSession { Id = previousSessionId, StudentId = DemoIds.StudentId, StudentWorkoutId = previousWorkoutId, StartedAt = DateTimeOffset.UtcNow.AddDays(-7), CompletedAt = DateTimeOffset.UtcNow.AddDays(-7).AddHours(1), Status = "Completed" };
@@ -316,7 +312,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
             previousExercise.Performances.Add(new SetPerformance { Id = Guid.NewGuid(), WorkoutSessionExerciseId = previousExercise.Id, ClientOperationId = $"previous-{Guid.NewGuid():N}", SetNumber = 1, WeightKg = 30m, Repetitions = 12, CompletedAt = DateTimeOffset.UtcNow.AddDays(-7) });
             previousExercise.Performances.Add(new SetPerformance { Id = Guid.NewGuid(), WorkoutSessionExerciseId = previousExercise.Id, ClientOperationId = $"latest-{Guid.NewGuid():N}", SetNumber = 2, WeightKg = 32.5m, Repetitions = 10, CompletedAt = DateTimeOffset.UtcNow.AddDays(-7).AddMinutes(5) });
             previousSession.Exercises.Add(previousExercise);
-            var currentWorkout = new StudentWorkout { Id = currentWorkoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino atual", RecommendedDay = 2, CreatedAt = DateTimeOffset.UtcNow };
+            var currentWorkout = new StudentWorkout { Id = currentWorkoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino atual", SuggestedOrder = 2, CreatedAt = DateTimeOffset.UtcNow };
             currentWorkout.Exercises.Add(StudentWorkoutExercise.FromCatalog(currentWorkoutId, catalog, 1, 3, 8, 12, 60));
             db.StudentWorkouts.AddRange(previousWorkout, currentWorkout);
             db.WorkoutSessions.Add(previousSession);
@@ -356,7 +352,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var catalog = await db.Exercises.AsNoTracking().Where(x => x.IsActive).Take(2).ToArrayAsync();
-            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Preview read-only", RecommendedDay = 6, CreatedAt = DateTimeOffset.UtcNow };
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Preview read-only", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow };
             workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, catalog[1], 2, 3, 10, 12, 60, "Segundo"));
             workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, catalog[0], 1, 4, 8, 10, 90, "Primeiro"));
             db.StudentWorkouts.Add(workout);

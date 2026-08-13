@@ -29,12 +29,16 @@ export function StudentTrainingSessionScreen() {
     mutationFn: async () => {
       const sync = await synchronizePendingSets(authSession!.accessToken, authSession!.studentId);
       const resumed = await inviteApi.activeSession(authSession!.accessToken, id!);
-      if (resumed) return hydratePendingProgress(resumed, authSession!.studentId);
+      if (resumed) {
+        const hydrated = await hydratePendingProgress(resumed, authSession!.studentId);
+        return { session: hydrated, hasPending: await pendingSetCount(hydrated.sessionId, authSession!.studentId) > 0 };
+      }
       if (sync.failed > 0) throw new Error('Não foi possível sincronizar as séries pendentes.');
-      return hydratePendingProgress(await inviteApi.startWorkout(authSession!.accessToken, id!), authSession!.studentId);
+      const started = await hydratePendingProgress(await inviteApi.startWorkout(authSession!.accessToken, id!), authSession!.studentId);
+      return { session: started, hasPending: false };
     },
-    onSuccess: async (started) => {
-      setSession(started, false, authSession!.studentId);
+    onSuccess: async ({ session: started, hasPending }) => {
+      setSession(started, hasPending, authSession!.studentId);
       try { await cacheWorkout(started, authSession!.studentId); } catch { /* The API response remains usable if local storage fails. */ }
     },
     onError: async (startError: Error) => {
@@ -55,7 +59,7 @@ export function StudentTrainingSessionScreen() {
       const refreshed = await inviteApi.activeSession(authSession.accessToken, id);
       if (!refreshed) return;
       const hydrated = await hydratePendingProgress(refreshed, authSession.studentId);
-      setSession(hydrated, false, authSession.studentId);
+      setSession(hydrated, await pendingSetCount(hydrated.sessionId, authSession.studentId) > 0, authSession.studentId);
       await cacheWorkout(hydrated, authSession.studentId);
     } catch { /* Keep the shared snapshot visible while offline. */ }
   };
@@ -83,7 +87,7 @@ export function StudentTrainingSessionScreen() {
         const resumed = await inviteApi.activeSession(authSession.accessToken, id);
         if (resumed) {
           const hydrated = await hydratePendingProgress(resumed, authSession.studentId);
-          setSession(hydrated, false, authSession.studentId);
+          setSession(hydrated, await pendingSetCount(hydrated.sessionId, authSession.studentId) > 0, authSession.studentId);
           await cacheWorkout(hydrated, authSession.studentId).catch(() => undefined);
           return;
         }

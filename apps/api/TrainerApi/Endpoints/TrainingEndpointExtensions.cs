@@ -329,8 +329,10 @@ public static class TrainingEndpointExtensions
             if (workout is null)
                 return context.ApiError("WORKOUT_NOT_FOUND", "Treino não encontrado para este aluno.", 404);
 
+            if (await db.WorkoutSessions.AnyAsync(x => x.StudentWorkoutId == workoutId && x.StudentId == studentId && x.Status == "InProgress", ct))
+                return context.ApiError("WORKOUT_SESSION_IN_PROGRESS", "Conclua ou retome a sessão em andamento antes de remover este treino.", 409);
+
             workout.IsActive = false;
-            workout.IsRecommended = false;
             await db.SaveChangesAsync(ct);
             return Results.NoContent();
         }).RequireAuthorization();

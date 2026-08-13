@@ -177,7 +177,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             var exercise = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
-            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino para excluir", RecommendedDay = 1, IsRecommended = true, CreatedAt = DateTimeOffset.UtcNow };
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino para excluir", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow };
             workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, exercise, 1, 3, 8, 12, 60));
             db.StudentWorkouts.Add(workout);
             db.WorkoutSessions.Add(new WorkoutSession { Id = sessionId, StudentId = DemoIds.StudentId, StudentWorkoutId = workoutId, StartedAt = DateTimeOffset.UtcNow.AddDays(-1), CompletedAt = DateTimeOffset.UtcNow.AddDays(-1).AddHours(1), Status = "Completed" });
@@ -195,13 +195,43 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         var persisted = await verifyDb.StudentWorkouts.AsNoTracking().SingleAsync(x => x.Id == workoutId);
         Assert.False(persisted.IsActive);
-        Assert.False(persisted.IsRecommended);
+        Assert.False(persisted.IsActive);
         Assert.True(await verifyDb.WorkoutSessions.AnyAsync(x => x.Id == sessionId));
 
         verifyDb.WorkoutSessions.RemoveRange(verifyDb.WorkoutSessions.Where(x => x.Id == sessionId));
         verifyDb.StudentWorkoutExercises.RemoveRange(verifyDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == workoutId));
         verifyDb.StudentWorkouts.RemoveRange(verifyDb.StudentWorkouts.Where(x => x.Id == workoutId));
         await verifyDb.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Trainer_cannot_delete_a_workout_with_an_in_progress_session()
+    {
+        var workoutId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var exercise = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino em andamento", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow };
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, exercise, 1, 2, 8, 12, 60));
+            var session = new WorkoutSession { Id = sessionId, StudentId = DemoIds.StudentId, StudentWorkoutId = workoutId, StartedAt = DateTimeOffset.UtcNow, Status = "InProgress" };
+            session.Exercises.AddRange(workout.Exercises.Select(x => WorkoutSessionExercise.FromStudentWorkout(session.Id, x)));
+            db.StudentWorkouts.Add(workout);
+            db.WorkoutSessions.Add(session);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.DeleteAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/{workoutId}");
+        Assert.Equal(HttpStatusCode.Conflict, response.StatusCode);
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        cleanupDb.WorkoutSessionExercises.RemoveRange(cleanupDb.WorkoutSessionExercises.Where(x => x.WorkoutSessionId == sessionId));
+        cleanupDb.WorkoutSessions.RemoveRange(cleanupDb.WorkoutSessions.Where(x => x.Id == sessionId));
+        cleanupDb.StudentWorkoutExercises.RemoveRange(cleanupDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == workoutId));
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == workoutId));
+        await cleanupDb.SaveChangesAsync();
     }
 
     [Fact]
@@ -216,7 +246,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             db.Trainers.Add(new Trainer { Id = otherTrainerId, Name = "Outro personal", CreatedAt = DateTimeOffset.UtcNow });
             db.Students.Add(new Student { Id = otherStudentId, FirstName = "Aluno", LastName = "Privado", CreatedAt = DateTimeOffset.UtcNow });
             db.TrainerStudents.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = otherTrainerId, StudentId = otherStudentId, StartedAt = DateTimeOffset.UtcNow });
-            db.StudentWorkouts.Add(new StudentWorkout { Id = otherWorkoutId, TrainerId = otherTrainerId, StudentId = otherStudentId, Name = "Treino privado", RecommendedDay = 1, CreatedAt = DateTimeOffset.UtcNow });
+            db.StudentWorkouts.Add(new StudentWorkout { Id = otherWorkoutId, TrainerId = otherTrainerId, StudentId = otherStudentId, Name = "Treino privado", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
         }
 
@@ -247,7 +277,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var exercise = await GetActiveExercise();
         var workoutId = Guid.NewGuid();
         var sessionId = Guid.NewGuid();
-        var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Histórico real", RecommendedDay = 1, CreatedAt = DateTimeOffset.UtcNow };
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Histórico real", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow };
         var prescription = StudentWorkoutExercise.FromCatalog(workoutId, exercise, 1, 3, 8, 12, 60);
         workout.Exercises.Add(prescription);
         var session = new WorkoutSession { Id = sessionId, StudentId = DemoIds.StudentId, StudentWorkoutId = workoutId, StartedAt = DateTimeOffset.UtcNow.AddMinutes(-20), CompletedAt = DateTimeOffset.UtcNow, Status = "Completed" };
@@ -286,7 +316,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var catalog = await GetActiveExercises(4);
         var workoutId = Guid.NewGuid();
         var sessionId = Guid.NewGuid();
-        var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Editor atômico", RecommendedDay = 2, CreatedAt = DateTimeOffset.UtcNow };
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Editor atômico", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow };
         workout.Exercises.AddRange([
             StudentWorkoutExercise.FromCatalog(workoutId, catalog[0], 1, 3, 8, 10, 60, "Primeiro"),
             StudentWorkoutExercise.FromCatalog(workoutId, catalog[1], 2, 4, 10, 12, 75, "Segundo"),
@@ -348,7 +378,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var catalog = await GetActiveExercises(1);
         var inactive = new Exercise { Id = Guid.NewGuid(), Name = "Inativo", Slug = $"inativo-{Guid.NewGuid():N}", PrimaryMuscleGroup = "Peito", ImageRef = "assets/training/inativo.png", IsActive = false };
         var workoutId = Guid.NewGuid();
-        var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Validação editor", RecommendedDay = 3, CreatedAt = DateTimeOffset.UtcNow };
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Validação editor", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow };
         var existing = StudentWorkoutExercise.FromCatalog(workoutId, catalog[0], 1, 3, 8, 12, 60, "Original");
         workout.Exercises.Add(existing);
         using (var scope = factory.Services.CreateScope())
@@ -416,7 +446,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             db.Trainers.Add(new Trainer { Id = otherTrainerId, Name = "Outro personal", CreatedAt = DateTimeOffset.UtcNow });
             db.Students.Add(new Student { Id = otherStudentId, FirstName = "Aluno", LastName = "Privado", CreatedAt = DateTimeOffset.UtcNow });
             db.TrainerStudents.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = otherTrainerId, StudentId = otherStudentId, StartedAt = DateTimeOffset.UtcNow });
-            db.StudentWorkouts.Add(new StudentWorkout { Id = workoutId, TrainerId = otherTrainerId, StudentId = otherStudentId, Name = "Treino privado", RecommendedDay = 1, CreatedAt = DateTimeOffset.UtcNow });
+            db.StudentWorkouts.Add(new StudentWorkout { Id = workoutId, TrainerId = otherTrainerId, StudentId = otherStudentId, Name = "Treino privado", SuggestedOrder = 1, CreatedAt = DateTimeOffset.UtcNow });
             await db.SaveChangesAsync();
         }
 
@@ -636,7 +666,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             await db.SaveChangesAsync();
         }
 
-        var applyResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{templateId}/apply", new { studentId = DemoIds.StudentId, recommendedDay = 3, isRecommended = false });
+            var applyResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{templateId}/apply", new { studentId = DemoIds.StudentId });
         Assert.Equal(HttpStatusCode.OK, applyResponse.StatusCode);
         var applied = await applyResponse.Content.ReadFromJsonAsync<AppliedWorkoutResponse>();
         Assert.NotNull(applied);
@@ -710,7 +740,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             await db.SaveChangesAsync();
         }
 
-        var applyResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{templateId}/apply", new { studentId = DemoIds.StudentId, recommendedDay = 2, isRecommended = false });
+            var applyResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{templateId}/apply", new { studentId = DemoIds.StudentId });
         Assert.Equal(HttpStatusCode.OK, applyResponse.StatusCode);
         var applied = await applyResponse.Content.ReadFromJsonAsync<AppliedWorkoutResponse>();
         Assert.NotNull(applied);
@@ -781,7 +811,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             owned.Exercises.Add(new WorkoutTemplateExercise { Id = Guid.NewGuid(), WorkoutTemplateId = ownedTemplateId, ExerciseId = exercise.Id, Sequence = 1, Sets = 3, RepetitionsMin = 8, RepetitionsMax = 12, RestSeconds = 60 });
             var other = new WorkoutTemplate { Id = otherTemplateId, TrainerId = otherTrainerId, Name = "Modelo alheio", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
             other.Exercises.Add(new WorkoutTemplateExercise { Id = Guid.NewGuid(), WorkoutTemplateId = otherTemplateId, ExerciseId = exercise.Id, Sequence = 1, Sets = 3, RepetitionsMin = 8, RepetitionsMax = 12, RestSeconds = 60 });
-            var existingRecommended = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Recomendação anterior", RecommendedDay = 1, IsRecommended = true, CreatedAt = DateTimeOffset.UtcNow };
+            var existingRecommended = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino anterior", SuggestedOrder = expectedSuggestedOrder - 1, CreatedAt = DateTimeOffset.UtcNow };
             existingRecommendedId = existingRecommended.Id;
             db.WorkoutTemplates.AddRange(owned, other);
             db.StudentWorkouts.Add(existingRecommended);
@@ -802,7 +832,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
 
         using var cleanupScope = factory.Services.CreateScope();
         var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
-        Assert.True((await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == existingRecommendedId)).IsRecommended);
+        Assert.Equal(expectedSuggestedOrder - 1, (await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == existingRecommendedId)).SuggestedOrder);
         var created = await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == applied!.Id);
         Assert.Equal(expectedSuggestedOrder, created.SuggestedOrder);
         Assert.Equal(expectedSuggestedOrder, applied.SuggestedOrder);
@@ -824,7 +854,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
             expectedSuggestedOrder = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId).MaxAsync(x => x.SuggestedOrder) + 1;
-            var existing = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Recomendação temporária", RecommendedDay = 2, IsRecommended = true, CreatedAt = DateTimeOffset.UtcNow };
+            var existing = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino temporário", SuggestedOrder = expectedSuggestedOrder - 1, CreatedAt = DateTimeOffset.UtcNow };
             existingRecommendedId = existing.Id;
             db.StudentWorkouts.Add(existing);
             await db.SaveChangesAsync();
@@ -844,10 +874,9 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var persisted = await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == created.Id);
         Assert.Equal("Novo treino", persisted.Name);
         Assert.Equal("Montado do zero", persisted.Notes);
-        Assert.False(persisted.IsRecommended);
         Assert.Equal(expectedSuggestedOrder, persisted.SuggestedOrder);
         Assert.Equal(expectedSuggestedOrder, created.SuggestedOrder);
-        Assert.True((await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == existingRecommendedId)).IsRecommended);
+        Assert.Equal(expectedSuggestedOrder - 1, (await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == existingRecommendedId)).SuggestedOrder);
         cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == created.Id || x.Id == existingRecommendedId));
         await cleanupDb.SaveChangesAsync();
     }

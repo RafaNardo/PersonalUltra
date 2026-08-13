@@ -181,11 +181,10 @@ public sealed class ExerciseCatalogDomainTests
             .AsNoTracking()
             .Include(x => x.Exercises)
             .Where(x => x.StudentId == DemoIds.StudentId)
-            .OrderBy(x => x.RecommendedDay)
+            .OrderBy(x => x.SuggestedOrder)
             .ToListAsync();
 
         Assert.Equal(["Upper A", "Lower A", "Upper B", "Lower B"], workouts.Select(x => x.Name));
-        Assert.Equal([1, 2, 4, 5], workouts.Select(x => x.RecommendedDay));
         Assert.Equal([1, 2, 3, 4], workouts.Select(x => x.SuggestedOrder));
         Assert.All(workouts, workout =>
         {
@@ -201,8 +200,6 @@ public sealed class ExerciseCatalogDomainTests
                 Assert.InRange(exercise.Sets, 1, 20);
             });
         });
-        Assert.Single(workouts, x => x.IsRecommended);
-        Assert.Equal("Upper A", workouts.Single(x => x.IsRecommended).Name);
     }
 
     [Fact]
@@ -236,7 +233,7 @@ public sealed class ExerciseCatalogDomainTests
         await new DemoDataSeeder(db, TimeProvider.System).SeedAsync(CancellationToken.None);
         var customId = Guid.NewGuid();
         var customExercise = await db.Exercises.AsNoTracking().FirstAsync();
-        var custom = new StudentWorkout { Id = customId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino personalizado", Notes = "Edição do aluno", RecommendedDay = 3, IsRecommended = false, CreatedAt = DateTimeOffset.UtcNow };
+        var custom = new StudentWorkout { Id = customId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino personalizado", Notes = "Edição do aluno", SuggestedOrder = 5, CreatedAt = DateTimeOffset.UtcNow };
         custom.Exercises.Add(StudentWorkoutExercise.FromCatalog(customId, customExercise, 1, 2, 15, 20, 45, "Minha nota"));
         db.StudentWorkouts.Add(custom);
         await db.SaveChangesAsync();
@@ -257,7 +254,7 @@ public sealed class ExerciseCatalogDomainTests
         await new DemoDataSeeder(db, TimeProvider.System).SeedAsync(CancellationToken.None);
         var catalog = await db.Exercises.AsNoTracking().ToDictionaryAsync(x => x.Slug);
         var legacyId = Guid.NewGuid();
-        var legacy = new StudentWorkout { Id = legacyId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Força · Treino A", Notes = "Foco em execução consistente e progressão gradual.", RecommendedDay = 1, IsRecommended = true, CreatedAt = DateTimeOffset.UtcNow.AddDays(-1) };
+        var legacy = new StudentWorkout { Id = legacyId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Força · Treino A", Notes = "Foco em execução consistente e progressão gradual.", SuggestedOrder = 5, CreatedAt = DateTimeOffset.UtcNow.AddDays(-1) };
         legacy.Exercises.Add(StudentWorkoutExercise.FromCatalog(legacyId, catalog["agachamento-livre"], 1, 4, 8, 8, 90));
         legacy.Exercises.Add(StudentWorkoutExercise.FromCatalog(legacyId, catalog["supino-reto-com-barra"], 2, 4, 10, 10, 75));
         legacy.Exercises.Add(StudentWorkoutExercise.FromCatalog(legacyId, catalog["remada-baixa"], 3, 3, 10, 10, 75));
@@ -270,9 +267,8 @@ public sealed class ExerciseCatalogDomainTests
         await new DemoDataSeeder(db, TimeProvider.System).SeedAsync(CancellationToken.None);
 
         var migrated = await db.StudentWorkouts.AsNoTracking().SingleAsync(x => x.Id == legacyId);
-        Assert.False(migrated.IsRecommended);
         Assert.True(await db.WorkoutSessions.AnyAsync(x => x.Id == session.Id));
-        Assert.Single(await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == DemoIds.StudentId && x.IsRecommended).ToListAsync());
+        Assert.Equal(5, migrated.SuggestedOrder);
     }
 
     [Fact]
@@ -286,7 +282,7 @@ public sealed class ExerciseCatalogDomainTests
 
         var catalog = await db.Exercises.AsNoTracking().ToDictionaryAsync(x => x.Slug);
         var legacyId = Guid.NewGuid();
-        var legacy = new StudentWorkout { Id = legacyId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Força · Treino A", Notes = "Edição do usuário", RecommendedDay = 1, IsRecommended = true, CreatedAt = DateTimeOffset.UtcNow.AddDays(-1) };
+        var legacy = new StudentWorkout { Id = legacyId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Força · Treino A", Notes = "Edição do usuário", SuggestedOrder = 5, CreatedAt = DateTimeOffset.UtcNow.AddDays(-1) };
         legacy.Exercises.Add(StudentWorkoutExercise.FromCatalog(legacyId, catalog["agachamento-livre"], 1, 5, 6, 8, 120, "Séries editadas"));
         legacy.Exercises.Add(StudentWorkoutExercise.FromCatalog(legacyId, catalog["supino-reto-com-barra"], 2, 4, 10, 12, 75));
         legacy.Exercises.Add(StudentWorkoutExercise.FromCatalog(legacyId, catalog["remada-baixa"], 3, 4, 8, 12, 90));
@@ -295,11 +291,8 @@ public sealed class ExerciseCatalogDomainTests
 
         await new DemoDataSeeder(db, TimeProvider.System).SeedAsync(CancellationToken.None);
 
-        var recommended = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == DemoIds.StudentId && x.IsRecommended).ToListAsync();
-        Assert.Single(recommended);
-        Assert.Equal(legacyId, recommended[0].Id);
         var restoredUpper = await db.StudentWorkouts.AsNoTracking().SingleAsync(x => x.StudentId == DemoIds.StudentId && x.Name == "Upper A");
-        Assert.False(restoredUpper.IsRecommended);
+        Assert.NotEqual(legacyId, restoredUpper.Id);
         Assert.Equal("Edição do usuário", (await db.StudentWorkouts.AsNoTracking().SingleAsync(x => x.Id == legacyId)).Notes);
     }
 

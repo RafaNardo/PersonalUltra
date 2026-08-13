@@ -88,16 +88,6 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
             .Where(x => x.TrainerId == DemoIds.TrainerId && x.StudentId == DemoIds.StudentId)
             .ToListAsync(cancellationToken);
 
-        // The original M3 seed used this one workout. It is known demo data,
-        // so only its recommendation flag is migrated; sessions and exercise
-        // edits remain untouched. User-created workouts are never changed.
-        foreach (var legacy in existing.Where(x => !seededIds.Contains(x.Id) && IsLegacyWorkout(x)))
-            legacy.IsRecommended = false;
-
-        // Never create a second recommendation while upgrading a database
-        // that already contains an unknown (possibly user-edited) one. This
-        // flag only controls newly added seeded rows; existing rows are kept.
-        var recommendationAlreadyExists = existing.Any(x => x.IsRecommended);
         var nextSuggestedOrder = existing.Select(x => x.SuggestedOrder).DefaultIfEmpty(0).Max();
 
         foreach (var seed in DemoWorkoutSeed.Workouts)
@@ -120,8 +110,6 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
                 Name = seed.Name,
                 Notes = seed.Notes,
                 SuggestedOrder = ++nextSuggestedOrder,
-                RecommendedDay = seed.RecommendedDay,
-                IsRecommended = seed.IsRecommended && !recommendationAlreadyExists,
                 CreatedAt = now,
             };
 
@@ -135,19 +123,9 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
             }
 
             dbContext.StudentWorkouts.Add(workout);
-            recommendationAlreadyExists |= workout.IsRecommended;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
 
-    private static bool IsLegacyWorkout(StudentWorkout workout) =>
-        workout.Name == "Força · Treino A" &&
-        workout.Exercises.Count == 3 &&
-        workout.Exercises.OrderBy(x => x.Sequence).Select(x => (x.Name, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds)).SequenceEqual(
-        [
-            ("Agachamento livre", 1, 4, 8, 8, 90),
-            ("Supino reto com barra", 2, 4, 10, 10, 75),
-            ("Remada baixa", 3, 3, 10, 10, 75),
-        ]);
 }

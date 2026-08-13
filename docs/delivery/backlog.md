@@ -49,7 +49,7 @@
 - `PU-M3-005`: duplicar template.
 - `PU-M3-006`: aplicar template copiando snapshot para Student.
 - `PU-M3-007`: editar plano do Student.
-- `PU-M3-008`: grade semanal recomendada.
+- `PU-M3-008`: histórico supersedido pela rotina flexível M3RF; a antiga grade semanal não integra a arquitetura atual.
 - `PU-M3-009`: Student API retorna recomendado + disponíveis + grade.
 - `PU-M3-010`: Student Home/treinos mostra recomendado e alternativas.
 - `PU-M3-011`: permitir iniciar qualquer treino disponível.
@@ -88,7 +88,7 @@ A direção aprovada está em `docs/design/trainer-training-refactor.md` e no ad
 A revisão pós-M3R constatou que catálogo, snapshots, execução e offline foram entregues, porém a UX Student consolidada do donor SVR não foi preservada como exigido por `PU-M3R-010`: a execução ficou condensada em uma tela longa com todos os exercícios. A direção corretiva aprovada está em `docs/design/student-training-ux-restoration.md`.
 
 - `PU-M3RR-001`: criar shell e árvore de navegação Student independentes, com tabs Início, Treino, Coach, Nutrição e Progresso; detalhes, execução, descanso e resumo devem ser rotas internas sem tab bar.
-- `PU-M3RR-002`: restaurar Home Student orientada ao dia, com treino recomendado/em andamento, cronograma semanal e cartões reais de mensagem, alimentação e progresso, sem fabricar métricas ausentes.
+- `PU-M3RR-002`: histórico supersedido por M3RF; a Home manteve cartões reais, mas removeu recomendação e cronograma prescritivo.
 - `PU-M3RR-003`: restaurar hub e preview de treino com recomendado, alternativas, imagens e prescrição; consultar detalhes não pode iniciar uma sessão, e iniciar/continuar devem ser ações distintas.
 - `PU-M3RR-004`: restaurar execução guiada, mostrando um exercício e uma série por vez, registrando somente carga e repetições reais e respeitando a sequência persistida; preservar a utilidade da tela condensada como visão geral consultiva da sessão.
 - `PU-M3RR-005`: restaurar descanso e transições com timer local baseado em `RestSeconds`, pular descanso, adicionar 30 segundos e avançar corretamente entre séries/exercícios.
@@ -119,9 +119,10 @@ execução está em `docs/delivery/m3rf-codex-handoff.md`.
 - `PU-M3RF-006`: refatorar o calendário/Home Student para mostrar somente sessões reais realizadas ou em andamento; remover workouts futuros por dia e qualquer linguagem de agenda obrigatória.
 - `PU-M3RF-007`: remover `RecommendedDay`/`IsRecommended` legados de domínio, contratos, seed, Coach e banco; revisar histórico, empty/error/loading/accessibility e validar Trainer → Student → execução → calendário end-to-end.
 
-**Status M3RF:** `PU-M3RF-001` a `PU-M3RF-006` concluídas com ordem sugerida persistida, backfill
-determinístico, contratos aditivos e campos legados preservados. Os gates de UI
-e a remoção física continuam pendentes na sequência documentada.
+**Status M3RF:** concluído. `PU-M3RF-001` a `PU-M3RF-007` entregaram ordem
+sugerida persistida, Trainer/Student neutros, escolha livre de treino e
+exercício, execução offline idempotente, calendário factual e remoção física
+dos campos transitórios de agenda. O fluxo foi validado no backend e no Expo.
 
 **Non-goals M3RF:** sem frequência semanal, calendário prescritivo, algoritmo de recomendação, metodologia automática, alteração da prescrição pelo Student, exclusão de histórico, IA ou recommended load.
 

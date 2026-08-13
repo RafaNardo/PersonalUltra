@@ -15,7 +15,6 @@ Base: `/api/v1`
 - `GET/PUT /students/{id}/training`
 - `DELETE /students/{id}/workouts/{workoutId}` (remoção lógica; preserva histórico)
 - `PUT /students/{id}/workouts/order`
-- `PUT /students/{id}/training/schedule`
 - `GET/PUT /students/{id}/nutrition`
 - `POST /students/{id}/messages`
 
@@ -33,8 +32,8 @@ As respostas Trainer de treino do aluno expõem `suggestedOrder`. Criar do zero
 ou aplicar um modelo reserva no servidor a próxima posição persistida, sem
 receber dia da semana ou indicador de recomendação. A reordenação exige todos os
 treinos ativos do aluno exatamente uma vez e sempre valida o vínculo com o
-Trainer autenticado. Os campos legados permanecem apenas no domínio e nas
-superfícies Student até os gates de compatibilidade seguintes.
+Trainer autenticado. Não existem campos de dia ou recomendação no domínio ou
+nos contratos finais.
 
 ## Student API
 - `GET /bootstrap`
@@ -47,7 +46,6 @@ superfícies Student até os gates de compatibilidade seguintes.
 - `POST /anamnesis/complete`
 - `GET /home/trainer-message`
 - `GET /workouts`
-- `GET /workouts/recommended`
 - `POST /workout-sessions`
 - `POST /workout-sessions/{id}/sets`
 - `POST /workout-sessions/{id}/complete`

@@ -10,7 +10,7 @@ Demonstrar um fluxo B2B2C no qual o personal cadastra e acompanha alunos, prescr
 - criar/editar treinos;
 - templates de treino;
 - aplicar template ao aluno;
-- grade semanal recomendada;
+- ordem sugerida dos treinos disponíveis;
 - alimentação;
 - mensagem motivacional exibida na Home do aluno;
 - WhatsApp via deep link;
@@ -19,8 +19,8 @@ Demonstrar um fluxo B2B2C no qual o personal cadastra e acompanha alunos, prescr
 
 ## Student V1
 - Home com branding e mensagem do personal;
-- grade recomendada;
-- treino recomendado hoje;
+- preparação para escolher o treino do dia;
+- atividade recente baseada em sessões reais;
 - escolha livre entre os treinos disponíveis;
 - execução com peso, repetições, descanso e histórico;
 - alimentação;
@@ -28,7 +28,7 @@ Demonstrar um fluxo B2B2C no qual o personal cadastra e acompanha alunos, prescr
 - Coach para dúvidas read-only.
 
 ## Flexibilidade de treino
-O aluno não fica bloqueado ao treino do dia. A plataforma mostra a recomendação e todos os treinos disponíveis; o aluno escolhe qual executar.
+O personal organiza uma ordem sugerida, sem impor dias ou frequência. O aluno escolhe qual treino disponível executar e pode adaptar a ordem dos exercícios durante a sessão.
 
 ## Mensagem do personal
 É conteúdo in-app, não push notification.

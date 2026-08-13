@@ -4,7 +4,7 @@
 Responder dúvidas do aluno com base no que já foi prescrito e registrado.
 
 ## Pode consultar
-- treino e grade;
+- treinos disponíveis e ordem organizada pelo personal;
 - histórico de treino;
 - séries anteriores;
 - alimentação;
@@ -12,8 +12,8 @@ Responder dúvidas do aluno com base no que já foi prescrito e registrado.
 - contexto/branding do Trainer.
 
 ## Pode responder
-- qual treino é recomendado;
 - quais treinos estão disponíveis;
+- qual aparece primeiro na ordem organizada pelo personal;
 - séries e repetições;
 - última carga registrada;
 - refeições;

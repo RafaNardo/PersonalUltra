@@ -19,14 +19,10 @@ enviar antes do próximo. Não agrupar toda a refatoração num único diff.
 007  remoção legada + E2E/polish
 ```
 
-`PU-M3RF-001` deve manter `RecommendedDay` e `IsRecommended` temporariamente,
-pois os consumidores ainda existem. `PU-M3RF-007` é o único gate autorizado a
-removê-los fisicamente depois que todos os leitores forem migrados.
-
-`PU-M3RF-001` foi entregue: a migration preenche `SuggestedOrder` por Student
-usando `RecommendedDay`, `CreatedAt` e `Id` como desempate determinístico; os
-contratos expõem o novo campo sem remover os antigos. Começar o próximo loop em
-`PU-M3RF-002` sem repetir ou ampliar esse gate.
+`PU-M3RF-001` foi entregue com backfill determinístico de `SuggestedOrder` por
+Student. O gate final removeu os campos transitórios de agenda do domínio,
+contratos, seed e banco; a ordem sugerida permanece como o único conceito de
+ordenação da prescrição.
 
 ## Regras invariantes
 
