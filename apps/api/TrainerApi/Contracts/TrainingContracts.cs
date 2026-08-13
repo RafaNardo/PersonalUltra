@@ -8,7 +8,9 @@ public sealed record WorkoutTemplateResponse(Guid Id, string Name, string Notes,
 public sealed record ApplyWorkoutRequest(Guid StudentId, int RecommendedDay, bool IsRecommended);
 public sealed record AppliedWorkoutResponse(Guid Id, Guid StudentId, string Name, int RecommendedDay, bool IsRecommended, int ExerciseCount);
 public sealed record StudentTrainingHistoryResponse(IReadOnlyList<TrainingHistoryItem> Sessions);
-public sealed record TrainingHistoryItem(Guid SessionId, string WorkoutName, string Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt, int CompletedSets);
+public sealed record TrainingHistoryItem(Guid SessionId, string WorkoutName, string Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt, int CompletedSets, IReadOnlyList<TrainingHistoryExerciseItem> Exercises);
+public sealed record TrainingHistoryExerciseItem(string Name, int Sequence, IReadOnlyList<TrainingHistorySetItem> Sets);
+public sealed record TrainingHistorySetItem(int SetNumber, decimal WeightKg, int Repetitions, DateTimeOffset CompletedAt);
 public sealed record TrainerStudentWorkoutListResponse(IReadOnlyList<TrainerStudentWorkoutSummary> Workouts);
 public sealed record TrainerStudentWorkoutSummary(Guid Id, string Name, string Notes, int RecommendedDay, bool IsRecommended, int ExerciseCount, DateTimeOffset CreatedAt);
 public sealed record TrainerStudentWorkoutDetail(Guid Id, Guid StudentId, string Name, string Notes, int RecommendedDay, bool IsRecommended, DateTimeOffset CreatedAt, IReadOnlyList<TrainerStudentWorkoutExercise> Exercises);

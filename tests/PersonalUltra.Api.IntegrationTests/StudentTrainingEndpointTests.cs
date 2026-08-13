@@ -76,17 +76,95 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         Assert.Equal(75, historical.RestSeconds);
         Assert.Equal("Nota original", historical.Notes);
 
-        var setResponse = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { setNumber = 1, weightKg = 42.5m, repetitions = 11 });
+        var clientOperationId = $"test-{Guid.NewGuid():N}";
+        var setResponse = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId, setNumber = 1, weightKg = 42.5m, repetitions = 11 });
         Assert.Equal(HttpStatusCode.OK, setResponse.StatusCode);
+
+        var retryResponse = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId, setNumber = 1, weightKg = 42.5m, repetitions = 11 });
+        Assert.Equal(HttpStatusCode.OK, retryResponse.StatusCode);
+
+        var reusedOperation = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId, setNumber = 1, weightKg = 50m, repetitions = 9 });
+        Assert.Equal(HttpStatusCode.Conflict, reusedOperation.StatusCode);
+
+        var duplicateSet = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId = $"test-{Guid.NewGuid():N}", setNumber = 1, weightKg = 42.5m, repetitions = 11 });
+        Assert.Equal(HttpStatusCode.Conflict, duplicateSet.StatusCode);
+
+        var completeResponse = await client.PostAsync($"/api/v1/training/sessions/{started.SessionId}/complete", null);
+        Assert.Equal(HttpStatusCode.OK, completeResponse.StatusCode);
+        var completed = await completeResponse.Content.ReadFromJsonAsync<CompletionResponse>();
+        var completeRetryResponse = await client.PostAsync($"/api/v1/training/sessions/{started.SessionId}/complete", null);
+        var completedRetry = await completeRetryResponse.Content.ReadFromJsonAsync<CompletionResponse>();
+        Assert.Equal(HttpStatusCode.OK, completeRetryResponse.StatusCode);
+        Assert.Equal(completed!.CompletedAt, completedRetry!.CompletedAt);
+
+        var afterCompletion = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId = $"test-{Guid.NewGuid():N}", setNumber = 2, weightKg = 40m, repetitions = 10 });
+        Assert.Equal(HttpStatusCode.Conflict, afterCompletion.StatusCode);
+
+        var trainingResponse = await client.GetAsync("/api/v1/training");
+        var training = await trainingResponse.Content.ReadFromJsonAsync<TrainingResponse>();
+        var history = Assert.Single(training!.History, x => x.SessionId == started.SessionId);
+        Assert.Equal("Completed", history.Status);
+        Assert.Equal(1, history.CompletedSets);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
         var performance = await verifyDb.SetPerformances.AsNoTracking().SingleAsync(x => x.WorkoutSessionExerciseId == historical.Id);
+        Assert.Equal(clientOperationId, performance.ClientOperationId);
         Assert.Equal(42.5m, performance.WeightKg);
         Assert.Equal(11, performance.Repetitions);
     }
 
+    [Fact]
+    public async Task Student_cannot_record_sets_or_complete_another_students_session()
+    {
+        var otherStudentId = Guid.NewGuid();
+        var otherEmail = $"other-{Guid.NewGuid():N}@student.test";
+        var workoutId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        Guid sessionExerciseId;
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var catalog = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Sessão protegida", RecommendedDay = 1, CreatedAt = DateTimeOffset.UtcNow };
+            var prescription = StudentWorkoutExercise.FromCatalog(workoutId, catalog, 1, 3, 8, 12, 60);
+            workout.Exercises.Add(prescription);
+            var protectedSession = new WorkoutSession { Id = sessionId, StudentId = DemoIds.StudentId, StudentWorkoutId = workoutId, StartedAt = DateTimeOffset.UtcNow, Status = "InProgress" };
+            var snapshot = WorkoutSessionExercise.FromStudentWorkout(sessionId, prescription);
+            sessionExerciseId = snapshot.Id;
+            protectedSession.Exercises.Add(snapshot);
+            db.Students.Add(new Student { Id = otherStudentId, FirstName = "Outro", LastName = "Aluno", Email = otherEmail, CreatedAt = DateTimeOffset.UtcNow });
+            db.TrainerStudents.Add(new TrainerStudent { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = otherStudentId, StartedAt = DateTimeOffset.UtcNow });
+            db.StudentWorkouts.Add(workout);
+            db.WorkoutSessions.Add(protectedSession);
+            await db.SaveChangesAsync();
+        }
+
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = otherEmail });
+        var token = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", token!.AccessToken);
+
+        var setResponse = await client.PostAsJsonAsync($"/api/v1/training/sessions/{sessionId}/exercises/{sessionExerciseId}/sets", new { clientOperationId = $"ownership-{Guid.NewGuid():N}", setNumber = 1, weightKg = 20m, repetitions = 10 });
+        var completionResponse = await client.PostAsync($"/api/v1/training/sessions/{sessionId}/complete", null);
+
+        Assert.Equal(HttpStatusCode.NotFound, setResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, completionResponse.StatusCode);
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        cleanupDb.WorkoutSessionExercises.RemoveRange(cleanupDb.WorkoutSessionExercises.Where(x => x.WorkoutSessionId == sessionId));
+        cleanupDb.WorkoutSessions.RemoveRange(cleanupDb.WorkoutSessions.Where(x => x.Id == sessionId));
+        cleanupDb.StudentWorkoutExercises.RemoveRange(cleanupDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == workoutId));
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == workoutId));
+        cleanupDb.TrainerStudents.RemoveRange(cleanupDb.TrainerStudents.Where(x => x.StudentId == otherStudentId));
+        cleanupDb.Students.RemoveRange(cleanupDb.Students.Where(x => x.Id == otherStudentId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
     private sealed record LoginResponse(string AccessToken);
     private sealed record SessionResponse(Guid SessionId, IReadOnlyList<SessionExerciseResponse> Exercises);
-    private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
+    private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets);
+    private sealed record TrainingResponse(IReadOnlyList<TrainingHistoryItem> History);
+    private sealed record TrainingHistoryItem(Guid SessionId, string Status, int CompletedSets);
+    private sealed record CompletionResponse(Guid Id, string Status, DateTimeOffset? CompletedAt);
 }

@@ -1,4 +1,5 @@
 import * as SQLite from 'expo-sqlite';
+import { stripLegacyToken, syncSequentially, type SyncResult } from './sync-queue';
 // Kept actor-local so offline persistence can outlive the first workout API.
 export type CompleteSetInput = { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number; repsInReserve?: number | null };
 export type CachedWorkoutSnapshot = {
@@ -40,6 +41,15 @@ export async function initializeTrainingDatabase() {
     CREATE TABLE IF NOT EXISTS pending_operations (client_operation_id TEXT PRIMARY KEY NOT NULL, operation_type TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL);
     CREATE TABLE IF NOT EXISTS local_sets (client_operation_id TEXT PRIMARY KEY NOT NULL, session_id TEXT NOT NULL, exercise_id TEXT NOT NULL, payload TEXT NOT NULL, created_at TEXT NOT NULL);
   `);
+  // Older demo builds duplicated the Student token in every queued operation.
+  // Rewrite compatible payloads once; authentication remains in the session store.
+  const legacyRows = await db.getAllAsync<{ client_operation_id: string; payload: string }>("SELECT client_operation_id, payload FROM pending_operations WHERE operation_type = 'complete_set'");
+  for (const row of legacyRows) {
+    try {
+      const normalized = normalizePendingSet(JSON.parse(row.payload));
+      await db.runAsync('UPDATE pending_operations SET payload = ? WHERE client_operation_id = ?', JSON.stringify(normalized), row.client_operation_id);
+    } catch { /* Keep unreadable legacy rows visible to diagnostics instead of deleting user data. */ }
+  }
 }
 
 export async function cacheWorkout(session: CachedWorkoutSnapshot) {
@@ -51,26 +61,69 @@ export async function cacheWorkout(session: CachedWorkoutSnapshot) {
   }
 }
 
-export async function cachedWorkout<T>(): Promise<T | undefined> {
+export async function cachedWorkout<T>(workoutId?: string): Promise<T | undefined> {
   const db = await database();
-  const row = await db.getFirstAsync<{ payload: string }>('SELECT payload FROM cached_workout ORDER BY updated_at DESC LIMIT 1');
-  return row ? JSON.parse(row.payload) as T : undefined;
+  const rows = await db.getAllAsync<{ payload: string }>('SELECT payload FROM cached_workout ORDER BY updated_at DESC');
+  for (const row of rows) {
+    const parsed = JSON.parse(row.payload) as T & { workoutId?: string };
+    if (!workoutId || parsed.workoutId === workoutId) return parsed;
+  }
+  return undefined;
 }
 
-export type PendingSet = { token: string; sessionId: string; exerciseId: string; input: CompleteSetInput };
+export type PendingSet = { sessionId: string; exerciseId: string; input: CompleteSetInput };
+
+export function normalizePendingSet(value: unknown): PendingSet {
+  const pending = stripLegacyToken(value as Partial<PendingSet> & { token?: string });
+  if (!pending.sessionId || !pending.exerciseId || !pending.input?.clientOperationId) throw new Error('Invalid pending set payload.');
+  return { sessionId: pending.sessionId, exerciseId: pending.exerciseId, input: pending.input };
+}
 
 export async function queueSet(pending: PendingSet) {
   const db = await database();
   const createdAt = new Date().toISOString();
   const payload = JSON.stringify(pending);
-  await db.runAsync('INSERT OR REPLACE INTO pending_operations (client_operation_id, operation_type, payload, created_at) VALUES (?, ?, ?, ?)', pending.input.clientOperationId, 'complete_set', payload, createdAt);
-  await db.runAsync('INSERT OR REPLACE INTO local_sets (client_operation_id, session_id, exercise_id, payload, created_at) VALUES (?, ?, ?, ?, ?)', pending.input.clientOperationId, pending.sessionId, pending.exerciseId, JSON.stringify(pending.input), createdAt);
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('INSERT OR REPLACE INTO pending_operations (client_operation_id, operation_type, payload, created_at) VALUES (?, ?, ?, ?)', pending.input.clientOperationId, 'complete_set', payload, createdAt);
+    await db.runAsync('INSERT OR REPLACE INTO local_sets (client_operation_id, session_id, exercise_id, payload, created_at) VALUES (?, ?, ?, ?, ?)', pending.input.clientOperationId, pending.sessionId, pending.exerciseId, JSON.stringify(pending.input), createdAt);
+  });
 }
 
 export async function pendingSets(): Promise<PendingSet[]> {
   const db = await database();
   const rows = await db.getAllAsync<{ payload: string }>("SELECT payload FROM pending_operations WHERE operation_type = 'complete_set' ORDER BY created_at");
-  return rows.map((row) => JSON.parse(row.payload) as PendingSet);
+  return rows.map((row) => normalizePendingSet(JSON.parse(row.payload)));
+}
+
+export async function pendingSetNumbers(sessionId: string): Promise<Record<string, number>> {
+  const db = await database();
+  const rows = await db.getAllAsync<{ exercise_id: string; payload: string }>('SELECT exercise_id, payload FROM local_sets WHERE session_id = ? ORDER BY created_at', sessionId);
+  return rows.reduce<Record<string, number>>((result, row) => {
+    const input = JSON.parse(row.payload) as CompleteSetInput;
+    result[row.exercise_id] = Math.max(result[row.exercise_id] ?? 0, input.setNumber);
+    return result;
+  }, {});
+}
+
+export async function pendingSetCount(sessionId: string): Promise<number> {
+  const db = await database();
+  const row = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM local_sets WHERE session_id = ?', sessionId);
+  return row?.count ?? 0;
+}
+
+export async function updateCachedExerciseProgress(sessionId: string, exerciseId: string, completedSets: number) {
+  const db = await database();
+  const row = await db.getFirstAsync<{ payload: string }>('SELECT payload FROM cached_workout WHERE session_id = ?', sessionId);
+  if (!row) return;
+  const snapshot = JSON.parse(row.payload) as CachedWorkoutSnapshot;
+  const exercise = snapshot.exercises.find((item) => item.id === exerciseId);
+  if (!exercise || exercise.completedSets >= completedSets) return;
+  exercise.completedSets = completedSets;
+  const updatedAt = new Date().toISOString();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('UPDATE cached_workout SET payload = ?, updated_at = ? WHERE session_id = ?', JSON.stringify(snapshot), updatedAt, sessionId);
+    await db.runAsync('UPDATE cached_exercises SET payload = ?, updated_at = ? WHERE exercise_id = ? AND session_id = ?', JSON.stringify(exercise), updatedAt, exerciseId, sessionId);
+  });
 }
 
 export async function removePendingSet(clientOperationId: string) {
@@ -84,9 +137,7 @@ export async function clearTrainingData() {
   await db.execAsync('DELETE FROM pending_operations; DELETE FROM local_sets; DELETE FROM cached_exercises; DELETE FROM cached_workout;');
 }
 
-export async function syncPendingSets(send: (pending: PendingSet) => Promise<void>) {
+export async function syncPendingSets(send: (pending: PendingSet) => Promise<void>): Promise<SyncResult> {
   const pending = await pendingSets();
-  for (const item of pending) {
-    try { await send(item); await removePendingSet(item.input.clientOperationId); } catch { break; }
-  }
+  return syncSequentially(pending, send, (item) => removePendingSet(item.input.clientOperationId));
 }

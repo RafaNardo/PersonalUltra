@@ -149,9 +149,11 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
 
         var listResponse = await client.GetAsync($"/api/v1/students/{otherStudentId}/workouts");
         var detailResponse = await client.GetAsync($"/api/v1/students/{otherStudentId}/workouts/{otherWorkoutId}");
+        var historyResponse = await client.GetAsync($"/api/v1/students/{otherStudentId}/training-history");
 
         Assert.Equal(HttpStatusCode.NotFound, listResponse.StatusCode);
         Assert.Equal(HttpStatusCode.NotFound, detailResponse.StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, historyResponse.StatusCode);
         var listError = await listResponse.Content.ReadFromJsonAsync<ErrorResponse>();
         var detailError = await detailResponse.Content.ReadFromJsonAsync<ErrorResponse>();
         Assert.Equal("STUDENT_NOT_FOUND", listError!.Code);
@@ -164,6 +166,45 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         cleanupDb.Students.RemoveRange(cleanupDb.Students.Where(x => x.Id == otherStudentId));
         cleanupDb.Trainers.RemoveRange(cleanupDb.Trainers.Where(x => x.Id == otherTrainerId));
         await cleanupDb.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Trainer_history_returns_actual_synced_weight_and_repetitions()
+    {
+        var exercise = await GetActiveExercise();
+        var workoutId = Guid.NewGuid();
+        var sessionId = Guid.NewGuid();
+        var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Histórico real", RecommendedDay = 1, CreatedAt = DateTimeOffset.UtcNow };
+        var prescription = StudentWorkoutExercise.FromCatalog(workoutId, exercise, 1, 3, 8, 12, 60);
+        workout.Exercises.Add(prescription);
+        var session = new WorkoutSession { Id = sessionId, StudentId = DemoIds.StudentId, StudentWorkoutId = workoutId, StartedAt = DateTimeOffset.UtcNow.AddMinutes(-20), CompletedAt = DateTimeOffset.UtcNow, Status = "Completed" };
+        var snapshot = WorkoutSessionExercise.FromStudentWorkout(sessionId, prescription);
+        snapshot.CompletedSets = 1;
+        snapshot.Performances.Add(new SetPerformance { Id = Guid.NewGuid(), WorkoutSessionExerciseId = snapshot.Id, ClientOperationId = $"history-{Guid.NewGuid():N}", SetNumber = 1, WeightKg = 42.5m, Repetitions = 11, CompletedAt = DateTimeOffset.UtcNow.AddMinutes(-10) });
+        session.Exercises.Add(snapshot);
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            db.StudentWorkouts.Add(workout);
+            db.WorkoutSessions.Add(session);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.GetAsync($"/api/v1/students/{DemoIds.StudentId}/training-history");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var history = await response.Content.ReadFromJsonAsync<TrainingHistoryResponse>();
+        var item = Assert.Single(history!.Sessions, x => x.SessionId == sessionId);
+        Assert.Equal("Completed", item.Status);
+        Assert.Equal(1, item.CompletedSets);
+        var historyExercise = Assert.Single(item.Exercises);
+        Assert.Equal(exercise.Name, historyExercise.Name);
+        var set = Assert.Single(historyExercise.Sets);
+        Assert.Equal(42.5m, set.WeightKg);
+        Assert.Equal(11, set.Repetitions);
+
+        await DeleteWorkoutAndSessions(workoutId);
     }
 
     [Fact]
@@ -659,4 +700,8 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     private sealed record StudentWorkoutSummaryResponse(Guid Id, string Name, int ExerciseCount);
     private sealed record StudentWorkoutDetailResponse(Guid Id, Guid StudentId, IReadOnlyList<StudentWorkoutExerciseResponse> Exercises);
     private sealed record StudentWorkoutExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? ImageRef, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
+    private sealed record TrainingHistoryResponse(IReadOnlyList<TrainingHistoryItemResponse> Sessions);
+    private sealed record TrainingHistoryItemResponse(Guid SessionId, string Status, int CompletedSets, IReadOnlyList<TrainingHistoryExerciseResponse> Exercises);
+    private sealed record TrainingHistoryExerciseResponse(string Name, IReadOnlyList<TrainingHistorySetResponse> Sets);
+    private sealed record TrainingHistorySetResponse(int SetNumber, decimal WeightKg, int Repetitions);
 }

@@ -350,12 +350,24 @@ public static class TrainingEndpointExtensions
                 return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
             var sessions = await db.WorkoutSessions
                 .AsNoTracking()
+                .Include(x => x.StudentWorkout)
+                .Include(x => x.Exercises)
+                .ThenInclude(x => x.Performances)
                 .Where(x => x.StudentId == studentId)
                 .OrderByDescending(x => x.StartedAt)
                 .Take(30)
-                .Select(x => new TrainingHistoryItem(x.Id, x.StudentWorkout.Name, x.Status, x.StartedAt, x.CompletedAt, x.Exercises.Sum(e => e.CompletedSets)))
                 .ToListAsync(ct);
-            return Results.Ok(new StudentTrainingHistoryResponse(sessions));
+            return Results.Ok(new StudentTrainingHistoryResponse(sessions.Select(x => new TrainingHistoryItem(
+                x.Id,
+                x.StudentWorkout.Name,
+                x.Status,
+                x.StartedAt,
+                x.CompletedAt,
+                x.Exercises.Sum(e => e.CompletedSets),
+                x.Exercises.OrderBy(e => e.Sequence).Select(e => new TrainingHistoryExerciseItem(
+                    e.Name,
+                    e.Sequence,
+                    e.Performances.OrderBy(p => p.SetNumber).Select(p => new TrainingHistorySetItem(p.SetNumber, p.WeightKg, p.Repetitions, p.CompletedAt)).ToArray())).ToArray())).ToArray()));
         });
     }
 

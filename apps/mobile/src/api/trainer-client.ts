@@ -89,7 +89,7 @@ export const trainerClient = {
     const suffix = query.toString();
     return request<TrainerExerciseCatalogItem[]>(`/training/exercises/${suffix ? `?${suffix}` : ''}`);
   },
-  trainingHistory: (studentId: string) => request<{ sessions: Array<{ sessionId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number }> }>(`/students/${studentId}/training-history`),
+  trainingHistory: (studentId: string) => request<{ sessions: Array<{ sessionId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number; exercises: Array<{ name: string; sequence: number; sets: Array<{ setNumber: number; weightKg: number; repetitions: number; completedAt: string }> }> }> }>(`/students/${studentId}/training-history`),
   nutrition: (studentId: string) => request<TrainerNutrition | null>(`/students/${studentId}/nutrition`),
   saveNutrition: (studentId: string, input: { name: string; notes?: string; meals: Array<{ name: string; sequence: number; notes?: string; foods: Array<{ foodName: string; quantityGrams: number }> }> }) => request<TrainerNutrition>(`/students/${studentId}/nutrition`, { method: 'PUT', body: JSON.stringify(input) }),
   weight: (studentId: string) => request<Array<{ id: string; weightKg: number; recordedAt: string }>>(`/students/${studentId}/progress/weight`),

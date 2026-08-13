@@ -28,15 +28,48 @@ public static class TrainingEndpointExtensions
         api.MapPost("/sessions/{sessionId:guid}/exercises/{exerciseId:guid}/sets", async (Guid sessionId, Guid exerciseId, CompleteSetRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
         {
             if (!StudentId(user, out var studentId)) return ApiEndpointExtensions.ApiError("STUDENT_SESSION_REQUIRED", "Use uma sessão de aluno válida.", 403);
-            if (request.SetNumber < 1 || request.Repetitions < 1 || request.WeightKg < 0) return ApiEndpointExtensions.ApiError("VALIDATION_ERROR", "Informe uma série válida.", 400);
+            if (string.IsNullOrWhiteSpace(request.ClientOperationId) || request.ClientOperationId.Length > 200 || request.SetNumber < 1 || request.Repetitions < 1 || request.WeightKg < 0) return ApiEndpointExtensions.ApiError("VALIDATION_ERROR", "Informe uma série válida.", 400);
             var exercise = await db.WorkoutSessionExercises.Include(x => x.WorkoutSession).SingleOrDefaultAsync(x => x.Id == exerciseId && x.WorkoutSessionId == sessionId && x.WorkoutSession.StudentId == studentId, ct); if (exercise is null) return ApiEndpointExtensions.ApiError("SESSION_NOT_FOUND", "Sessão de treino não encontrada.", 404);
-            if (await db.SetPerformances.AnyAsync(x => x.WorkoutSessionExerciseId == exerciseId && x.SetNumber == request.SetNumber, ct)) return Results.Ok(new { saved = true });
-            db.SetPerformances.Add(new PersonalUltra.Domain.SetPerformance { Id = Guid.NewGuid(), WorkoutSessionExerciseId = exerciseId, SetNumber = request.SetNumber, WeightKg = request.WeightKg, Repetitions = request.Repetitions, CompletedAt = clock.GetUtcNow() }); exercise.CompletedSets = await db.SetPerformances.CountAsync(x => x.WorkoutSessionExerciseId == exerciseId, ct) + 1; await db.SaveChangesAsync(ct); return Results.Ok(new { saved = true, exercise.CompletedSets });
+            if (exercise.WorkoutSession.Status != "InProgress") return ApiEndpointExtensions.ApiError("SESSION_COMPLETED", "Esta sessão já foi concluída.", 409);
+            if (request.SetNumber > exercise.Sets) return ApiEndpointExtensions.ApiError("VALIDATION_ERROR", "O número da série excede a prescrição do exercício.", 400);
+
+            var operationId = request.ClientOperationId.Trim();
+            var existingOperation = await db.SetPerformances.SingleOrDefaultAsync(x => x.WorkoutSessionExerciseId == exerciseId && x.ClientOperationId == operationId, ct);
+            if (existingOperation is not null)
+            {
+                if (existingOperation.SetNumber != request.SetNumber || existingOperation.WeightKg != request.WeightKg || existingOperation.Repetitions != request.Repetitions)
+                    return ApiEndpointExtensions.ApiError("IDEMPOTENCY_CONFLICT", "Esta operação já foi usada com outros dados.", 409);
+                return Results.Ok(new { saved = true, exercise.CompletedSets });
+            }
+
+            var existingSet = await db.SetPerformances.SingleOrDefaultAsync(x => x.WorkoutSessionExerciseId == exerciseId && x.SetNumber == request.SetNumber, ct);
+            if (existingSet is not null)
+                return ApiEndpointExtensions.ApiError("SET_ALREADY_RECORDED", "Esta série já foi registrada.", 409);
+
+            db.SetPerformances.Add(new PersonalUltra.Domain.SetPerformance { Id = Guid.NewGuid(), WorkoutSessionExerciseId = exerciseId, ClientOperationId = operationId, SetNumber = request.SetNumber, WeightKg = request.WeightKg, Repetitions = request.Repetitions, CompletedAt = clock.GetUtcNow() });
+            exercise.CompletedSets = await db.SetPerformances.CountAsync(x => x.WorkoutSessionExerciseId == exerciseId, ct) + 1;
+            try
+            {
+                await db.SaveChangesAsync(ct);
+                return Results.Ok(new { saved = true, exercise.CompletedSets });
+            }
+            catch (DbUpdateException)
+            {
+                // The unique operation/set indexes close the race between concurrent retries.
+                db.ChangeTracker.Clear();
+                var concurrentOperation = await db.SetPerformances.AsNoTracking().SingleOrDefaultAsync(x => x.WorkoutSessionExerciseId == exerciseId && x.ClientOperationId == operationId, ct);
+                if (concurrentOperation is not null && concurrentOperation.SetNumber == request.SetNumber && concurrentOperation.WeightKg == request.WeightKg && concurrentOperation.Repetitions == request.Repetitions)
+                {
+                    var completedSets = await db.SetPerformances.CountAsync(x => x.WorkoutSessionExerciseId == exerciseId, ct);
+                    return Results.Ok(new { saved = true, completedSets });
+                }
+                return ApiEndpointExtensions.ApiError("SET_ALREADY_RECORDED", "Esta série já foi registrada.", 409);
+            }
         });
         api.MapPost("/sessions/{sessionId:guid}/complete", async (Guid sessionId, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, CancellationToken ct) =>
         {
             if (!StudentId(user, out var studentId)) return ApiEndpointExtensions.ApiError("STUDENT_SESSION_REQUIRED", "Use uma sessão de aluno válida.", 403);
-            var session = await db.WorkoutSessions.SingleOrDefaultAsync(x => x.Id == sessionId && x.StudentId == studentId, ct); if (session is null) return ApiEndpointExtensions.ApiError("SESSION_NOT_FOUND", "Sessão de treino não encontrada.", 404); session.Status = "Completed"; session.CompletedAt = clock.GetUtcNow(); await db.SaveChangesAsync(ct); return Results.Ok(new { session.Id, session.Status, session.CompletedAt });
+            var session = await db.WorkoutSessions.SingleOrDefaultAsync(x => x.Id == sessionId && x.StudentId == studentId, ct); if (session is null) return ApiEndpointExtensions.ApiError("SESSION_NOT_FOUND", "Sessão de treino não encontrada.", 404); if (session.Status == "Completed") return Results.Ok(new { session.Id, session.Status, session.CompletedAt }); session.Status = "Completed"; session.CompletedAt = clock.GetUtcNow(); await db.SaveChangesAsync(ct); return Results.Ok(new { session.Id, session.Status, session.CompletedAt });
         });
     }
     private static bool StudentId(ClaimsPrincipal user, out Guid id) => Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out id) && user.FindFirstValue("subject") == "student";

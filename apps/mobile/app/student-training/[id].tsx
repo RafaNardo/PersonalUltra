@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { AppState, Image, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError } from '@/src/api/shared-http';
 import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
@@ -8,7 +8,7 @@ import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { cacheWorkout, cachedWorkout, queueSet, syncPendingSets } from '@/src/features/student/offline/training-db';
+import { cacheWorkout, cachedWorkout, pendingSetCount, pendingSetNumbers, queueSet, syncPendingSets, updateCachedExerciseProgress } from '@/src/features/student/offline/training-db';
 import { parseActualSetPerformance } from '@/src/features/student/training/set-performance';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
 
@@ -21,7 +21,10 @@ export default function StudentTrainingSessionScreen() {
   const [completionError, setCompletionError] = useState<string>();
 
   const start = useMutation({
-    mutationFn: () => inviteApi.startWorkout(session!.accessToken, id!),
+    mutationFn: async () => {
+      await synchronizePendingSets(session!.accessToken);
+      return hydratePendingProgress(await inviteApi.startWorkout(session!.accessToken, id!));
+    },
     onSuccess: async (startedWorkout) => {
       setWorkout(startedWorkout);
       setIsOfflineSnapshot(false);
@@ -31,9 +34,9 @@ export default function StudentTrainingSessionScreen() {
     onError: async (startError: Error) => {
       if (startError instanceof ApiError && startError.status === 0) {
         try {
-          const cached = await cachedWorkout<StudentSession>();
-          if (cached?.workoutId === id) {
-            setWorkout(cached);
+          const cached = await cachedWorkout<StudentSession>(id);
+          if (cached) {
+            setWorkout(await hydratePendingProgress(cached));
             setIsOfflineSnapshot(true);
             setError(undefined);
             return;
@@ -45,7 +48,12 @@ export default function StudentTrainingSessionScreen() {
   });
 
   const complete = useMutation({
-    mutationFn: () => inviteApi.completeWorkout(session!.accessToken, workout!.sessionId),
+    mutationFn: async () => {
+      await synchronizePendingSets(session!.accessToken);
+      const remaining = await pendingSetCount(workout!.sessionId);
+      if (remaining > 0) throw new Error(`${remaining} ${remaining === 1 ? 'série ainda está pendente' : 'séries ainda estão pendentes'}. Conecte-se e tente novamente antes de concluir.`);
+      return inviteApi.completeWorkout(session!.accessToken, workout!.sessionId);
+    },
     onSuccess: () => router.replace('/student-training'),
     onError: (completeError: Error) => setCompletionError(completeError instanceof ApiError && completeError.status === 0
       ? 'Conecte-se à internet para concluir o treino.'
@@ -57,10 +65,24 @@ export default function StudentTrainingSessionScreen() {
   }, [id, session, workout, start.isPending, start.isError]);
 
   useEffect(() => {
-    if (session) void syncPendingSets(async (item) => {
-      await inviteApi.completeSet(item.token, item.sessionId, item.exerciseId, item.input);
+    if (!session) return;
+    const retry = () => { void synchronizePendingSets(session.accessToken).catch(() => undefined); };
+    const interval = setInterval(retry, 15_000);
+    const subscription = AppState.addEventListener('change', (state) => {
+      if (state !== 'active' || start.isPending) return;
+      void (async () => {
+        try {
+          await synchronizePendingSets(session.accessToken);
+          if (!id) return;
+          const refreshed = await hydratePendingProgress(await inviteApi.startWorkout(session.accessToken, id));
+          setWorkout(refreshed);
+          setIsOfflineSnapshot(false);
+          await cacheWorkout(refreshed);
+        } catch { /* Keep the visible snapshot and pending progress while offline. */ }
+      })();
     });
-  }, [session]);
+    return () => { clearInterval(interval); subscription.remove(); };
+  }, [id, session, start.isPending]);
 
   if (!session) {
     router.replace('/login');
@@ -104,7 +126,8 @@ function Exercise({ session, workout, exercise }: { session: string; workout: St
     setSaving(true);
     setMessage(undefined);
     try {
-      await inviteApi.completeSet(session, workout.sessionId, exercise.id, input);
+      const response = await inviteApi.completeSet(session, workout.sessionId, exercise.id, input);
+      try { await updateCachedExerciseProgress(workout.sessionId, exercise.id, response.completedSets); } catch { /* The server-confirmed set remains authoritative. */ }
       setMessage(undefined);
     } catch (saveError) {
       if (!(saveError instanceof ApiError) || saveError.status !== 0) {
@@ -113,7 +136,8 @@ function Exercise({ session, workout, exercise }: { session: string; workout: St
         return;
       }
       try {
-        await queueSet({ token: session, sessionId: workout.sessionId, exerciseId: exercise.id, input });
+        await queueSet({ sessionId: workout.sessionId, exerciseId: exercise.id, input });
+        try { await updateCachedExerciseProgress(workout.sessionId, exercise.id, sets + 1); } catch { /* Pending sets still hydrate from local_sets. */ }
         setMessage({ tone: 'offline', text: 'Série salva no dispositivo e pendente para a próxima sincronização.' });
       } catch {
         setMessage({ tone: 'error', text: 'Não foi possível salvar a série no dispositivo.' });
@@ -163,6 +187,20 @@ function Exercise({ session, workout, exercise }: { session: string; workout: St
 
 function Prescription({ label, value }: { label: string; value: string }) {
   return <View style={styles.prescriptionItem}><Text style={styles.prescriptionLabel}>{label}</Text><Text style={styles.prescriptionValue}>{value}</Text></View>;
+}
+
+async function synchronizePendingSets(token: string) {
+  return syncPendingSets(async (item) => {
+    await inviteApi.completeSet(token, item.sessionId, item.exerciseId, item.input);
+  });
+}
+
+async function hydratePendingProgress(workout: StudentSession): Promise<StudentSession> {
+  const pending = await pendingSetNumbers(workout.sessionId);
+  return {
+    ...workout,
+    exercises: workout.exercises.map((exercise) => ({ ...exercise, completedSets: Math.max(exercise.completedSets, pending[exercise.id] ?? 0) })),
+  };
 }
 
 const styles = StyleSheet.create({

@@ -153,6 +153,8 @@ public sealed class SetPerformance
 {
     public Guid Id { get; set; }
     public Guid WorkoutSessionExerciseId { get; set; }
+    // Nullable only for performances created before offline operation IDs existed.
+    public string? ClientOperationId { get; set; }
     public int SetNumber { get; set; }
     public decimal WeightKg { get; set; }
     public int Repetitions { get; set; }
