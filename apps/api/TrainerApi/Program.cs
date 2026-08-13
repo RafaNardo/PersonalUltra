@@ -34,6 +34,7 @@ app.MapTrainingApi();
 app.MapNutritionProgressApi();
 app.MapDemoResetApi();
 app.MapBrandingApi();
+app.MapTrainerSettingsApi();
 app.Run();
 
 public partial class Program;

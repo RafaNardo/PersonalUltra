@@ -38,6 +38,7 @@ export type TrainerStudentWorkout = Omit<TrainerStudentWorkoutSummary, 'exercise
 export type TrainerStudentWorkoutExerciseInput = { id?: string; exerciseId?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string };
 export type TrainerExerciseCatalogItem = { id: string; name: string; slug: string; primaryMuscleGroup: string; equipment?: string; imageRef: string; instructions?: string; isActive: boolean };
 export type TrainerNutrition = { id: string; name: string; notes: string; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ foodName: string; quantityGrams: number }> }> };
+export type TrainerPrescriptionSettings = { sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; isCustomized: boolean };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
@@ -77,6 +78,7 @@ export const trainerClient = {
   template: (id: string) => request<WorkoutTemplate>(`/training/templates/${id}`),
   createTemplate: (input: { name: string; notes?: string; exercises: Array<Pick<WorkoutExerciseInput, 'exerciseId' | 'sequence' | 'sets' | 'repetitionsMin' | 'repetitionsMax' | 'restSeconds' | 'notes'>> }) => request<WorkoutTemplate>('/training/templates/', { method: 'POST', body: JSON.stringify(input) }),
   updateTemplate: (id: string, input: { name: string; notes?: string; exercises: Array<Pick<WorkoutExerciseInput, 'exerciseId' | 'sequence' | 'sets' | 'repetitionsMin' | 'repetitionsMax' | 'restSeconds' | 'notes'>> }) => request<WorkoutTemplate>(`/training/templates/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
+  deleteTemplate: (id: string) => request<void>(`/training/templates/${id}`, { method: 'DELETE' }),
   duplicateTemplate: (id: string) => request<WorkoutTemplate>(`/training/templates/${id}/duplicate`, { method: 'POST' }),
   applyTemplate: (id: string, studentId: string, recommendedDay = 1, isRecommended = false) => request<{ id: string; studentId: string; name: string; recommendedDay: number; isRecommended: boolean; exerciseCount: number }>(`/training/templates/${id}/apply`, { method: 'POST', body: JSON.stringify({ studentId, recommendedDay, isRecommended }) }),
   studentWorkouts: async (studentId: string) => (await request<{ workouts: TrainerStudentWorkoutSummary[] }>(`/students/${studentId}/workouts`)).workouts,
@@ -96,4 +98,6 @@ export const trainerClient = {
   nutrition: async (studentId: string) => (await request<TrainerNutrition | null>(`/students/${studentId}/nutrition`)) ?? null,
   saveNutrition: (studentId: string, input: { name: string; notes?: string; meals: Array<{ name: string; sequence: number; notes?: string; foods: Array<{ foodName: string; quantityGrams: number }> }> }) => request<TrainerNutrition>(`/students/${studentId}/nutrition`, { method: 'PUT', body: JSON.stringify(input) }),
   weight: (studentId: string) => request<Array<{ id: string; weightKg: number; recordedAt: string }>>(`/students/${studentId}/progress/weight`),
+  prescriptionSettings: () => request<TrainerPrescriptionSettings>('/settings/prescription'),
+  updatePrescriptionSettings: (input: Omit<TrainerPrescriptionSettings, 'isCustomized'>) => request<TrainerPrescriptionSettings>('/settings/prescription', { method: 'PUT', body: JSON.stringify(input) }),
 };

@@ -130,6 +130,20 @@ public static class TrainingEndpointExtensions
             return Results.Ok(ToResponse(updated));
         });
 
+        templates.MapDelete("/{id:guid}", async (Guid id, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        {
+            var template = await db.WorkoutTemplates
+                .Include(x => x.Exercises)
+                .SingleOrDefaultAsync(x => x.Id == id && x.TrainerId == TrainerId(user), ct);
+            if (template is null)
+                return context.ApiError("TEMPLATE_NOT_FOUND", "Modelo de treino não encontrado.", 404);
+
+            db.WorkoutTemplateExercises.RemoveRange(template.Exercises);
+            db.WorkoutTemplates.Remove(template);
+            await db.SaveChangesAsync(ct);
+            return Results.NoContent();
+        });
+
         templates.MapPost("/{id:guid}/duplicate", async (Guid id, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
         {
             var source = await db.WorkoutTemplates

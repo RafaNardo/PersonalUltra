@@ -16,6 +16,16 @@ export const initialExercisePrescription: ExercisePrescriptionDraft = {
   notes: '',
 };
 
+export function prescriptionDraftFromDefaults(defaults: { sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number }): ExercisePrescriptionDraft {
+  return {
+    sets: String(defaults.sets),
+    repetitionsMin: String(defaults.repetitionsMin),
+    repetitionsMax: String(defaults.repetitionsMax),
+    restSeconds: String(defaults.restSeconds),
+    notes: '',
+  };
+}
+
 export function validateExercisePrescription(draft: ExercisePrescriptionDraft): ExercisePrescriptionErrors {
   const errors: ExercisePrescriptionErrors = {};
   const sets = integer(draft.sets);

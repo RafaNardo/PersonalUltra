@@ -5,8 +5,9 @@ import type { TrainerExerciseCatalogItem, WorkoutExercise } from '@/src/api/trai
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
+import { useTrainerPrescriptionSettings } from '@/src/features/trainer/settings/hooks';
 import { useCreateTrainerTemplate, useDuplicateTrainerTemplate, useTrainerExerciseCatalog, useTrainerTemplate, useUpdateTrainerTemplate } from '@/src/features/trainer/training/hooks';
-import { initialExercisePrescription, parseExercisePrescription, validateExercisePrescription, type ExercisePrescriptionDraft } from '@/src/features/trainer/training/prescription';
+import { initialExercisePrescription, parseExercisePrescription, prescriptionDraftFromDefaults, validateExercisePrescription, type ExercisePrescriptionDraft } from '@/src/features/trainer/training/prescription';
 import { feedback } from '@/src/platform/feedback';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
 
@@ -27,6 +28,7 @@ export default function TrainerTemplateEditorScreen() {
   const [prescription, setPrescription] = useState<ExercisePrescriptionDraft>({ ...initialExercisePrescription });
   const initialized = useRef(false);
   const catalog = useTrainerExerciseCatalog(search, undefined, showCatalog);
+  const settings = useTrainerPrescriptionSettings();
 
   useEffect(() => {
     if (!template.data || initialized.current) return;
@@ -37,8 +39,9 @@ export default function TrainerTemplateEditorScreen() {
     setDirty(false);
   }, [template.data]);
 
-  if (!isNew && template.isLoading) return <LoadingView message="Abrindo modelo…" />;
+  if ((!isNew && template.isLoading) || settings.isLoading) return <LoadingView message="Abrindo modelo…" />;
   if (!isNew && template.isError) return <ErrorView message={template.error.message} onRetry={() => template.refetch()} />;
+  if (settings.isError) return <ErrorView message={settings.error.message} onRetry={() => settings.refetch()} />;
 
   const prescriptionErrors = validateExercisePrescription(prescription);
   const prescriptionValid = Object.keys(prescriptionErrors).length === 0;
@@ -63,7 +66,7 @@ export default function TrainerTemplateEditorScreen() {
     setShowCatalog(false);
   };
   const configureCatalog = (exercise: TrainerExerciseCatalogItem) => {
-    setPrescription({ ...initialExercisePrescription });
+    setPrescription(prescriptionDraftFromDefaults(settings.data!));
     setConfiguration({ catalog: exercise });
   };
   const commitConfiguration = () => {

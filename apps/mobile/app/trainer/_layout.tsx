@@ -7,6 +7,7 @@ export default function TrainerLayout() {
     <Tabs.Screen name="index" options={{ title: 'Início', tabBarIcon: (props) => <TabBarIcon {...props} active="home" inactive="home-outline" /> }} />
     <Tabs.Screen name="students" options={{ title: 'Alunos', tabBarIcon: (props) => <TabBarIcon {...props} active="people" inactive="people-outline" /> }} />
     <Tabs.Screen name="training" options={{ title: 'Treinos', tabBarIcon: (props) => <TabBarIcon {...props} active="barbell" inactive="barbell-outline" /> }} />
+    <Tabs.Screen name="settings" options={{ title: 'Configurações', tabBarIcon: (props) => <TabBarIcon {...props} active="settings" inactive="settings-outline" /> }} />
     <Tabs.Screen name="invite" options={{ href: null }} />
     <Tabs.Screen name="students/[id]" options={{ href: null }} />
     <Tabs.Screen name="students/nutrition/[id]" options={{ href: null }} />

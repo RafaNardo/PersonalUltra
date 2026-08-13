@@ -495,6 +495,97 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     }
 
     [Fact]
+    public async Task Trainer_can_delete_an_owned_template_and_its_prescriptions()
+    {
+        var exercise = await GetActiveExercise();
+        var templateId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var template = new WorkoutTemplate { Id = templateId, TrainerId = DemoIds.TrainerId, Name = "Modelo removível", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            template.Exercises.Add(new WorkoutTemplateExercise { Id = Guid.NewGuid(), WorkoutTemplateId = templateId, ExerciseId = exercise.Id, Sequence = 1, Sets = 3, RepetitionsMin = 8, RepetitionsMax = 12, RestSeconds = 60 });
+            db.WorkoutTemplates.Add(template);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.DeleteAsync($"/api/v1/training/templates/{templateId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, response.StatusCode);
+        using var verifyScope = factory.Services.CreateScope();
+        var verifyDb = verifyScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        Assert.False(await verifyDb.WorkoutTemplates.AnyAsync(x => x.Id == templateId));
+        Assert.False(await verifyDb.WorkoutTemplateExercises.AnyAsync(x => x.WorkoutTemplateId == templateId));
+    }
+
+    [Fact]
+    public async Task Trainer_cannot_delete_another_trainers_template()
+    {
+        var exercise = await GetActiveExercise();
+        var otherTrainerId = Guid.NewGuid();
+        var templateId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            db.Trainers.Add(new Trainer { Id = otherTrainerId, Name = "Outro personal", CreatedAt = DateTimeOffset.UtcNow });
+            var template = new WorkoutTemplate { Id = templateId, TrainerId = otherTrainerId, Name = "Modelo privado", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            template.Exercises.Add(new WorkoutTemplateExercise { Id = Guid.NewGuid(), WorkoutTemplateId = templateId, ExerciseId = exercise.Id, Sequence = 1, Sets = 3, RepetitionsMin = 8, RepetitionsMax = 12, RestSeconds = 60 });
+            db.WorkoutTemplates.Add(template);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.DeleteAsync($"/api/v1/training/templates/{templateId}");
+
+        Assert.Equal(HttpStatusCode.NotFound, response.StatusCode);
+        Assert.Equal("TEMPLATE_NOT_FOUND", (await response.Content.ReadFromJsonAsync<ErrorResponse>())!.Code);
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        Assert.True(await cleanupDb.WorkoutTemplates.AnyAsync(x => x.Id == templateId));
+        cleanupDb.WorkoutTemplateExercises.RemoveRange(cleanupDb.WorkoutTemplateExercises.Where(x => x.WorkoutTemplateId == templateId));
+        cleanupDb.WorkoutTemplates.RemoveRange(cleanupDb.WorkoutTemplates.Where(x => x.Id == templateId));
+        cleanupDb.Trainers.RemoveRange(cleanupDb.Trainers.Where(x => x.Id == otherTrainerId));
+        await cleanupDb.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Deleting_a_template_preserves_student_workout_snapshot_applied_from_it()
+    {
+        var exercises = await GetActiveExercises(2);
+        var templateId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var template = new WorkoutTemplate { Id = templateId, TrainerId = DemoIds.TrainerId, Name = "Snapshot independente", CreatedAt = DateTimeOffset.UtcNow, UpdatedAt = DateTimeOffset.UtcNow };
+            template.Exercises.AddRange(exercises.Select((exercise, index) => new WorkoutTemplateExercise { Id = Guid.NewGuid(), WorkoutTemplateId = templateId, ExerciseId = exercise.Id, Sequence = index + 1, Sets = 3 + index, RepetitionsMin = 8, RepetitionsMax = 12, RestSeconds = 60 }));
+            db.WorkoutTemplates.Add(template);
+            await db.SaveChangesAsync();
+        }
+
+        var applyResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{templateId}/apply", new { studentId = DemoIds.StudentId, recommendedDay = 3, isRecommended = false });
+        Assert.Equal(HttpStatusCode.OK, applyResponse.StatusCode);
+        var applied = await applyResponse.Content.ReadFromJsonAsync<AppliedWorkoutResponse>();
+        Assert.NotNull(applied);
+
+        var deleteResponse = await client.DeleteAsync($"/api/v1/training/templates/{templateId}");
+
+        Assert.Equal(HttpStatusCode.NoContent, deleteResponse.StatusCode);
+        using (var verifyScope = factory.Services.CreateScope())
+        {
+            var verifyDb = verifyScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            Assert.False(await verifyDb.WorkoutTemplates.AnyAsync(x => x.Id == templateId));
+            Assert.True(await verifyDb.StudentWorkouts.AnyAsync(x => x.Id == applied!.Id));
+            var snapshots = await verifyDb.StudentWorkoutExercises.AsNoTracking().Where(x => x.StudentWorkoutId == applied.Id).OrderBy(x => x.Sequence).ToListAsync();
+            Assert.Equal(2, snapshots.Count);
+            Assert.Equal(exercises.Select(x => (Guid?)x.Id).ToArray(), snapshots.Select(x => x.ExerciseId).ToArray());
+            Assert.Equal([3, 4], snapshots.Select(x => x.Sets).ToArray());
+        }
+
+        await DeleteWorkoutAndSessions(applied!.Id);
+    }
+
+    [Fact]
     public async Task Trainer_duplicates_a_template_without_reinserting_catalog_exercises()
     {
         var exercises = await GetActiveExercises(3);

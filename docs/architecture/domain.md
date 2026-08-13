@@ -3,12 +3,15 @@
 ## Core
 - `Trainer`
 - `TrainerBranding`
+- `TrainerPrescriptionSettings`
 - `Student`
 - `TrainerStudent`
 - `StudentInvite`
 - `Anamnesis`
 
 `TrainerStudent` deve ser uma entidade explícita mesmo que V1 permita apenas um Trainer ativo por Student.
+
+`TrainerPrescriptionSettings` guarda somente os padrões editáveis usados como ponto de partida ao criar uma nova prescrição (`Sets`, faixa de repetições e descanso). Ela pertence ao Trainer, não ao catálogo global, e nunca altera retroativamente modelos ou treinos já salvos.
 
 ## Training
 - `Exercise`

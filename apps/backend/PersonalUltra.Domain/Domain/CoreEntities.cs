@@ -6,9 +6,22 @@ public sealed class Trainer
     public string Name { get; set; } = null!;
     public DateTimeOffset CreatedAt { get; set; }
     public TrainerBranding? Branding { get; set; }
+    public TrainerPrescriptionSettings? PrescriptionSettings { get; set; }
     public List<TrainerStudent> Students { get; } = [];
     public List<StudentInvite> Invites { get; } = [];
     public List<TrainerMessage> Messages { get; } = [];
+}
+
+public sealed class TrainerPrescriptionSettings
+{
+    public Guid Id { get; set; }
+    public Guid TrainerId { get; set; }
+    public int Sets { get; set; }
+    public int RepetitionsMin { get; set; }
+    public int RepetitionsMax { get; set; }
+    public int RestSeconds { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public Trainer Trainer { get; set; } = null!;
 }
 
 public sealed class TrainerBranding

@@ -9,7 +9,8 @@ Base: `/api/v1`
 - `GET /students/{id}/anamnesis`
 - `GET /students/{id}/progress/weight`
 - `POST /student-invites`
-- `GET/POST/PUT /workout-templates`
+- `GET/POST/PUT/DELETE /training/templates`
+- `GET/PUT /settings/prescription`
 - `POST /students/{id}/training/from-template/{templateId}`
 - `GET/PUT /students/{id}/training`
 - `PUT /students/{id}/training/schedule`

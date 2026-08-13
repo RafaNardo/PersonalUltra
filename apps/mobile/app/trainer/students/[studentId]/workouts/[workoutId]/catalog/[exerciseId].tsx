@@ -5,8 +5,9 @@ import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { useTrainerStudent } from '@/src/features/trainer/students/hooks';
+import { useTrainerPrescriptionSettings } from '@/src/features/trainer/settings/hooks';
 import { useTrainerExerciseCatalog, useTrainerStudentWorkout } from '@/src/features/trainer/training/hooks';
-import { hasPrescriptionErrors, initialExercisePrescription, validateExercisePrescription, type ExercisePrescriptionDraft } from '@/src/features/trainer/training/prescription';
+import { hasPrescriptionErrors, initialExercisePrescription, prescriptionDraftFromDefaults, validateExercisePrescription, type ExercisePrescriptionDraft } from '@/src/features/trainer/training/prescription';
 import { useWorkoutEditorStore, workoutEditorKey } from '@/src/features/trainer/training/workout-editor-store';
 import { feedback } from '@/src/platform/feedback';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
@@ -22,6 +23,7 @@ export default function TrainerExerciseConfigurationScreen() {
   const updateExercise = useWorkoutEditorStore((state) => state.updateExercise);
   const editingExercise = editor?.exercises.find((item) => item.clientId === workoutExerciseId);
   const catalog = useTrainerExerciseCatalog('', undefined, !workoutExerciseId);
+  const settings = useTrainerPrescriptionSettings(!workoutExerciseId);
   const [draft, setDraft] = useState<ExercisePrescriptionDraft>({ ...initialExercisePrescription });
   const errors = useMemo(() => validateExercisePrescription(draft), [draft]);
 
@@ -30,11 +32,16 @@ export default function TrainerExerciseConfigurationScreen() {
     if (!editingExercise) return;
     setDraft({ sets: String(editingExercise.sets), repetitionsMin: String(editingExercise.repetitionsMin), repetitionsMax: String(editingExercise.repetitionsMax), restSeconds: String(editingExercise.restSeconds), notes: editingExercise.notes });
   }, [editingExercise?.clientId]);
+  useEffect(() => {
+    if (editingExercise || !settings.data) return;
+    setDraft(prescriptionDraftFromDefaults(settings.data));
+  }, [editingExercise, settings.data]);
 
-  if (student.isLoading || workout.isLoading || (!workoutExerciseId && catalog.isLoading) || (workout.data && !editor)) return <LoadingView message="Carregando o exercício…" />;
+  if (student.isLoading || workout.isLoading || (!workoutExerciseId && (catalog.isLoading || settings.isLoading)) || (workout.data && !editor)) return <LoadingView message="Carregando o exercício…" />;
   if (student.isError) return <ErrorView message={student.error.message} onRetry={() => student.refetch()} />;
   if (workout.isError) return <ErrorView message={workout.error.message} onRetry={() => workout.refetch()} />;
   if (!workoutExerciseId && catalog.isError) return <ErrorView message={catalog.error.message} onRetry={() => catalog.refetch()} />;
+  if (!workoutExerciseId && settings.isError) return <ErrorView message={settings.error.message} onRetry={() => settings.refetch()} />;
 
   const catalogExercise = catalog.data?.find((item) => item.id === exerciseId);
   const exercise = editingExercise ?? catalogExercise;
