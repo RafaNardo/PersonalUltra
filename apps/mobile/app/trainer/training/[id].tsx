@@ -6,6 +6,7 @@ import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/com
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { useTrainerPrescriptionSettings } from '@/src/features/trainer/settings/hooks';
+import { ExerciseCatalogBrowser, type ExerciseMuscleGroup } from '@/src/features/trainer/training/exercise-catalog-browser';
 import { useCreateTrainerTemplate, useTrainerExerciseCatalog, useTrainerTemplate, useUpdateTrainerTemplate } from '@/src/features/trainer/training/hooks';
 import { initialExercisePrescription, parseExercisePrescription, prescriptionDraftFromDefaults, validateExercisePrescription, type ExercisePrescriptionDraft } from '@/src/features/trainer/training/prescription';
 import { loadTemplateDraft, removeTemplateDraft, saveTemplateDraft } from '@/src/features/trainer/training/template-draft-storage';
@@ -23,6 +24,7 @@ export default function TrainerTemplateEditorScreen() {
   const [exercises, setExercises] = useState<WorkoutExercise[]>([]);
   const [dirty, setDirty] = useState(isNew);
   const [search, setSearch] = useState('');
+  const [muscleGroup, setMuscleGroup] = useState<ExerciseMuscleGroup>('Todos');
   const [showCatalog, setShowCatalog] = useState(false);
   const [configuration, setConfiguration] = useState<{ catalog?: TrainerExerciseCatalogItem; index?: number }>();
   const [prescription, setPrescription] = useState<ExercisePrescriptionDraft>({ ...initialExercisePrescription });
@@ -31,7 +33,7 @@ export default function TrainerTemplateEditorScreen() {
   const draftPersistenceDisabled = useRef(false);
   const [localDraftId, setLocalDraftId] = useState<string>();
   const [draftLoading, setDraftLoading] = useState(Boolean(isNew && draftId));
-  const catalog = useTrainerExerciseCatalog(search, undefined, showCatalog);
+  const catalog = useTrainerExerciseCatalog(search, muscleGroup === 'Todos' ? undefined : muscleGroup, showCatalog);
   const settings = useTrainerPrescriptionSettings();
 
   useEffect(() => {
@@ -95,6 +97,7 @@ export default function TrainerTemplateEditorScreen() {
   const configureCatalog = (exercise: TrainerExerciseCatalogItem) => {
     setPrescription(prescriptionDraftFromDefaults(settings.data!));
     setConfiguration({ catalog: exercise });
+    setShowCatalog(false);
   };
   const commitConfiguration = () => {
     const parsed = parseExercisePrescription(prescription);
@@ -108,6 +111,7 @@ export default function TrainerTemplateEditorScreen() {
     setConfiguration(undefined);
     setShowCatalog(false);
     setSearch('');
+    setMuscleGroup('Todos');
     setDirty(true);
     feedback.success();
   };
@@ -127,6 +131,26 @@ export default function TrainerTemplateEditorScreen() {
       Alert.alert('Não foi possível salvar', error instanceof Error ? error.message : 'Tente novamente.');
     }
   };
+
+  if (showCatalog) return <Screen withinTabs style={styles.page}>
+    <TopBar eyebrow={name.trim() || (isNew ? 'NOVO MODELO' : 'MODELO DE TREINO')} title="Adicionar exercício" onBack={() => setShowCatalog(false)} />
+    {catalog.isLoading && !catalog.data ? <LoadingView message="Abrindo o catálogo…" /> : catalog.isError ? <ErrorView message={catalog.error.message} onRetry={() => catalog.refetch()} /> : <ExerciseCatalogBrowser results={catalog.data ?? []} search={search} muscleGroup={muscleGroup} isFetching={catalog.isFetching} onSearchChange={setSearch} onMuscleGroupChange={setMuscleGroup} onSelect={configureCatalog} />}
+  </Screen>;
+
+  if (configuration) {
+    const exercise = configuration.catalog ?? exercises[configuration.index!];
+    const source = exerciseMediaSource(exercise.imageRef);
+    const cancelConfiguration = () => { const adding = Boolean(configuration.catalog); setConfiguration(undefined); if (adding) setShowCatalog(true); };
+    return <Screen withinTabs style={styles.page}>
+      <TopBar eyebrow={name.trim() || (isNew ? 'NOVO MODELO' : 'MODELO DE TREINO')} title={exercise.name} onBack={cancelConfiguration} />
+      <Text style={styles.exerciseMeta}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text>
+      <View style={styles.heroFrame}>{source ? <Image source={source} accessibilityLabel={`Demonstração do exercício ${exercise.name}`} resizeMode="cover" style={styles.heroImage} /> : <View accessibilityLabel="Imagem indisponível" style={styles.heroFallback}><Text style={styles.copy}>Imagem indisponível</Text></View>}</View>
+      {exercise.instructions ? <Card style={styles.instructions}><Text style={styles.sectionEyebrow}>INSTRUÇÕES</Text><Text style={styles.instructionsCopy}>{exercise.instructions}</Text></Card> : null}
+      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Configuração</Text><Text style={styles.sectionHint}>Prescrição do modelo</Text></View>
+      <PrescriptionPanel name={exercise.name} draft={prescription} errors={prescriptionErrors} onChange={setPrescription} onCancel={cancelConfiguration} onSave={commitConfiguration} disabled={!prescriptionValid} />
+    </Screen>;
+  }
+
   return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow={isNew ? 'NOVO MODELO' : 'MODELO DE TREINO'} title={isNew ? 'Criar modelo' : name || 'Modelo'} onBack={() => router.back()} action={!isNew ? <Tag tone="neutral">MODELO</Tag> : undefined} />
     <Card style={styles.form}>
@@ -136,14 +160,6 @@ export default function TrainerTemplateEditorScreen() {
 
     <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Exercícios</Text><Text style={styles.copy}>{exercises.length} de 30 configurados</Text></View><Button variant="secondary" disabled={exercises.length >= 30} style={styles.compactButton} onPress={() => { setConfiguration(undefined); setShowCatalog(true); }}>+ Adicionar exercício</Button></View>
     {exercises.length === 0 ? <EmptyState status="MODELO EM CONSTRUÇÃO" symbol="+" title="Adicione o primeiro exercício." message="Escolha no catálogo e configure séries, repetições, descanso e observações." /> : <View style={styles.list}>{exercises.map((exercise, index) => <TemplateExerciseCard key={`${exercise.exerciseId}-${index}`} exercise={exercise} index={index} count={exercises.length} onEdit={() => configureExisting(index)} onRemove={() => remove(index)} onMove={(to) => move(index, to)} />)}</View>}
-
-    {showCatalog && <Card style={styles.catalogPanel}>
-      <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Catálogo Ultra</Text><Pressable accessibilityRole="button" accessibilityLabel="Fechar catálogo" onPress={() => setShowCatalog(false)}><Text style={styles.close}>Fechar</Text></Pressable></View>
-      <TextInput value={search} onChangeText={setSearch} maxLength={100} autoCapitalize="none" placeholder="Buscar exercício…" placeholderTextColor={colors.textMuted} accessibilityLabel="Buscar no catálogo" style={styles.search} />
-      {catalog.isLoading ? <Text style={styles.copy}>Carregando catálogo…</Text> : catalog.isError ? <><Text style={styles.error}>Não foi possível carregar o catálogo.</Text><Button variant="secondary" onPress={() => catalog.refetch()}>Tentar novamente</Button></> : catalog.data!.length === 0 ? <EmptyState variant="inline" status="CATÁLOGO VAZIO" title="Nenhum exercício está disponível." message="Atualize a tela para consultar novamente o catálogo do sistema." actionLabel="Atualizar catálogo" onAction={() => catalog.refetch()} /> : <View style={styles.catalogList}>{catalog.data!.map((exercise) => <Pressable key={exercise.id} accessibilityRole="button" accessibilityLabel={`Configurar ${exercise.name}`} onPress={() => configureCatalog(exercise)} style={({ pressed }) => [styles.catalogItem, pressed && styles.pressed]}>{exerciseMediaSource(exercise.imageRef) ? <Image source={exerciseMediaSource(exercise.imageRef)} style={styles.catalogImage} /> : <View style={styles.catalogImage} />}<View style={styles.catalogIdentity}><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.exerciseContext}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text></View><Text style={styles.chevron}>›</Text></Pressable>)}</View>}
-    </Card>}
-
-    {configuration && <PrescriptionPanel name={configuration.catalog?.name ?? exercises[configuration.index!]?.name ?? 'Exercício'} draft={prescription} errors={prescriptionErrors} onChange={setPrescription} onCancel={() => setConfiguration(undefined)} onSave={commitConfiguration} disabled={!prescriptionValid} />}
 
     <Button loading={saving} disabled={!canSave || saving} onPress={() => void save()}>{isNew ? 'Salvar modelo' : 'Salvar alterações do modelo'}</Button>
   </Screen>;
@@ -156,13 +172,19 @@ function TemplateExerciseCard({ exercise, index, count, onEdit, onRemove, onMove
 
 function PrescriptionPanel({ name, draft, errors, onChange, onCancel, onSave, disabled }: { name: string; draft: ExercisePrescriptionDraft; errors: ReturnType<typeof validateExercisePrescription>; onChange: (draft: ExercisePrescriptionDraft) => void; onCancel: () => void; onSave: () => void; disabled: boolean }) {
   const update = (field: keyof ExercisePrescriptionDraft, value: string) => onChange({ ...draft, [field]: value });
-  return <Card style={styles.configuration}><Text style={styles.sectionTitle}>{name}</Text><View style={styles.numberRow}><NumberField label="Séries" value={draft.sets} error={errors.sets} onChange={(value) => update('sets', value)} /><NumberField label="Rep. mín." value={draft.repetitionsMin} error={errors.repetitionsMin} onChange={(value) => update('repetitionsMin', value)} /><NumberField label="Rep. máx." value={draft.repetitionsMax} error={errors.repetitionsMax} onChange={(value) => update('repetitionsMax', value)} /></View><NumberField label="Descanso em segundos" value={draft.restSeconds} error={errors.restSeconds} onChange={(value) => update('restSeconds', value)} /><Field label="Observações do Trainer" value={draft.notes} onChangeText={(value) => update('notes', value)} maxLength={1000} placeholder="Orientações de execução" multiline error={errors.notes} /><Button disabled={disabled} onPress={onSave}>Confirmar configuração</Button><Button variant="ghost" onPress={onCancel}>Cancelar</Button></Card>;
+  return <Card style={styles.configuration}><Text style={styles.sectionTitle}>{name}</Text><NumberField label="Séries" value={draft.sets} min={1} max={20} error={errors.sets} onChange={(value) => update('sets', value)} /><View style={styles.numberRow}><NumberField label="Repetições mín." value={draft.repetitionsMin} min={1} max={100} error={errors.repetitionsMin} onChange={(value) => update('repetitionsMin', value)} /><Text accessibilityElementsHidden style={styles.rangeSeparator}>—</Text><NumberField label="Repetições máx." value={draft.repetitionsMax} min={1} max={100} error={errors.repetitionsMax} onChange={(value) => update('repetitionsMax', value)} /></View><NumberField label="Descanso (segundos)" value={draft.restSeconds} min={0} max={900} step={15} error={errors.restSeconds} onChange={(value) => update('restSeconds', value)} /><Field label="Observações do Trainer" value={draft.notes} onChangeText={(value) => update('notes', value)} maxLength={1000} placeholder="Orientações de execução" multiline error={errors.notes} /><Button disabled={disabled} onPress={onSave}>Confirmar configuração</Button><Button variant="ghost" onPress={onCancel}>Cancelar</Button></Card>;
 }
 
 function Field({ label, error, ...props }: React.ComponentProps<typeof TextInput> & { label: string; error?: string }) { return <View style={styles.field}><Text style={styles.label}>{label}</Text><TextInput {...props} placeholderTextColor={colors.textMuted} style={[styles.input, props.multiline && styles.multiline, error && styles.inputError]} />{error ? <Text style={styles.error}>{error}</Text> : null}</View>; }
-function NumberField({ label, value, error, onChange }: { label: string; value: string; error?: string; onChange: (value: string) => void }) { return <View style={styles.numberField}><Text style={styles.label}>{label}</Text><TextInput value={value} onChangeText={onChange} keyboardType="number-pad" maxLength={4} selectTextOnFocus style={[styles.input, styles.numberInput, error && styles.inputError]} />{error ? <Text style={styles.error}>{error}</Text> : null}</View>; }
+function NumberField({ label, value, min, max, step = 1, error, onChange }: { label: string; value: string; min: number; max: number; step?: number; error?: string; onChange: (value: string) => void }) {
+  const adjust = (direction: -1 | 1) => {
+    const current = /^\d+$/.test(value.trim()) ? Number(value) : min;
+    onChange(String(Math.min(max, Math.max(min, current + direction * step))));
+  };
+  return <View style={styles.numberField}><Text style={styles.label}>{label}</Text><View style={[styles.stepper, error && styles.inputError]}><Pressable accessibilityRole="button" accessibilityLabel={`Diminuir ${label}`} onPress={() => adjust(-1)} style={({ pressed }) => [styles.stepButton, pressed && styles.stepPressed]}><Text style={styles.stepText}>−</Text></Pressable><TextInput value={value} onChangeText={onChange} keyboardType="number-pad" maxLength={4} selectTextOnFocus accessibilityLabel={label} style={styles.numberInput} /><Pressable accessibilityRole="button" accessibilityLabel={`Aumentar ${label}`} onPress={() => adjust(1)} style={({ pressed }) => [styles.stepButton, pressed && styles.stepPressed]}><Text style={styles.stepText}>+</Text></Pressable></View>{error ? <Text accessibilityRole="alert" style={styles.error}>{error}</Text> : null}</View>;
+}
 function OrderButton({ label, disabled, symbol, onPress }: { label: string; disabled: boolean; symbol: string; onPress: () => void }) { return <Pressable disabled={disabled} accessibilityRole="button" accessibilityLabel={label} accessibilityState={{ disabled }} onPress={onPress} style={[styles.orderButton, disabled && styles.disabled]}><Text style={styles.orderText}>{symbol}</Text></Pressable>; }
 
 const styles = StyleSheet.create({
-  page: { paddingVertical: spacing.xl, gap: spacing.md }, form: { gap: spacing.md }, field: { gap: spacing.xs }, label: { ...typography.caption, color: colors.titanium }, input: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 50, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, multiline: { minHeight: 96, paddingTop: spacing.md, textAlignVertical: 'top' }, inputError: { borderColor: colors.danger }, error: { ...typography.caption, color: colors.danger }, sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, compactButton: { minHeight: 44, paddingHorizontal: spacing.md }, list: { gap: spacing.sm }, exerciseCard: { gap: spacing.md }, exerciseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, thumbnail: { width: 80, height: 80, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, catalogIdentity: { flex: 1, gap: spacing.xxs }, exerciseName: { ...typography.bodyLG, color: colors.textPrimary, fontFamily: 'MontserratSemiBold' }, exerciseContext: { ...typography.caption, color: colors.textMuted }, prescription: { ...typography.bodyMD, color: colors.primary }, actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }, orderButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, disabled: { opacity: .3 }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, textButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs }, edit: { ...typography.caption, color: colors.primary }, remove: { ...typography.caption, color: colors.danger }, catalogPanel: { gap: spacing.md, borderColor: colors.primary }, close: { ...typography.caption, color: colors.primary }, search: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 50, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, catalogList: { gap: spacing.xs }, catalogItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm, minHeight: 70, padding: spacing.xs, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, catalogImage: { width: 62, height: 62, borderRadius: radius.sm, backgroundColor: colors.surface }, chevron: { fontSize: 24, color: colors.primary }, pressed: { opacity: .76 }, configuration: { gap: spacing.md, borderColor: colors.primary, backgroundColor: '#20160F' }, numberRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.xs }, numberField: { flex: 1, gap: spacing.xs }, numberInput: { textAlign: 'center', paddingHorizontal: spacing.xs },
+  page: { paddingVertical: spacing.xl, gap: spacing.md }, form: { gap: spacing.md }, field: { gap: spacing.xs }, label: { ...typography.caption, color: colors.titanium }, input: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 50, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, multiline: { minHeight: 96, paddingTop: spacing.md, textAlignVertical: 'top' }, inputError: { borderColor: colors.danger }, error: { ...typography.caption, color: colors.danger }, sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, sectionHint: { ...typography.caption, color: colors.textMuted }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, exerciseMeta: { ...typography.caption, color: colors.primary, marginTop: -spacing.sm }, heroFrame: { width: '100%', maxWidth: 420, height: 210, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.lg, backgroundColor: colors.surfaceElevated }, heroImage: { width: '100%', height: '100%' }, heroFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }, instructions: { gap: spacing.xs }, sectionEyebrow: { ...typography.caption, color: colors.primary, letterSpacing: .8 }, instructionsCopy: { ...typography.bodyMD, color: colors.titaniumLight, lineHeight: 22 }, compactButton: { minHeight: 44, paddingHorizontal: spacing.md }, list: { gap: spacing.sm }, exerciseCard: { gap: spacing.md }, exerciseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, thumbnail: { width: 80, height: 80, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, catalogIdentity: { flex: 1, gap: spacing.xxs }, exerciseName: { ...typography.bodyLG, color: colors.textPrimary, fontFamily: 'MontserratSemiBold' }, exerciseContext: { ...typography.caption, color: colors.textMuted }, prescription: { ...typography.bodyMD, color: colors.primary }, actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }, orderButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, disabled: { opacity: .3 }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, textButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs }, edit: { ...typography.caption, color: colors.primary }, remove: { ...typography.caption, color: colors.danger }, configuration: { gap: spacing.lg }, numberRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs }, rangeSeparator: { ...typography.headingMD, color: colors.textMuted, paddingTop: spacing.lg }, numberField: { flex: 1, gap: spacing.xs }, stepper: { minHeight: 52, flexDirection: 'row', alignItems: 'stretch', overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, stepButton: { width: 44, alignItems: 'center', justifyContent: 'center' }, stepPressed: { backgroundColor: '#3A1D0C' }, stepText: { ...typography.headingMD, color: colors.primary }, numberInput: { ...typography.headingMD, color: colors.textPrimary, flex: 1, minWidth: 34, textAlign: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border },
 });
