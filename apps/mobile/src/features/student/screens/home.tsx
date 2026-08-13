@@ -82,7 +82,7 @@ export function StudentHomeScreen() {
             <Button onPress={() => router.push('/student/training')}>{inProgress ? 'Abrir treino em andamento' : 'Ver treino recomendado'}</Button>
           </Card>
         ) : (
-          <EmptyState title="Nenhum treino recomendado" message={workouts.length ? 'Seu personal liberou treinos para a semana. Acesse Treino para escolher uma sessão.' : 'Seu personal ainda não liberou um treino para você.'} actionLabel={workouts.length ? 'Ver treinos' : undefined} onAction={workouts.length ? () => router.push('/student/training') : undefined} />
+          <EmptyState status={workouts.length ? 'TREINOS DISPONÍVEIS' : 'AGUARDANDO SEU PERSONAL'} symbol="●" title={workouts.length ? 'Escolha o treino que combina com seu dia.' : 'Seu próximo treino aparecerá aqui.'} message={workouts.length ? 'Seu personal liberou treinos para a semana, mas ainda não marcou um como recomendado.' : 'Quando seu personal publicar a prescrição, você verá a sessão recomendada e toda a sequência de exercícios.'} actionLabel={workouts.length ? 'Ver treinos' : undefined} onAction={workouts.length ? () => router.push('/student/training') : undefined} />
         )}
       </View>
 
@@ -104,18 +104,18 @@ export function StudentHomeScreen() {
         <Text style={styles.sectionTitle}>Seu acompanhamento</Text>
         <Card style={styles.card}>
           <Text style={styles.cardEyebrow}>MENSAGEM DO PERSONAL</Text>
-          {message.isLoading ? <Text style={styles.copy}>Carregando mensagem…</Text> : message.isError ? <Text style={styles.copy}>Não foi possível carregar a mensagem agora.</Text> : message.data ? <><Text style={styles.message}>{message.data.message}</Text><Text style={styles.detail}>Enviada em {formatDate(message.data.startsAt)}</Text></> : <Text style={styles.copy}>Nenhuma mensagem ativa do seu personal.</Text>}
+          {message.isLoading ? <Text style={styles.copy}>Carregando mensagem…</Text> : message.isError ? <Text style={styles.copy}>Não foi possível carregar a mensagem agora.</Text> : message.data ? <><Text style={styles.message}>{message.data.message}</Text><Text style={styles.detail}>Enviada em {formatDate(message.data.startsAt)}</Text></> : <EmptyState variant="inline" status="SEM MENSAGEM ATIVA" symbol="●" title="Tudo certo por aqui." message="Quando seu personal enviar uma orientação, ela ficará em destaque neste espaço." />}
         </Card>
 
         <View style={styles.supportCards}>
           <Card style={styles.card}>
             <Text style={styles.cardEyebrow}>ALIMENTAÇÃO</Text>
-            {nutrition.isLoading ? <Text style={styles.copy}>Carregando…</Text> : nutrition.isError ? <Text style={styles.copy}>Não foi possível carregar agora.</Text> : nutrition.data ? <><Text style={styles.cardTitle}>{nutrition.data.name}</Text><Text style={styles.copy}>{nutrition.data.meals.length} {nutrition.data.meals.length === 1 ? 'refeição cadastrada' : 'refeições cadastradas'}</Text>{nutrition.data.notes ? <Text style={styles.detail} numberOfLines={2}>{nutrition.data.notes}</Text> : null}</> : <Text style={styles.copy}>Seu personal ainda não liberou um plano alimentar.</Text>}
+            {nutrition.isLoading ? <Text style={styles.copy}>Carregando…</Text> : nutrition.isError ? <Text style={styles.copy}>Não foi possível carregar agora.</Text> : nutrition.data ? <><Text style={styles.cardTitle}>{nutrition.data.name}</Text><Text style={styles.copy}>{nutrition.data.meals.length} {nutrition.data.meals.length === 1 ? 'refeição cadastrada' : 'refeições cadastradas'}</Text>{nutrition.data.notes ? <Text style={styles.detail} numberOfLines={2}>{nutrition.data.notes}</Text> : null}</> : <EmptyState variant="inline" status="AGUARDANDO SEU PERSONAL" symbol="●" title="Seu plano alimentar aparecerá aqui." message="Você poderá consultar refeições e orientações assim que ele for publicado." />}
             <Button variant="ghost" onPress={() => router.push('/student/nutrition')}>Abrir alimentação</Button>
           </Card>
           <Card style={styles.card}>
             <Text style={styles.cardEyebrow}>PROGRESSO</Text>
-            {weight.isLoading ? <Text style={styles.copy}>Carregando…</Text> : weight.isError ? <Text style={styles.copy}>Não foi possível carregar agora.</Text> : latestWeight ? <><Text style={styles.cardTitle}>{latestWeight.weightKg} kg</Text><Text style={styles.copy}>Último registro em {formatDate(latestWeight.recordedAt)}</Text><Text style={styles.detail}>{weight.data!.length} {weight.data!.length === 1 ? 'registro salvo' : 'registros salvos'}</Text></> : <Text style={styles.copy}>Você ainda não tem registros de peso.</Text>}
+            {weight.isLoading ? <Text style={styles.copy}>Carregando…</Text> : weight.isError ? <Text style={styles.copy}>Não foi possível carregar agora.</Text> : latestWeight ? <><Text style={styles.cardTitle}>{latestWeight.weightKg} kg</Text><Text style={styles.copy}>Último registro em {formatDate(latestWeight.recordedAt)}</Text><Text style={styles.detail}>{weight.data!.length} {weight.data!.length === 1 ? 'registro salvo' : 'registros salvos'}</Text></> : <EmptyState variant="inline" status="PRIMEIRO REGISTRO" symbol="+" title="Comece a acompanhar sua evolução." message="Registre seu peso para construir seu histórico ao longo do acompanhamento." />}
             <Button variant="ghost" onPress={() => router.push('/student/progress')}>Abrir progresso</Button>
           </Card>
         </View>

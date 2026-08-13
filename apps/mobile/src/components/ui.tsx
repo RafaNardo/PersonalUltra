@@ -30,8 +30,29 @@ export function ErrorView({ message, onRetry }: { message: string; onRetry?: () 
   return <View accessibilityRole="alert" accessibilityLiveRegion="assertive" style={styles.error}><Text style={styles.errorTitle}>Não foi possível carregar</Text><Text style={styles.errorMessage}>{message}</Text>{onRetry && <Button variant="secondary" onPress={onRetry}>Tentar novamente</Button>}</View>;
 }
 
-export function EmptyState({ title, message, actionLabel, onAction }: { title: string; message: string; actionLabel?: string; onAction?: () => void }) {
-  return <View accessibilityRole="text" accessibilityLabel={`${title}. ${message}`} style={styles.empty}><Text style={styles.emptyTitle}>{title}</Text><Text style={styles.emptyMessage}>{message}</Text>{actionLabel && onAction && <Button variant="secondary" onPress={onAction}>{actionLabel}</Button>}</View>;
+type EmptyStateProps = {
+  title: string;
+  message: string;
+  status?: string;
+  symbol?: string;
+  items?: string[];
+  footer?: string;
+  actionLabel?: string;
+  onAction?: () => void;
+  variant?: 'page' | 'section' | 'inline';
+};
+
+export function EmptyState({ title, message, status = 'PRÓXIMO PASSO', symbol = '✦', items, footer, actionLabel, onAction, variant = 'section' }: EmptyStateProps) {
+  const compact = variant === 'inline';
+  return <View accessibilityLiveRegion="polite" style={[styles.empty, variant === 'page' && styles.emptyPage, compact && styles.emptyInline]}>
+    {!compact ? <View style={[styles.emptyMark, variant === 'page' && styles.emptyMarkPage]}><Text style={[styles.emptyMarkText, variant === 'page' && styles.emptyMarkTextPage]}>{symbol}</Text></View> : null}
+    <Text style={styles.emptyStatus}>{status}</Text>
+    <Text style={[styles.emptyTitle, variant === 'page' && styles.emptyTitlePage]}>{title}</Text>
+    <Text style={[styles.emptyMessage, variant === 'page' && styles.emptyMessagePage]}>{message}</Text>
+    {items?.length ? <View style={styles.emptyItems}>{items.map((item, index) => <View key={`${index}-${item}`} style={styles.emptyItem}><View style={styles.emptyItemNumber}><Text style={styles.emptyItemNumberText}>{String(index + 1).padStart(2, '0')}</Text></View><Text style={styles.emptyItemText}>{item}</Text></View>)}</View> : null}
+    {footer ? <Text style={styles.emptyFooter}>{footer}</Text> : null}
+    {actionLabel && onAction ? <Button variant="secondary" style={styles.emptyAction} onPress={onAction}>{actionLabel}</Button> : null}
+  </View>;
 }
 
 const styles = StyleSheet.create({
@@ -45,5 +66,23 @@ const styles = StyleSheet.create({
   progressTrack: { height: 6, overflow: 'hidden', borderRadius: radius.pill, backgroundColor: colors.surfaceElevated }, progressValue: { height: '100%', borderRadius: radius.pill, backgroundColor: colors.primary },
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md, padding: spacing.xl, backgroundColor: colors.background }, loadingText: { ...typography.bodyMD, color: colors.textSecondary },
   error: { flex: 1, justifyContent: 'center', gap: spacing.md, padding: spacing.xl, backgroundColor: colors.background }, errorTitle: { ...typography.headingLG, color: colors.textPrimary }, errorMessage: { ...typography.bodyMD, color: colors.textSecondary },
-  empty: { gap: spacing.sm, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }, emptyTitle: { ...typography.headingMD, color: colors.textPrimary }, emptyMessage: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 },
+  empty: { gap: spacing.sm, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
+  emptyPage: { alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl },
+  emptyInline: { gap: spacing.xs, padding: spacing.md, backgroundColor: colors.surfaceElevated },
+  emptyMark: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  emptyMarkPage: { width: 92, height: 92, borderRadius: 46 },
+  emptyMarkText: { ...typography.headingLG, color: colors.background },
+  emptyMarkTextPage: { ...typography.displayLG },
+  emptyStatus: { ...typography.caption, color: colors.primary, letterSpacing: 1, textAlign: 'center' },
+  emptyTitle: { ...typography.headingMD, color: colors.textPrimary, textAlign: 'center' },
+  emptyTitlePage: { ...typography.displayLG },
+  emptyMessage: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21, textAlign: 'center' },
+  emptyMessagePage: { ...typography.bodyLG, lineHeight: 25 },
+  emptyItems: { alignSelf: 'stretch', gap: spacing.xs, marginTop: spacing.sm },
+  emptyItem: { flexDirection: 'row', alignItems: 'center', gap: spacing.md, paddingVertical: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  emptyItemNumber: { width: 38, height: 38, borderRadius: 19, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.surfaceElevated },
+  emptyItemNumberText: { ...typography.caption, color: colors.primary },
+  emptyItemText: { ...typography.bodyMD, color: colors.titaniumLight, lineHeight: 21, flex: 1 },
+  emptyFooter: { ...typography.bodyMD, color: colors.textMuted, lineHeight: 21, textAlign: 'center', marginTop: spacing.sm },
+  emptyAction: { alignSelf: 'stretch', marginTop: spacing.sm },
 });

@@ -1,7 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Card, ErrorView, LoadingView, Tag } from '@/src/components/ui';
+import { Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
 import { useTrainerStudents } from '@/src/features/trainer/students/hooks';
@@ -22,7 +22,7 @@ export default function TrainerStudentsScreen() {
     <TopBar eyebrow="GESTÃO DE ALUNOS" title="Seus alunos" onBack={() => router.back()} />
     <Text style={styles.copy}>{students.data!.length} {students.data!.length === 1 ? 'aluno ativo' : 'alunos ativos'}</Text>
     <TextInput value={query} onChangeText={setQuery} autoCapitalize="none" autoCorrect={false} placeholder="Buscar por nome ou e-mail" placeholderTextColor={colors.textMuted} accessibilityLabel="Buscar alunos" style={styles.search} />
-    {filteredStudents.length === 0 ? <Card><Text style={styles.copy}>Nenhum aluno encontrado para esta busca.</Text></Card> : <View style={styles.list}>{filteredStudents.map((student) => <Pressable key={student.studentId} accessibilityRole="button" accessibilityLabel={`Abrir ${student.firstName} ${student.lastName}`} accessibilityHint="Abre o resumo e as ações do aluno" onPress={() => router.push({ pathname: '/trainer/students/[id]', params: { id: student.studentId } })} style={({ pressed }) => pressed && styles.pressed}><Card style={styles.student}><View style={styles.studentHeader}><Text style={styles.studentName}>{student.firstName} {student.lastName}</Text><Tag tone={student.anamnesisStatus === 'Completed' ? 'success' : 'neutral'}>{anamnesisLabel(student.anamnesisStatus)}</Tag></View>{student.email && <Text style={styles.email}>{student.email}</Text>}<View style={styles.action}><Text style={styles.actionText}>Ver detalhes</Text><Text style={styles.chevron}>›</Text></View></Card></Pressable>)}</View>}
+    {filteredStudents.length === 0 ? <EmptyState status={query.trim() ? 'BUSCA SEM RESULTADO' : 'COMECE SUA CARTEIRA'} symbol="+" title={query.trim() ? 'Nenhum aluno corresponde à busca.' : 'Seus alunos aparecerão aqui.'} message={query.trim() ? 'Revise o nome ou e-mail informado para tentar novamente.' : 'Convide o primeiro aluno para iniciar o acompanhamento.'} actionLabel={query.trim() ? 'Limpar busca' : 'Convidar aluno'} onAction={() => query.trim() ? setQuery('') : router.push('/trainer/invite')} /> : <View style={styles.list}>{filteredStudents.map((student) => <Pressable key={student.studentId} accessibilityRole="button" accessibilityLabel={`Abrir ${student.firstName} ${student.lastName}`} accessibilityHint="Abre o resumo e as ações do aluno" onPress={() => router.push({ pathname: '/trainer/students/[id]', params: { id: student.studentId } })} style={({ pressed }) => pressed && styles.pressed}><Card style={styles.student}><View style={styles.studentHeader}><Text style={styles.studentName}>{student.firstName} {student.lastName}</Text><Tag tone={student.anamnesisStatus === 'Completed' ? 'success' : 'neutral'}>{anamnesisLabel(student.anamnesisStatus)}</Tag></View>{student.email && <Text style={styles.email}>{student.email}</Text>}<View style={styles.action}><Text style={styles.actionText}>Ver detalhes</Text><Text style={styles.chevron}>›</Text></View></Card></Pressable>)}</View>}
   </Screen>;
 }
 

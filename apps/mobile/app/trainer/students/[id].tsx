@@ -77,7 +77,7 @@ export default function TrainerStudentDetailScreen() {
       <Button variant="secondary" onPress={() => router.push({ pathname: '/trainer/training/templates', params: { studentId: id! } })}>Aplicar a partir de um modelo</Button>
       {workouts.isLoading && <Card><Text style={styles.copy}>Carregando treinos…</Text></Card>}
       {workouts.isError && <Card style={styles.card}><Text style={styles.errorText}>Não foi possível carregar os treinos.</Text><Button variant="secondary" onPress={() => workouts.refetch()}>Tentar novamente</Button></Card>}
-      {!workouts.isLoading && !workouts.isError && workouts.data?.length === 0 && <EmptyState title="Nenhum treino prescrito" message="Os treinos deste aluno aparecerão aqui quando forem disponibilizados." />}
+      {!workouts.isLoading && !workouts.isError && workouts.data?.length === 0 && <EmptyState status="PRIMEIRA PRESCRIÇÃO" symbol="+" title="Prepare o primeiro treino deste aluno." message="Use um modelo para publicar uma prescrição com mais rapidez." actionLabel="Escolher um modelo" onAction={() => router.push({ pathname: '/trainer/training/templates', params: { studentId: id! } })} />}
       {workouts.data?.map((workout) => <Pressable key={workout.id} accessibilityRole="button" accessibilityLabel={`Abrir treino ${workout.name}`} accessibilityHint="Mostra os exercícios prescritos para este aluno" onPress={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/[workoutId]', params: { studentId: id!, workoutId: workout.id } })} style={({ pressed }) => pressed && styles.pressed}>
         <Card style={styles.workoutCard}>
           <View style={styles.workoutHeader}><Text style={styles.workoutName}>{workout.name}</Text>{workout.isRecommended && <Tag tone="success">RECOMENDADO</Tag>}</View>
@@ -90,14 +90,17 @@ export default function TrainerStudentDetailScreen() {
         <Text style={styles.cardTitle}>Histórico recente</Text>
         {history.isLoading && <Text style={styles.copy}>Carregando histórico…</Text>}
         {history.isError && <><Text style={styles.errorText}>Não foi possível carregar o histórico.</Text><Button variant="secondary" onPress={() => history.refetch()}>Tentar novamente</Button></>}
-        {!history.isLoading && !history.isError && !history.data?.sessions.length && <Text style={styles.copy}>Nenhuma sessão registrada ainda.</Text>}
+        {!history.isLoading && !history.isError && !history.data?.sessions.length && <EmptyState variant="inline" status="HISTÓRICO EM FORMAÇÃO" symbol="●" title="As sessões concluídas aparecerão aqui." message="O histórico será atualizado quando o aluno começar a executar os treinos prescritos." />}
         {history.data?.sessions.slice(0, 5).map((item) => <View key={item.sessionId} style={styles.historySession}><Text style={styles.copy}>{item.workoutName} · {item.status === 'Completed' ? 'Concluído' : 'Em andamento'} · {item.completedSets} séries</Text>{item.exercises.flatMap((exercise) => exercise.sets.map((set) => <Text key={`${exercise.sequence}-${set.setNumber}`} style={styles.historySet}>{exercise.name} · série {set.setNumber}: {set.weightKg} kg × {set.repetitions} reps</Text>))}</View>)}
       </Card>
     </>}
 
     {section === 'progress' && <Card style={styles.card}>
       <Text style={styles.cardTitle}>Alimentação e progresso</Text>
-      {nutrition.isLoading || weight.isLoading ? <Text style={styles.copy}>Carregando evolução…</Text> : <><Text style={styles.copy}>{nutrition.data?.name ?? 'Nenhum plano alimentar cadastrado.'}</Text><Text style={styles.copy}>{weight.data?.length ? `Último peso: ${weight.data.at(-1)?.weightKg} kg · ${weight.data.length} registros` : 'Nenhum registro de peso ainda.'}</Text></>}
+      {nutrition.isLoading || weight.isLoading ? <Text style={styles.copy}>Carregando evolução…</Text> : <>
+        {nutrition.data ? <Text style={styles.copy}>{nutrition.data.name}</Text> : <EmptyState variant="inline" status="ALIMENTAÇÃO PENDENTE" symbol="+" title="Defina a orientação alimentar deste aluno." message="Crie o primeiro plano para que ele possa consultá-lo no aplicativo." actionLabel="Criar plano alimentar" onAction={() => router.push({ pathname: '/trainer/students/nutrition/[id]', params: { id: id! } })} />}
+        {weight.data?.length ? <Text style={styles.copy}>Último peso: {weight.data.at(-1)?.weightKg} kg · {weight.data.length} registros</Text> : <EmptyState variant="inline" status="SEM MEDIÇÕES" symbol="●" title="O acompanhamento de peso ainda não começou." message="Os registros informados pelo aluno aparecerão aqui." />}
+      </>}
       {(nutrition.isError || weight.isError) && <Text style={styles.errorText}>Alguns dados de evolução não puderam ser carregados.</Text>}
       <Button variant="secondary" onPress={() => router.push({ pathname: '/trainer/students/nutrition/[id]', params: { id: id! } })}>Editar alimentação</Button>
     </Card>}

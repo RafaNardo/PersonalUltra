@@ -3,7 +3,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { AppState, Image, StyleSheet, Text, View } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
 import { ApiError } from '@/src/api/shared-http';
-import { Button, Card, ErrorView, LoadingView, Tag } from '@/src/components/ui';
+import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
@@ -120,7 +120,7 @@ function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: S
     <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: progress.percentage }} style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress.percentage}%` }]} /></View>
     {isOfflineSnapshot ? <Card style={styles.offlineCard}><Text accessibilityRole="alert" style={styles.offlineTitle}>Você está sem conexão</Text><Text style={styles.copy}>Exibindo a sessão salva neste dispositivo. Séries novas ficam pendentes para sincronização.</Text></Card> : null}
     <Text style={styles.intro}>Acompanhe a sequência completa e abra somente o exercício atual para registrar a próxima série.</Text>
-    {exercises.length === 0 ? <Card><Text style={styles.copy}>Este treino ainda não possui exercícios.</Text></Card> : exercises.map((exercise) => <OverviewExercise key={exercise.id} session={session} exercise={exercise} />)}
+    {exercises.length === 0 ? <EmptyState status="SESSÃO SEM EXERCÍCIOS" symbol="●" title="Não há uma sequência para executar." message="Volte aos treinos e escolha outra sessão enquanto seu personal revisa esta prescrição." actionLabel="Voltar aos treinos" onAction={() => router.replace('/student/training')} /> : exercises.map((exercise) => <OverviewExercise key={exercise.id} session={session} exercise={exercise} />)}
     {current ? <Button onPress={() => router.push({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: current.id } })}>{progress.completedSets > 0 ? 'Continuar exercício atual' : 'Começar exercício atual'}</Button> : null}
     {allComplete ? <Button loading={complete.isPending} onPress={() => { setCompletionError(undefined); complete.mutate(); }}>Concluir treino</Button> : null}
     {completionError ? <Text accessibilityRole="alert" style={styles.error}>{completionError}</Text> : null}

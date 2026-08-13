@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { Button, Card, ErrorView, LoadingView, Tag } from '@/src/components/ui';
+import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentWorkoutPreview } from '@/src/features/student/invite/api';
@@ -27,7 +27,7 @@ export function StudentTrainingPreviewScreen() {
     <View style={styles.headingMeta}><Tag tone={state.tone}>{state.label}</Tag><Text style={styles.meta}>{workout.exercises.length} exercícios · Dia {workout.recommendedDay}</Text></View>
     {workout.notes ? <Text style={styles.copy}>{workout.notes}</Text> : null}
     <Text style={styles.intro}>{isContinuing ? 'Você já tem uma sessão em andamento. Continue quando estiver pronto.' : 'Confira a sequência, a prescrição e as orientações antes de começar.'}</Text>
-    {workout.exercises.length === 0 ? <Card><Text style={styles.copy}>Este treino ainda não possui exercícios.</Text></Card> : workout.exercises.map((exercise) => <PreviewExercise key={exercise.id} exercise={exercise} />)}
+    {workout.exercises.length === 0 ? <EmptyState status="PRESCRIÇÃO INCOMPLETA" symbol="●" title="Este treino ainda não possui exercícios." message="Seu personal precisa adicionar a sequência antes que você possa iniciar a sessão." /> : workout.exercises.map((exercise) => <PreviewExercise key={exercise.id} exercise={exercise} />)}
     <Button disabled={workout.exercises.length === 0} onPress={() => router.replace({ pathname: '/student/training/[id]', params: { id: workout.id, start: '1' } })}>{isContinuing ? 'Continuar treino' : 'Iniciar treino'}</Button>
   </Screen>;
 }

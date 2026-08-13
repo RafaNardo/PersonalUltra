@@ -1,7 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Image, StyleSheet, Text, View } from 'react-native';
-import { Button, Card, ErrorView, LoadingView, Tag } from '@/src/components/ui';
+import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSessionDetail } from '@/src/features/student/invite/api';
@@ -50,7 +50,7 @@ function SummaryContent({ summary }: { summary: StudentSessionDetail }) {
       <Stat label="Séries" value={`${completedSets}/${totalSets}`} />
       {duration ? <Stat label="Duração" value={duration} /> : null}
     </Card>
-    {orderedExercises.length === 0 ? <Card><Text style={styles.copy}>Nenhum exercício foi registrado nesta sessão.</Text></Card> : orderedExercises.map((exercise) => <SummaryExercise key={exercise.id} exercise={exercise} />)}
+    {orderedExercises.length === 0 ? <EmptyState status="SEM REGISTROS" symbol="●" title="Esta sessão não possui exercícios registrados." message="O resumo permanece disponível, mas não há séries ou desempenhos para exibir." /> : orderedExercises.map((exercise) => <SummaryExercise key={exercise.id} exercise={exercise} />)}
     <Button onPress={() => router.replace('/student/training')}>Voltar aos treinos</Button>
   </Screen>;
 }
