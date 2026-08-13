@@ -1,5 +1,5 @@
 import { router } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
@@ -12,11 +12,10 @@ export default function TrainerStudentsScreen() {
   if (students.isLoading) return <LoadingView message="Carregando seus alunos…" />;
   if (students.isError) return <ErrorView message={students.error.message} onRetry={() => students.refetch()} />;
 
-  const filteredStudents = useMemo(() => {
-    const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR');
-    if (!normalizedQuery) return students.data!;
-    return students.data!.filter((student) => `${student.firstName} ${student.lastName} ${student.email ?? ''}`.toLocaleLowerCase('pt-BR').includes(normalizedQuery));
-  }, [query, students.data]);
+  const normalizedQuery = query.trim().toLocaleLowerCase('pt-BR');
+  const filteredStudents = normalizedQuery
+    ? students.data!.filter((student) => `${student.firstName} ${student.lastName} ${student.email ?? ''}`.toLocaleLowerCase('pt-BR').includes(normalizedQuery))
+    : students.data!;
 
   return <Screen style={styles.page}>
     <TopBar eyebrow="GESTÃO DE ALUNOS" title="Seus alunos" onBack={() => router.back()} />

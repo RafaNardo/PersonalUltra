@@ -1,10 +1,6 @@
 import { Tabs } from 'expo-router';
-import { Text } from 'react-native';
+import { TabBarIcon } from '@/src/components/tab-bar-icon';
 import { colors, typography } from '@/src/design/tokens';
-
-function TabIcon({ symbol, focused }: { symbol: string; focused: boolean }) {
-  return <Text style={{ color: focused ? colors.primary : colors.textMuted, fontSize: 18 }}>{symbol}</Text>;
-}
 
 export default function StudentTabsLayout() {
   return (
@@ -23,11 +19,11 @@ export default function StudentTabsLayout() {
         tabBarLabelStyle: { ...typography.caption, fontSize: 11 },
       }}
     >
-      <Tabs.Screen name="index" options={{ title: 'Início', tabBarIcon: ({ focused }) => <TabIcon symbol="⌂" focused={focused} /> }} />
-      <Tabs.Screen name="training" options={{ title: 'Treino', tabBarIcon: ({ focused }) => <TabIcon symbol="●" focused={focused} /> }} />
-      <Tabs.Screen name="coach" options={{ title: 'Coach', tabBarIcon: ({ focused }) => <TabIcon symbol="✦" focused={focused} /> }} />
-      <Tabs.Screen name="nutrition" options={{ title: 'Nutrição', tabBarIcon: ({ focused }) => <TabIcon symbol="◉" focused={focused} /> }} />
-      <Tabs.Screen name="progress" options={{ title: 'Progresso', tabBarIcon: ({ focused }) => <TabIcon symbol="↗" focused={focused} /> }} />
+      <Tabs.Screen name="index" options={{ title: 'Início', tabBarIcon: (props) => <TabBarIcon {...props} active="home" inactive="home-outline" /> }} />
+      <Tabs.Screen name="training" options={{ title: 'Treino', tabBarIcon: (props) => <TabBarIcon {...props} active="barbell" inactive="barbell-outline" /> }} />
+      <Tabs.Screen name="coach" options={{ title: 'Coach', tabBarIcon: (props) => <TabBarIcon {...props} active="sparkles" inactive="sparkles-outline" /> }} />
+      <Tabs.Screen name="nutrition" options={{ title: 'Nutrição', tabBarIcon: (props) => <TabBarIcon {...props} active="restaurant" inactive="restaurant-outline" /> }} />
+      <Tabs.Screen name="progress" options={{ title: 'Progresso', tabBarIcon: (props) => <TabBarIcon {...props} active="trending-up" inactive="trending-up-outline" /> }} />
     </Tabs>
   );
 }

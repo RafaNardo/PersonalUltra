@@ -104,24 +104,40 @@ A revisão pós-M3R constatou que catálogo, snapshots, execução e offline for
 
 As rotas legadas `student-training*`, `student-coach`, `student-nutrition` e `student-progress` permanecem somente como redirects de compatibilidade; não são implementações concorrentes. A tela condensada substituída pode ser recuperada para comparação pelo commit Git `99df898` (`feat(m3r-010): adapt student workout execution`), principalmente nos arquivos listados em `docs/design/student-training-ux-restoration.md`. O estado offline posterior não deve ser revertido ao consultar esse commit.
 
+## Critério transversal de UI — M4 em diante
+
+Toda task da M4 ou posterior que crie ou refatore uma tela deve identificar os estados válidos sem dados e tratá-los conforme o guia de `docs/design/design-system.md`. Esse é um critério de aceite da própria task, não um polish opcional para uma etapa posterior.
+
+Para ser considerada concluída, a task de UI deve:
+
+- distinguir loading, erro e ausência válida de dados;
+- usar o primitive compartilhado `EmptyState` nas variantes `page`, `section` ou `inline`, sem criar uma apresentação concorrente;
+- informar o estado atual, quem ou o que libera o próximo conteúdo e oferecer somente uma ação que já funcione;
+- manter linguagem acolhedora para Student e operacional para Trainer;
+- cobrir busca/filtro sem resultado e coleções vazias quando existirem no fluxo;
+- revisar o estado vazio em tela pequena, com texto ampliado e sem dados de seed que o ocultem;
+- incluir o cenário vazio na revisão manual da milestone e preservar typecheck/export do Expo.
+
+Mensagens pontuais dentro de conteúdo existente — por exemplo, um dia sem treino dentro de uma agenda preenchida — podem continuar compactas. Endpoints, migrations, seeds e outras tasks sem superfície visual não precisam fabricar um empty state.
+
 ## M4 — Nutrition, Progress, Coach & Polish
 - `PU-M4-001`: adaptar domínio nutrição.
-- `PU-M4-002`: editor de alimentação Trainer.
-- `PU-M4-003`: Student nutrition.
+- `PU-M4-002`: editor de alimentação Trainer, incluindo estado padrão para plano/refeições ainda não criados e CTA funcional de criação.
+- `PU-M4-003`: Student nutrition, incluindo estado `page` acolhedor quando o personal ainda não publicou o plano.
 - `PU-M4-004`: Weight API.
-- `PU-M4-005`: Student progress somente peso.
-- `PU-M4-006`: Trainer weight chart.
+- `PU-M4-005`: Student progress somente peso, incluindo primeira medição como empty state orientado à ação.
+- `PU-M4-006`: Trainer weight chart, incluindo estado sem medições que explique a dependência do registro do Student.
 - `PU-M4-007`: Coach context builder read-only.
 - `PU-M4-008`: remover qualquer Coach mutation.
-- `PU-M4-009`: Coach UI read-only.
+- `PU-M4-009`: Coach UI read-only, incluindo revisão do estado inicial/sem resposta sem sugerir mutations ou capacidades inexistentes.
 - `PU-M4-010`: demo seed com 12–20 Students.
 - `PU-M4-011`: Student principal com anamnese, 4 treinos, histórico, alimentação, peso e TrainerMessage.
 - `PU-M4-012`: demo reset.
-- `PU-M4-013`: polish de loading/error/empty/haptics.
-- `PU-M4-014`: verificar demo end-to-end.
-- `PU-M4-015`: configuração de branding do Trainer (modelo/API/UI), usando as cores semânticas compartilhadas.
-- `PU-M4-016`: aplicar branding dinâmico e validado na experiência Student.
-- `PU-M4-017`: integrar alimentação e progresso ao detalhe do aluno no Trainer, consolidando as seções disponíveis.
+- `PU-M4-013`: polish de loading/error/empty/haptics; auditar todas as superfícies Student e Trainer contra o padrão compartilhado de empty states.
+- `PU-M4-014`: verificar demo end-to-end, incluindo cenários sem dados de seed para cada empty state introduzido ou revisado na M4.
+- `PU-M4-015`: configuração de branding do Trainer (modelo/API/UI), usando as cores semânticas compartilhadas e tratando qualquer ausência de configuração conforme o padrão de empty state quando aplicável.
+- `PU-M4-016`: aplicar branding dinâmico e validado na experiência Student, garantindo que o primitive compartilhado de empty state receba o accent validado sem alterar cores semânticas.
+- `PU-M4-017`: integrar alimentação e progresso ao detalhe do aluno no Trainer, consolidando as seções disponíveis e seus estados `inline` sem plano ou medições.
 - `PU-M4-018`: concluída antecipadamente por decisão de produto: o fluxo legado SVR baseado em `Member` foi retirado, e a entrada do aluno permanece apoiada apenas em `Student`. A autenticação demo por e-mail permanece até a fundação de autenticação real na M5.
 
 Implementação concluída na demo: alimentação Trainer/Student, registro e consulta de peso, Coach explicativo read-only, seed ampliado, reset demo, branding validado por Trainer e aplicado ao contexto Student, além da consolidação no detalhe do aluno.
@@ -133,6 +149,8 @@ Antes de considerar a demo comercialmente fechada, o refactor `M3R` acima tem pr
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
 
+Qualquer decomposição futura da M5 em tasks de interface herda obrigatoriamente o critério transversal de UI acima. O split físico deve extrair o mesmo primitive e preservar comportamento/copy dos empty states, sem duplicá-los de forma divergente entre os apps.
+
 ## V2 addendum
 - Admin interno para gerenciar catálogo de exercícios.
 - Upload/gestão de imagens e vídeos.
@@ -140,5 +158,7 @@ Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real
 - Curadoria e lifecycle do catálogo.
 - AI-assisted workout generation baseada na metodologia do Trainer, sempre revisada/publicada pelo profissional.
 
+Toda futura task V2 com superfície visual também herda o critério transversal de UI da M4 em diante.
+
 ## Prompt padrão Codex
-`Read AGENTS.md and all docs relevant to PU-MX-YYY. Implement only that task. Preserve Trainer/Student boundaries and future mobile splitability. Do not implement future tasks. Run relevant tests/typecheck and report architecture ambiguity before changing documented boundaries.`
+`Read AGENTS.md and all docs relevant to PU-MX-YYY. Implement only that task. Preserve Trainer/Student boundaries and future mobile splitability. For every UI task from M4 onward, inventory and validate empty states against docs/design/design-system.md as an acceptance criterion. Do not implement future tasks. Run relevant tests/typecheck and report architecture ambiguity before changing documented boundaries.`
