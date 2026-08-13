@@ -32,12 +32,11 @@ export function ListItem({ title, metadata, description, leading, badge, actionL
   const content = <>
     {leading}
     <View style={styles.listItemIdentity}>
-      <View style={styles.listItemHeader}><Text numberOfLines={2} style={styles.listItemTitle}>{title}</Text>{badge}</View>
+      <Text numberOfLines={2} style={styles.listItemTitle}>{title}</Text>
       {metadata ? <Text numberOfLines={1} style={styles.listItemMetadata}>{metadata}</Text> : null}
       {description ? <Text numberOfLines={2} style={styles.listItemDescription}>{description}</Text> : null}
-      {onPress ? <Text style={styles.listItemActionText}>{actionLabel}</Text> : null}
+      {badge || onPress ? <View style={styles.listItemFooter}>{badge}{onPress ? <View style={styles.listItemAction}><Text style={styles.listItemActionText}>{actionLabel}</Text><Ionicons name="chevron-forward" size={18} color={colors.primary} /></View> : null}</View> : null}
     </View>
-    {onPress ? <Ionicons name="chevron-forward" size={19} color={colors.primary} /> : null}
   </>;
 
   if (!onPress) return <View style={styles.listItem}>{content}</View>;
@@ -98,11 +97,12 @@ const styles = StyleSheet.create({
   listItem: { minHeight: 76, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
   listItemPressed: { opacity: .76, transform: [{ scale: .99 }] },
   listItemIdentity: { flex: 1, gap: spacing.xxs },
-  listItemHeader: { flexDirection: 'row', alignItems: 'flex-start', flexWrap: 'wrap', gap: spacing.sm },
-  listItemTitle: { ...typography.bodyLG, color: colors.textPrimary, fontFamily: 'MontserratSemiBold', flexShrink: 1 },
+  listItemTitle: { ...typography.bodyLG, color: colors.textPrimary, fontFamily: 'MontserratSemiBold' },
   listItemMetadata: { ...typography.caption, color: colors.titanium },
   listItemDescription: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 },
-  listItemActionText: { ...typography.caption, color: colors.primary, marginTop: spacing.xxs },
+  listItemFooter: { flexDirection: 'row', alignItems: 'center', flexWrap: 'wrap', columnGap: spacing.sm, rowGap: spacing.xs, marginTop: spacing.xs },
+  listItemAction: { flexDirection: 'row', alignItems: 'center', gap: spacing.xxs, marginLeft: 'auto' },
+  listItemActionText: { ...typography.caption, color: colors.primary },
   searchField: { minHeight: 50, flexDirection: 'row', alignItems: 'center', gap: spacing.sm, paddingHorizontal: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface },
   searchInput: { ...typography.bodyMD, color: colors.textPrimary, flex: 1, minHeight: 48 },
   tag: { alignSelf: 'flex-start', paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.pill, backgroundColor: colors.surfaceElevated },

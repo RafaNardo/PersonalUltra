@@ -12,8 +12,13 @@ Uma linha de navegação usa, nesta ordem:
 1. título identificador, com no máximo duas linhas;
 2. metadado curto e comparável, em uma linha;
 3. descrição opcional, somente quando ajuda a decidir antes de abrir;
-4. badge opcional para um estado real e relevante;
-5. ação textual curta e chevron quando a linha abre outra tela.
+4. faixa inferior com badge opcional à esquerda;
+5. ação textual curta e chevron à direita quando a linha abre outra tela.
+
+O título nunca divide a mesma linha horizontal com o badge. Assim nomes longos
+mantêm a largura do card e o estado permanece associado ao item, em uma faixa
+inferior previsível. Em telas estreitas, a faixa inferior pode quebrar sem
+fragmentar o nome.
 
 O toque vale para toda a linha. A ação textual não é um segundo botão: ela deixa
 explícito o destino do toque. Use verbos de produto como `Ver detalhes`, `Abrir
@@ -43,8 +48,7 @@ chevron ou linguagem de ação.
   único destino;
 - evite repetir no subtítulo o que já está no badge;
 - preserve truncamento previsível para nomes, e-mails e observações longas;
-- um badge não pode expulsar o título da tela; em conteúdo excepcionalmente
-  longo, prefira mover estado menos importante para o metadado;
+- um badge fica na faixa inferior e nunca disputa largura com o título;
 - busca filtra a coleção já carregada quando isso não altera regra de negócio;
 - busca sem resultados usa o padrão de empty state e oferece limpar o filtro.
 
