@@ -21,6 +21,7 @@ export function StudentTrainingExerciseScreen() {
   const setSession = useStudentTrainingSessionStore((state) => state.setSession);
   const [loading, setLoading] = useState(!session || session.sessionId !== sessionId || ownerStudentId !== authSession?.studentId);
   const [error, setError] = useState<string>();
+  const [isNavigatingToRest, setIsNavigatingToRest] = useState(false);
 
   useEffect(() => {
     if (session?.sessionId === sessionId && ownerStudentId === authSession?.studentId) return;
@@ -45,22 +46,31 @@ export function StudentTrainingExerciseScreen() {
     })().finally(() => setLoading(false));
   }, [session?.sessionId, ownerStudentId, sessionId, authSession, setSession]);
 
-  if (!authSession) { router.replace('/login'); return null; }
+  const requested = session?.exercises.find((exercise) => exercise.id === exerciseId);
+  const exercise = session ? currentExercise(session) : undefined;
+  const shouldOpenCurrentExercise = Boolean(requested && exercise && requested.id !== exercise.id);
+
+  useEffect(() => {
+    if (!authSession) router.replace('/login');
+  }, [authSession]);
+
+  useEffect(() => {
+    if (loading || error || isNavigatingToRest || session?.sessionId !== sessionId || !shouldOpenCurrentExercise || !exercise) return;
+    router.replace({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });
+  }, [loading, error, isNavigatingToRest, session?.sessionId, sessionId, shouldOpenCurrentExercise, exercise?.id]);
+
+  if (!authSession) return null;
   if (loading) return <LoadingView message="Abrindo seu exercício…" />;
   if (error || !session || session.sessionId !== sessionId) return <ErrorView message={error ?? 'Sessão indisponível.'} onRetry={() => router.back()} />;
+  if (isNavigatingToRest) return <LoadingView message="Série registrada…" />;
 
   const ordered = orderedExercises(session);
-  const requested = session.exercises.find((exercise) => exercise.id === exerciseId);
-  const exercise = currentExercise(session);
   if (!requested || !exercise) return <CompletedExercise session={session} />;
-  if (requested.id !== exercise.id) {
-    router.replace({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });
-    return null;
-  }
-  return <FocusedExercise session={session} exercise={exercise} authToken={authSession.accessToken} studentId={authSession.studentId} isOfflineSnapshot={isOfflineSnapshot} position={ordered.findIndex((item) => item.id === exercise.id) + 1} />;
+  if (shouldOpenCurrentExercise) return <LoadingView message="Abrindo o exercício atual…" />;
+  return <FocusedExercise session={session} exercise={exercise} authToken={authSession.accessToken} studentId={authSession.studentId} isOfflineSnapshot={isOfflineSnapshot} position={ordered.findIndex((item) => item.id === exercise.id) + 1} onRestTransition={() => setIsNavigatingToRest(true)} />;
 }
 
-function FocusedExercise({ session, exercise, authToken, studentId, isOfflineSnapshot, position }: { session: StudentSession; exercise: StudentSession['exercises'][number]; authToken: string; studentId: string; isOfflineSnapshot: boolean; position: number }) {
+function FocusedExercise({ session, exercise, authToken, studentId, isOfflineSnapshot, position, onRestTransition }: { session: StudentSession; exercise: StudentSession['exercises'][number]; authToken: string; studentId: string; isOfflineSnapshot: boolean; position: number; onRestTransition: () => void }) {
   const updateExerciseProgress = useStudentTrainingSessionStore((state) => state.updateExerciseProgress);
   const setOfflineSnapshot = useStudentTrainingSessionStore((state) => state.setOfflineSnapshot);
   const currentSessionPerformance = exercise.performances?.at(-1);
@@ -85,6 +95,7 @@ function FocusedExercise({ session, exercise, authToken, studentId, isOfflineSna
       const response = await inviteApi.completeSet(authToken, session.sessionId, exercise.id, input);
       const completedSets = Math.max(setNumber, response.completedSets);
       const performance = { setNumber, ...parsed.value, completedAt: new Date().toISOString() };
+      onRestTransition();
       updateExerciseProgress(exercise.id, completedSets, performance);
       await updateCachedExerciseProgress(session.sessionId, studentId, exercise.id, completedSets, performance).catch(() => undefined);
       router.replace({ pathname: '/student/rest/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });
@@ -93,6 +104,7 @@ function FocusedExercise({ session, exercise, authToken, studentId, isOfflineSna
       try {
         await queueSet({ studentId, sessionId: session.sessionId, exerciseId: exercise.id, input });
         const performance = { setNumber, ...parsed.value, completedAt: new Date().toISOString() };
+        onRestTransition();
         updateExerciseProgress(exercise.id, setNumber, performance);
         setOfflineSnapshot(true);
         try { await updateCachedExerciseProgress(session.sessionId, studentId, exercise.id, setNumber, performance); } catch { /* Pending sets hydrate from local_sets. */ }
