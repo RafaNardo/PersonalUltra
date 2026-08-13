@@ -1,6 +1,7 @@
 import { router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
+import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen } from '@/src/components/layout';
@@ -129,11 +130,10 @@ export function StudentHomeScreen() {
   const workouts = data.workouts;
   const history = data.history as TrainingHistoryItem[];
   const inProgress = history.find((item) => item.status === 'InProgress');
-  const inProgressWorkout = (inProgress ? workouts.find((workout) => workout.id === inProgress.workoutId) : undefined)
-    ?? workouts.find((workout) => workout.state === 'InProgress');
-  const primaryWorkout = inProgressWorkout ?? workouts[0];
-  const activeWorkoutId = inProgress?.workoutId ?? inProgressWorkout?.id;
-  const primaryTitle = inProgress?.workoutName ?? primaryWorkout?.name;
+  const todayKey = localDateKey(new Date());
+  const completedToday = history
+    .filter((item) => item.status === 'Completed' && item.completedAt && !Number.isNaN(new Date(item.completedAt).getTime()) && localDateKey(item.completedAt) === todayKey)
+    .sort((left, right) => new Date(right.completedAt!).getTime() - new Date(left.completedAt!).getTime())[0];
   const latestWeight = weight.data?.length ? weight.data[weight.data.length - 1] : undefined;
 
   return (
@@ -150,26 +150,33 @@ export function StudentHomeScreen() {
       </View>
 
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>{inProgressWorkout ? 'Continue de onde parou' : 'Iniciar treino'}</Text>
-        {primaryTitle ? (
-          <Card style={styles.primaryCard}>
-            <View style={styles.cardHeader}>
-              <View style={styles.cardTitleGroup}>
-                <Text style={styles.primaryTitle}>{primaryTitle}</Text>
-                <Text style={styles.meta}>{inProgressWorkout ? 'Sessão em andamento' : 'Escolha um treino para hoje'}</Text>
-              </View>
+        <Text style={styles.sectionTitle}>Seu treino de hoje</Text>
+        <Card style={[styles.primaryCard, completedToday && !inProgress ? styles.completedTodayCard : undefined]}>
+          {inProgress ? <>
+            <View style={styles.contextualHeader}>
+              <View accessible={false} style={styles.contextualIcon}><Ionicons name="play" size={22} color={colors.background} /></View>
+              <View style={styles.cardTitleGroup}><Text style={styles.meta}>SESSÃO EM ANDAMENTO</Text><Text style={styles.primaryTitle}>{inProgress.workoutName}</Text></View>
             </View>
-            {!inProgressWorkout && primaryWorkout?.notes ? <Text style={styles.copy}>{primaryWorkout.notes}</Text> : null}
-            {primaryWorkout ? <Text style={styles.detail}>{primaryWorkout.exerciseCount} {primaryWorkout.exerciseCount === 1 ? 'exercício prescrito' : 'exercícios prescritos'}{inProgress?.completedSets ? ` · ${inProgress.completedSets} séries registradas` : ''}</Text> : inProgress ? <Text style={styles.detail}>{inProgress.completedSets} séries registradas nesta sessão</Text> : null}
-            <Button onPress={() => inProgress
-              ? router.push({ pathname: '/student/training/[id]', params: { id: activeWorkoutId!, start: '1' } })
-              : router.push('/student/training/start')}>{inProgress ? 'Continuar treino' : 'Escolher treino'}</Button>
-          </Card>
-        ) : (
-          <EmptyState status={workouts.length ? 'TREINOS DISPONÍVEIS' : 'AGUARDANDO SEU PERSONAL'} symbol="●" title={workouts.length ? 'Escolha o treino que combina com seu dia.' : 'Seus treinos aparecerão aqui.'} message={workouts.length ? 'Seu personal liberou a rotina. Escolha uma sessão quando estiver pronto.' : 'Quando seu personal publicar a prescrição, você poderá escolher a sessão por aqui.'} actionLabel={workouts.length ? 'Escolher treino' : undefined} onAction={workouts.length ? () => router.push('/student/training/start') : undefined} />
-        )}
+            <Text style={styles.copy}>Seu treino está salvo. Continue no seu ritmo, exatamente de onde parou.</Text>
+            <Text style={styles.detail}>{inProgress.completedSets} {inProgress.completedSets === 1 ? 'série registrada' : 'séries registradas'}</Text>
+            <Button accessibilityHint="Retoma esta sessão em andamento" onPress={() => router.push({ pathname: '/student/training/[id]', params: { id: inProgress.workoutId, start: '1' } })}>Continuar treino</Button>
+          </> : completedToday ? <>
+            <View style={styles.contextualHeader}>
+              <View accessible={false} style={styles.completedIcon}><Ionicons name="trophy" size={25} color={colors.background} /></View>
+              <View style={styles.cardTitleGroup}><Text style={styles.meta}>TREINO CONCLUÍDO</Text><Text style={styles.primaryTitle}>Você já concluiu um treino hoje</Text></View>
+            </View>
+            <Text style={styles.copy}>Mandou bem! Seu registro de {completedToday.workoutName} já faz parte da sua evolução.</Text>
+            <Button accessibilityHint="Abre o resumo do treino mais recente concluído hoje" onPress={() => router.push({ pathname: '/student/training/summary/[sessionId]', params: { sessionId: completedToday.sessionId } })}>Ver resumo do treino</Button>
+          </> : <>
+            <View style={styles.contextualHeader}>
+              <View accessible={false} style={styles.contextualIcon}><Ionicons name="sparkles" size={22} color={colors.background} /></View>
+              <View style={styles.cardTitleGroup}><Text style={styles.meta}>{workouts.length ? 'QUANDO ESTIVER PRONTO' : 'AGUARDANDO SEU PERSONAL'}</Text><Text style={styles.primaryTitle}>{workouts.length ? 'Seu próximo treino começa com a sua escolha.' : 'Seus treinos aparecerão aqui.'}</Text></View>
+            </View>
+            <Text style={styles.copy}>{workouts.length ? 'Escolha a opção que combina com o seu dia. A ordem do personal orienta, mas não limita você.' : 'Quando seu personal publicar sua rotina, você poderá escolher o treino que fizer sentido para o dia.'}</Text>
+            {workouts.length ? <Button accessibilityHint="Abre a lista de treinos disponíveis" onPress={() => router.push('/student/training/start')}>Escolher treino</Button> : null}
+          </>}
+        </Card>
       </View>
-      <Button variant="secondary" onPress={() => router.push('/student/training/start')}>Ver todos os treinos</Button>
 
       {history.length === 0 ? <Card style={styles.calendarEmpty}><Text style={styles.cardEyebrow}>SEUS TREINOS REALIZADOS</Text><EmptyState variant="inline" status="SEM SESSÕES AINDA" symbol="●" title="Seu histórico começa quando você treinar." message="Os dias sem sessão ficam neutros. Escolha qualquer treino quando estiver pronto." /></Card> : <FactualCalendar history={history} />}
 
@@ -210,8 +217,12 @@ const styles = StyleSheet.create({
   section: { gap: spacing.sm },
   sectionTitle: { ...typography.headingMD, color: colors.textPrimary },
   primaryCard: { gap: spacing.md, borderColor: colors.primary },
+  completedTodayCard: { borderColor: colors.success },
   card: { gap: spacing.sm },
   cardHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
+  contextualHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.md },
+  contextualIcon: { width: 46, height: 46, borderRadius: 23, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
+  completedIcon: { width: 50, height: 50, borderRadius: 25, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.success },
   cardTitleGroup: { flex: 1, gap: spacing.xs },
   primaryTitle: { ...typography.headingLG, color: colors.textPrimary },
   cardTitle: { ...typography.headingMD, color: colors.textPrimary },

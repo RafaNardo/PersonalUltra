@@ -20,12 +20,12 @@ export function TemplateMuscleFilters({ groups, selected, onSelect }: { groups: 
 }
 
 function Filter({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
-  return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} onPress={onPress} style={[styles.filter, selected && styles.filterSelected]}><Text style={[styles.filterText, selected && styles.filterTextSelected]}>{label}</Text></Pressable>;
+  return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} hitSlop={2} onPress={onPress} style={[styles.filter, selected && styles.filterSelected]}><Text style={[styles.filterText, selected && styles.filterTextSelected]}>{label}</Text></Pressable>;
 }
 
 const styles = StyleSheet.create({
   filters: { gap: spacing.xs, paddingRight: spacing.lg },
-  filter: { minHeight: 42, justifyContent: 'center', paddingHorizontal: spacing.md, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
+  filter: { minHeight: 40, justifyContent: 'center', paddingHorizontal: spacing.sm, borderRadius: radius.pill, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface },
   filterSelected: { borderColor: colors.primary, backgroundColor: '#3A1D0C' },
   filterText: { ...typography.caption, color: colors.textSecondary },
   filterTextSelected: { color: colors.primary },
