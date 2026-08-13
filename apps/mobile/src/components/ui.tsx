@@ -44,7 +44,7 @@ type EmptyStateProps = {
 
 export function EmptyState({ title, message, status = 'PRÓXIMO PASSO', symbol = '✦', items, footer, actionLabel, onAction, variant = 'section' }: EmptyStateProps) {
   const compact = variant === 'inline';
-  return <View accessibilityLiveRegion="polite" style={[styles.empty, variant === 'page' && styles.emptyPage, compact && styles.emptyInline]}>
+  return <View accessibilityLiveRegion="polite" style={[styles.empty, variant !== 'inline' && styles.emptyCentered, variant === 'page' && styles.emptyPage, compact && styles.emptyInline]}>
     {!compact ? <View style={[styles.emptyMark, variant === 'page' && styles.emptyMarkPage]}><Text style={[styles.emptyMarkText, variant === 'page' && styles.emptyMarkTextPage]}>{symbol}</Text></View> : null}
     <Text style={styles.emptyStatus}>{status}</Text>
     <Text style={[styles.emptyTitle, variant === 'page' && styles.emptyTitlePage]}>{title}</Text>
@@ -67,7 +67,8 @@ const styles = StyleSheet.create({
   loading: { flex: 1, justifyContent: 'center', alignItems: 'center', gap: spacing.md, padding: spacing.xl, backgroundColor: colors.background }, loadingText: { ...typography.bodyMD, color: colors.textSecondary },
   error: { flex: 1, justifyContent: 'center', gap: spacing.md, padding: spacing.xl, backgroundColor: colors.background }, errorTitle: { ...typography.headingLG, color: colors.textPrimary }, errorMessage: { ...typography.bodyMD, color: colors.textSecondary },
   empty: { gap: spacing.sm, padding: spacing.lg, borderRadius: radius.lg, backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border },
-  emptyPage: { alignItems: 'center', gap: spacing.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl },
+  emptyCentered: { alignItems: 'center' },
+  emptyPage: { gap: spacing.md, paddingHorizontal: spacing.xl, paddingVertical: spacing.xxl },
   emptyInline: { gap: spacing.xs, padding: spacing.md, backgroundColor: colors.surfaceElevated },
   emptyMark: { width: 58, height: 58, borderRadius: 29, alignItems: 'center', justifyContent: 'center', backgroundColor: colors.primary },
   emptyMarkPage: { width: 92, height: 92, borderRadius: 46 },
@@ -84,5 +85,5 @@ const styles = StyleSheet.create({
   emptyItemNumberText: { ...typography.caption, color: colors.primary },
   emptyItemText: { ...typography.bodyMD, color: colors.titaniumLight, lineHeight: 21, flex: 1 },
   emptyFooter: { ...typography.bodyMD, color: colors.textMuted, lineHeight: 21, textAlign: 'center', marginTop: spacing.sm },
-  emptyAction: { alignSelf: 'stretch', marginTop: spacing.sm },
+  emptyAction: { alignSelf: 'stretch', width: '100%', marginTop: spacing.sm },
 });
