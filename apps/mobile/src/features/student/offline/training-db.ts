@@ -65,6 +65,8 @@ export async function cachedSession<T extends { sessionId?: string }>(sessionId:
 }
 
 export type PendingSet = { studentId: string; sessionId: string; exerciseId: string; input: CompleteSetInput };
+export type PendingSetNumbers = Record<string, number[]>;
+export type PendingSetDetail = CompleteSetInput & { exerciseId: string; completedAt: string };
 export function normalizePendingSet(value: unknown): PendingSet {
   const pending = stripLegacyToken(value as Partial<PendingSet> & { token?: string });
   if (!pending.studentId || !pending.sessionId || !pending.exerciseId || !pending.input?.clientOperationId) throw new Error('Invalid or unowned pending set payload.');
@@ -74,8 +76,19 @@ export function normalizePendingSet(value: unknown): PendingSet {
 export async function queueSet(pending: PendingSet) {
   const db = await database(); const createdAt = new Date().toISOString(); const payload = JSON.stringify(pending);
   await db.withTransactionAsync(async () => {
-    await db.runAsync('INSERT OR REPLACE INTO pending_operations (client_operation_id, student_id, operation_type, payload, created_at) VALUES (?, ?, ?, ?, ?)', pending.input.clientOperationId, pending.studentId, 'complete_set', payload, createdAt);
-    await db.runAsync('INSERT OR REPLACE INTO local_sets (client_operation_id, student_id, session_id, exercise_id, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)', pending.input.clientOperationId, pending.studentId, pending.sessionId, pending.exerciseId, JSON.stringify(pending.input), createdAt);
+    const existing = await db.getFirstAsync<{ student_id?: string; payload: string }>('SELECT student_id, payload FROM pending_operations WHERE client_operation_id = ?', pending.input.clientOperationId);
+    if (existing) {
+      let same = false;
+      try {
+        const current = normalizePendingSet(JSON.parse(existing.payload));
+        same = current.studentId === pending.studentId && current.sessionId === pending.sessionId && current.exerciseId === pending.exerciseId && current.input.setNumber === pending.input.setNumber && current.input.weightKg === pending.input.weightKg && current.input.repetitions === pending.input.repetitions;
+      } catch { /* Treat unreadable legacy rows as an ownership collision. */ }
+      if (!same) throw new Error('A pending operation already belongs to another session or payload.');
+    }
+    const local = await db.getFirstAsync<{ student_id?: string; session_id: string; exercise_id: string; payload: string }>('SELECT student_id, session_id, exercise_id, payload FROM local_sets WHERE client_operation_id = ?', pending.input.clientOperationId);
+    if (local && (local.student_id !== pending.studentId || local.session_id !== pending.sessionId || local.exercise_id !== pending.exerciseId)) throw new Error('A local set already belongs to another session.');
+    await db.runAsync('INSERT OR IGNORE INTO pending_operations (client_operation_id, student_id, operation_type, payload, created_at) VALUES (?, ?, ?, ?, ?)', pending.input.clientOperationId, pending.studentId, 'complete_set', payload, createdAt);
+    await db.runAsync('INSERT OR IGNORE INTO local_sets (client_operation_id, student_id, session_id, exercise_id, payload, created_at) VALUES (?, ?, ?, ?, ?, ?)', pending.input.clientOperationId, pending.studentId, pending.sessionId, pending.exerciseId, JSON.stringify(pending.input), createdAt);
   });
 }
 
@@ -84,9 +97,24 @@ export async function pendingSets(studentId: string): Promise<PendingSet[]> {
   const rows = await db.getAllAsync<{ payload: string }>("SELECT payload FROM pending_operations WHERE operation_type = 'complete_set' AND student_id = ? ORDER BY created_at", studentId);
   return rows.flatMap((row) => { try { return [normalizePendingSet(JSON.parse(row.payload))]; } catch { return []; } });
 }
-export async function pendingSetNumbers(sessionId: string, studentId: string): Promise<Record<string, number>> {
+export async function pendingSetNumbers(sessionId: string, studentId: string): Promise<PendingSetNumbers> {
   const db = await database(); const rows = await db.getAllAsync<{ exercise_id: string; payload: string }>('SELECT exercise_id, payload FROM local_sets WHERE session_id = ? AND student_id = ? ORDER BY created_at', sessionId, studentId);
-  return rows.reduce<Record<string, number>>((result, row) => { const input = JSON.parse(row.payload) as CompleteSetInput; result[row.exercise_id] = Math.max(result[row.exercise_id] ?? 0, input.setNumber); return result; }, {});
+  return rows.reduce<PendingSetNumbers>((result, row) => {
+    try {
+      const input = JSON.parse(row.payload) as CompleteSetInput;
+      const numbers = result[row.exercise_id] ?? [];
+      if (!numbers.includes(input.setNumber)) numbers.push(input.setNumber);
+      result[row.exercise_id] = numbers.sort((left, right) => left - right);
+    } catch { /* Ignore malformed rows; the sync queue remains diagnosable. */ }
+    return result;
+  }, {});
+}
+export async function pendingSetDetails(sessionId: string, studentId: string): Promise<PendingSetDetail[]> {
+  const db = await database(); const rows = await db.getAllAsync<{ exercise_id: string; payload: string; created_at: string }>('SELECT exercise_id, payload, created_at FROM local_sets WHERE session_id = ? AND student_id = ? ORDER BY created_at', sessionId, studentId);
+  return rows.flatMap((row) => {
+    try { return [{ ...(JSON.parse(row.payload) as CompleteSetInput), exerciseId: row.exercise_id, completedAt: row.created_at }]; }
+    catch { return []; }
+  });
 }
 export async function pendingSetCount(sessionId: string, studentId: string): Promise<number> {
   const db = await database(); const row = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM local_sets WHERE session_id = ? AND student_id = ?', sessionId, studentId); return row?.count ?? 0;
@@ -95,6 +123,13 @@ export async function updateCachedExerciseProgress(sessionId: string, studentId:
   const db = await database(); const row = await db.getFirstAsync<{ payload: string }>('SELECT payload FROM cached_workout WHERE session_id = ? AND student_id = ?', sessionId, studentId); if (!row) return;
   const snapshot = JSON.parse(row.payload) as CachedWorkoutSnapshot; const exercise = snapshot.exercises.find((item) => item.id === exerciseId); if (!exercise) return; exercise.completedSets = Math.max(exercise.completedSets, completedSets); if (performance) exercise.performances = [...(exercise.performances ?? []).filter((item) => item.setNumber !== performance.setNumber), performance].sort((left, right) => left.setNumber - right.setNumber); const updatedAt = new Date().toISOString();
   await db.withTransactionAsync(async () => { await db.runAsync('UPDATE cached_workout SET payload = ?, updated_at = ? WHERE session_id = ? AND student_id = ?', JSON.stringify(snapshot), updatedAt, sessionId, studentId); await db.runAsync('UPDATE cached_exercises SET payload = ?, updated_at = ? WHERE exercise_id = ? AND session_id = ? AND student_id = ?', JSON.stringify(exercise), updatedAt, exerciseId, sessionId, studentId); });
+}
+export async function clearCachedSession(sessionId: string, studentId: string) {
+  const db = await database();
+  await db.withTransactionAsync(async () => {
+    await db.runAsync('DELETE FROM cached_exercises WHERE session_id = ? AND student_id = ?', sessionId, studentId);
+    await db.runAsync('DELETE FROM cached_workout WHERE session_id = ? AND student_id = ?', sessionId, studentId);
+  });
 }
 export async function removePendingSet(clientOperationId: string, studentId: string) { const db = await database(); await db.runAsync('DELETE FROM pending_operations WHERE client_operation_id = ? AND student_id = ?', clientOperationId, studentId); await db.runAsync('DELETE FROM local_sets WHERE client_operation_id = ? AND student_id = ?', clientOperationId, studentId); }
 export async function clearTrainingData() { const db = await database(); await db.execAsync('DELETE FROM pending_operations; DELETE FROM local_sets; DELETE FROM cached_exercises; DELETE FROM cached_workout;'); }

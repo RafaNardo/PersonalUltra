@@ -186,6 +186,18 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         var duplicateSet = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId = $"test-{Guid.NewGuid():N}", setNumber = 1, weightKg = 42.5m, repetitions = 11 });
         Assert.Equal(HttpStatusCode.Conflict, duplicateSet.StatusCode);
 
+        var incompleteResponse = await client.PostAsync($"/api/v1/training/sessions/{started.SessionId}/complete", null);
+        Assert.Equal(HttpStatusCode.Conflict, incompleteResponse.StatusCode);
+
+        var skippedSet = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId = $"test-{Guid.NewGuid():N}", setNumber = 3, weightKg = 40m, repetitions = 10 });
+        Assert.Equal(HttpStatusCode.Conflict, skippedSet.StatusCode);
+
+        for (var setNumber = 2; setNumber <= historical.Sets; setNumber++)
+        {
+            var nextSet = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId = $"test-{Guid.NewGuid():N}", setNumber, weightKg = 40m + setNumber, repetitions = 10 });
+            Assert.Equal(HttpStatusCode.OK, nextSet.StatusCode);
+        }
+
         var completeResponse = await client.PostAsync($"/api/v1/training/sessions/{started.SessionId}/complete", null);
         Assert.Equal(HttpStatusCode.OK, completeResponse.StatusCode);
         var completed = await completeResponse.Content.ReadFromJsonAsync<CompletionResponse>();
@@ -193,6 +205,9 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         var completedRetry = await completeRetryResponse.Content.ReadFromJsonAsync<CompletionResponse>();
         Assert.Equal(HttpStatusCode.OK, completeRetryResponse.StatusCode);
         Assert.Equal(completed!.CompletedAt, completedRetry!.CompletedAt);
+
+        var replayAfterCompletion = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId, setNumber = 1, weightKg = 42.5m, repetitions = 11 });
+        Assert.Equal(HttpStatusCode.OK, replayAfterCompletion.StatusCode);
 
         var afterCompletion = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{historical.Id}/sets", new { clientOperationId = $"test-{Guid.NewGuid():N}", setNumber = 2, weightKg = 40m, repetitions = 10 });
         Assert.Equal(HttpStatusCode.Conflict, afterCompletion.StatusCode);
@@ -204,7 +219,8 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         Assert.Equal("Completed", detail.Status);
         Assert.NotNull(detail.CompletedAt);
         var detailExercise = Assert.Single(detail.Exercises);
-        var detailPerformance = Assert.Single(detailExercise.Performances);
+        Assert.Equal(historical.Sets, detailExercise.Performances.Count);
+        var detailPerformance = Assert.Single(detailExercise.Performances, x => x.SetNumber == 1);
         Assert.Equal(42.5m, detailPerformance.WeightKg);
         Assert.Equal(11, detailPerformance.Repetitions);
 
@@ -212,11 +228,11 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         var training = await trainingResponse.Content.ReadFromJsonAsync<TrainingResponse>();
         var history = Assert.Single(training!.History, x => x.SessionId == started.SessionId);
         Assert.Equal("Completed", history.Status);
-        Assert.Equal(1, history.CompletedSets);
+        Assert.Equal(historical.Sets, history.CompletedSets);
 
         using var verifyScope = factory.Services.CreateScope();
         var verifyDb = verifyScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
-        var performance = await verifyDb.SetPerformances.AsNoTracking().SingleAsync(x => x.WorkoutSessionExerciseId == historical.Id);
+        var performance = await verifyDb.SetPerformances.AsNoTracking().SingleAsync(x => x.WorkoutSessionExerciseId == historical.Id && x.SetNumber == 1);
         Assert.Equal(clientOperationId, performance.ClientOperationId);
         Assert.Equal(42.5m, performance.WeightKg);
         Assert.Equal(11, performance.Repetitions);

@@ -63,6 +63,11 @@ coleção neutra `workouts`. Não expõem dia recomendado, indicador de recomend
 nem separam treinos em `recommended`/`available`. A preparação e a prévia são
 read-only; somente uma confirmação explícita inicia ou retoma a sessão.
 
+O registro de séries é idempotente e contíguo dentro de cada exercício, sem
+obrigar a ordem entre exercícios. A conclusão retorna conflito enquanto faltar
+qualquer série persistida; o progresso das respostas é derivado das performances
+reais, e não apenas de um contador cliente.
+
 ## Fronteiras
 Student API não expõe mutations de prescrição.
 Trainer API sempre valida ownership do Student.

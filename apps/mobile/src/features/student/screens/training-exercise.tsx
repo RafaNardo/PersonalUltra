@@ -7,7 +7,7 @@ import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { cacheWorkout, cachedSession, pendingSetNumbers, queueSet, updateCachedExerciseProgress } from '@/src/features/student/offline/training-db';
+import { cacheWorkout, cachedSession, pendingSetCount, pendingSetDetails, queueSet, syncPendingSets, updateCachedExerciseProgress } from '@/src/features/student/offline/training-db';
 import { orderedExercises, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
 import { parseActualSetPerformance } from '@/src/features/student/training/set-performance';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
@@ -29,7 +29,7 @@ export function StudentTrainingExerciseScreen() {
     void (async () => {
       try {
         const server = await inviteApi.session(authSession.accessToken, sessionId);
-        const pending = await pendingSetNumbers(server.sessionId, authSession.studentId);
+        const pending = await pendingSetDetails(server.sessionId, authSession.studentId);
         const hydrated = withPendingProgress(server, pending);
         setSession(hydrated, false, authSession.studentId);
         await cacheWorkout(hydrated, authSession.studentId).catch(() => undefined);
@@ -40,7 +40,7 @@ export function StudentTrainingExerciseScreen() {
       try {
         const cached = await cachedSession<StudentSession>(sessionId, authSession.studentId);
         if (!cached) { setError('A sessão não está disponível neste dispositivo.'); return; }
-        const pending = await pendingSetNumbers(cached.sessionId, authSession.studentId);
+        const pending = await pendingSetDetails(cached.sessionId, authSession.studentId);
         setSession(withPendingProgress(cached, pending), true, authSession.studentId);
       } catch { setError('Não foi possível recuperar a sessão salva.'); }
     })().finally(() => setLoading(false));
@@ -86,10 +86,15 @@ function FocusedExercise({ session, exercise, authToken, studentId, isOfflineSna
     const input = { clientOperationId: `${session.sessionId}-${exercise.id}-${setNumber}`, setNumber, ...parsed.value };
     setSaving(true); setMessage(undefined);
     try {
+      const sync = await syncPendingSets(studentId, async (pending) => {
+        await inviteApi.completeSet(authToken, pending.sessionId, pending.exerciseId, pending.input);
+      });
+      if (sync.failed > 0) throw new ApiError(0, 'Sem conexão com o servidor.');
       const response = await inviteApi.completeSet(authToken, session.sessionId, exercise.id, input);
       const completedSets = Math.max(setNumber, response.completedSets);
       const performance = { setNumber, ...parsed.value, completedAt: new Date().toISOString() };
       onRestTransition();
+      if (await pendingSetCount(session.sessionId, studentId) === 0) setOfflineSnapshot(false);
       updateExerciseProgress(exercise.id, completedSets, performance);
       await updateCachedExerciseProgress(session.sessionId, studentId, exercise.id, completedSets, performance).catch(() => undefined);
       router.replace({ pathname: '/student/rest/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });

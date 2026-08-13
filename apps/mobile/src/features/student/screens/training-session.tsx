@@ -1,14 +1,14 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
 import { AppState, Image, StyleSheet, Text, View } from 'react-native';
-import { useMutation } from '@tanstack/react-query';
+import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/src/api/shared-http';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { cacheWorkout, cachedWorkout, pendingSetCount, pendingSetNumbers, syncPendingSets } from '@/src/features/student/offline/training-db';
+import { cacheWorkout, cachedWorkout, clearCachedSession, pendingSetCount, pendingSetDetails, syncPendingSets } from '@/src/features/student/offline/training-db';
 import { currentExercise, exerciseProgressState, orderedExercises, sessionProgress, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
 
@@ -23,6 +23,7 @@ export function StudentTrainingSessionScreen() {
   const setSession = useStudentTrainingSessionStore((state) => state.setSession);
   const [error, setError] = useState<string>();
   const [loadingSnapshot, setLoadingSnapshot] = useState(false);
+  const [snapshotAttempted, setSnapshotAttempted] = useState(false);
 
   const startWorkout = useMutation({
     mutationFn: async () => {
@@ -73,13 +74,27 @@ export function StudentTrainingSessionScreen() {
   }, [authSession, id, activeSession, startWorkout.isPending]);
 
   useEffect(() => {
-    if (!authSession || !id || activeSession || start === '1' || loadingSnapshot) return;
+    if (!authSession || !id || activeSession || start === '1' || loadingSnapshot || snapshotAttempted) return;
+    setSnapshotAttempted(true);
     setLoadingSnapshot(true);
-    void cachedWorkout<StudentSession>(id, authSession.studentId).then(async (cached) => {
-      if (cached) setSession(await hydratePendingProgress(cached, authSession.studentId), true, authSession.studentId);
-      else setError('Abra a prévia do treino e confirme o início para criar uma sessão.');
-    }).catch(() => setError('Não foi possível recuperar a sessão salva neste dispositivo.')).finally(() => setLoadingSnapshot(false));
-  }, [authSession, id, activeSession, start, loadingSnapshot]);
+    void (async () => {
+      try {
+        await synchronizePendingSets(authSession.accessToken, authSession.studentId);
+        const resumed = await inviteApi.activeSession(authSession.accessToken, id);
+        if (resumed) {
+          const hydrated = await hydratePendingProgress(resumed, authSession.studentId);
+          setSession(hydrated, false, authSession.studentId);
+          await cacheWorkout(hydrated, authSession.studentId).catch(() => undefined);
+          return;
+        }
+      } catch { /* Fall back to the owned offline snapshot below. */ }
+      try {
+        const cached = await cachedWorkout<StudentSession>(id, authSession.studentId);
+        if (cached) setSession(await hydratePendingProgress(cached, authSession.studentId), true, authSession.studentId);
+        else setError('Abra a prévia do treino e confirme o início para criar uma sessão.');
+      } catch { setError('Não foi possível recuperar a sessão salva neste dispositivo.'); }
+    })().finally(() => setLoadingSnapshot(false));
+  }, [authSession, id, activeSession, start, loadingSnapshot, snapshotAttempted]);
 
   if (!authSession) { router.replace('/login'); return null; }
   if (!activeSession && (startWorkout.isPending || loadingSnapshot)) return <LoadingView message="Preparando seu treino…" />;
@@ -90,6 +105,7 @@ export function StudentTrainingSessionScreen() {
 }
 
 function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: StudentSession; isOfflineSnapshot: boolean; authToken: string }) {
+  const queryClient = useQueryClient();
   const exercises = useMemo(() => orderedExercises(session), [session]);
   const progress = sessionProgress(session);
   const current = currentExercise(session);
@@ -107,7 +123,9 @@ function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: S
       if (authoritative.exercises.some((exercise) => exercise.completedSets < exercise.sets)) throw new Error('A sessão ainda não está completa no servidor.');
       return inviteApi.completeWorkout(authToken, session.sessionId);
     },
-    onSuccess: () => {
+    onSuccess: async () => {
+      await clearCachedSession(session.sessionId, studentId).catch(() => undefined);
+      await queryClient.invalidateQueries({ queryKey: ['student', studentId, 'training'] });
       clearSession();
       router.replace({ pathname: '/student/training/summary/[sessionId]', params: { sessionId: session.sessionId } });
     },
@@ -121,7 +139,7 @@ function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: S
     {isOfflineSnapshot ? <Card style={styles.offlineCard}><Text accessibilityRole="alert" style={styles.offlineTitle}>Você está sem conexão</Text><Text style={styles.copy}>Exibindo a sessão salva neste dispositivo. Séries novas ficam pendentes para sincronização.</Text></Card> : null}
     <Text style={styles.intro}>A ordem do seu personal é uma sugestão. Abra qualquer exercício pendente e adapte a sessão quando precisar.</Text>
     {exercises.length === 0 ? <EmptyState status="SESSÃO SEM EXERCÍCIOS" symbol="●" title="Não há uma sequência para executar." message="Volte aos treinos e escolha outra sessão enquanto seu personal revisa esta prescrição." actionLabel="Voltar aos treinos" onAction={() => router.replace('/student/training')} /> : exercises.map((exercise) => <OverviewExercise key={exercise.id} session={session} exercise={exercise} onOpen={() => router.push({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } })} />)}
-    {current ? <Button onPress={() => router.push({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: current.id } })}>{progress.completedSets > 0 ? 'Continuar exercício atual' : 'Começar exercício atual'}</Button> : null}
+    {current ? <Button onPress={() => router.push({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: current.id } })}>{progress.completedSets > 0 ? 'Continuar próximo sugerido' : 'Começar próximo sugerido'}</Button> : null}
     {allComplete ? <Button loading={complete.isPending} onPress={() => { setCompletionError(undefined); complete.mutate(); }}>Concluir treino</Button> : null}
     {completionError ? <Text accessibilityRole="alert" style={styles.error}>{completionError}</Text> : null}
   </Screen>;
@@ -142,6 +160,6 @@ function OverviewExercise({ session, exercise, onOpen }: { session: StudentSessi
 
 function Prescription({ label, value }: { label: string; value: string }) { return <View style={styles.prescriptionItem}><Text style={styles.prescriptionLabel}>{label}</Text><Text style={styles.prescriptionValue}>{value}</Text></View>; }
 async function synchronizePendingSets(token: string, studentId: string) { return syncPendingSets(studentId, async (item) => { await inviteApi.completeSet(token, item.sessionId, item.exerciseId, item.input); }); }
-async function hydratePendingProgress(workout: StudentSession, studentId: string): Promise<StudentSession> { const pending = await pendingSetNumbers(workout.sessionId, studentId); return withPendingProgress(workout, pending); }
+async function hydratePendingProgress(workout: StudentSession, studentId: string): Promise<StudentSession> { const pending = await pendingSetDetails(workout.sessionId, studentId); return withPendingProgress(workout, pending); }
 
 const styles = StyleSheet.create({ page: { paddingVertical: spacing.xl, gap: spacing.lg }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, intro: { ...typography.bodyLG, color: colors.titaniumLight, lineHeight: 24 }, progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }, progressCopy: { gap: spacing.xxs, flex: 1 }, progressTitle: { ...typography.headingMD, color: colors.textPrimary }, progressValue: { ...typography.headingLG, color: colors.primary }, progressTrack: { height: 8, borderRadius: 8, backgroundColor: colors.surfaceElevated, overflow: 'hidden' }, progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 8 }, card: { gap: spacing.md, overflow: 'hidden' }, currentCard: { borderColor: colors.primary }, exerciseRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }, thumbnail: { width: 64, height: 64, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, exerciseIdentity: { flex: 1, gap: spacing.xxs }, sequence: { ...typography.headingMD, color: colors.textPrimary }, context: { ...typography.caption, color: colors.titanium }, note: { ...typography.caption, color: colors.titaniumLight }, prescription: { flexDirection: 'row', gap: spacing.xs }, prescriptionItem: { flex: 1, gap: spacing.xxs, padding: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, prescriptionLabel: { ...typography.caption, color: colors.textMuted }, prescriptionValue: { ...typography.bodyLG, color: colors.textPrimary }, completedHint: { ...typography.caption, color: colors.textMuted }, offlineCard: { gap: spacing.xs, borderColor: colors.warning }, offlineTitle: { ...typography.headingMD, color: colors.warning }, error: { ...typography.caption, color: colors.danger } });

@@ -7,7 +7,7 @@ import { colors, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { ApiError } from '@/src/api/shared-http';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { cacheWorkout, cachedSession, pendingSetNumbers } from '@/src/features/student/offline/training-db';
+import { cacheWorkout, cachedSession, pendingSetDetails } from '@/src/features/student/offline/training-db';
 import { currentExercise, orderedExercises, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
 
 /**
@@ -31,7 +31,7 @@ export function StudentTrainingRestScreen() {
     void (async () => {
       try {
         const server = await inviteApi.session(authSession.accessToken, sessionId);
-        const pending = await pendingSetNumbers(server.sessionId, authSession.studentId);
+        const pending = await pendingSetDetails(server.sessionId, authSession.studentId);
         const hydrated = withPendingProgress(server, pending);
         setSession(hydrated, false, authSession.studentId);
         await cacheWorkout(hydrated, authSession.studentId).catch(() => undefined);
@@ -42,7 +42,7 @@ export function StudentTrainingRestScreen() {
       try {
         const cached = await cachedSession<StudentSession>(sessionId, authSession.studentId);
         if (!cached) { setError('A sessão não está disponível neste dispositivo.'); return; }
-        const pending = await pendingSetNumbers(cached.sessionId, authSession.studentId);
+        const pending = await pendingSetDetails(cached.sessionId, authSession.studentId);
         setSession(withPendingProgress(cached, pending), true, authSession.studentId);
       } catch { setError('Não foi possível recuperar a sessão salva.'); }
     })().finally(() => setLoading(false));
@@ -115,13 +115,13 @@ function RestTimer({ session, exercise, next, isOfflineSnapshot }: { session: St
       <Text style={styles.completedLabel}>SÉRIE REGISTRADA</Text>
       <Text style={styles.exerciseName}>{exercise.name}</Text>
       <Text accessibilityRole="timer" accessibilityLiveRegion="polite" style={styles.timer}>{formatTime(remaining)}</Text>
-      <Text style={styles.copy}>{finished ? 'Descanso concluído. Quando estiver pronto, continue a sequência.' : 'Use este intervalo conforme a prescrição do seu personal.'}</Text>
+      <Text style={styles.copy}>{finished ? (continuation ? `Descanso concluído. Próximo sugerido: ${continuation.name}.` : 'Descanso concluído. Volte à visão geral para finalizar.') : 'Use este intervalo conforme a prescrição do seu personal.'}</Text>
     </Card>
     <View style={styles.actions}>
       <Button variant="secondary" onPress={addThirtySeconds}>+30 segundos</Button>
       <Button variant="secondary" onPress={continueFromRest}>Pular descanso</Button>
       <Button variant="secondary" onPress={() => router.replace({ pathname: '/student/training/[id]', params: { id: session.workoutId } })}>Escolher outro exercício</Button>
-      <Button disabled={!finished} onPress={continueFromRest}>{continuation ? (continuation.id === exercise.id ? 'Próxima série' : 'Próximo exercício') : 'Ver visão geral'}</Button>
+      <Button disabled={!finished} onPress={continueFromRest}>{continuation ? (continuation.id === exercise.id ? 'Próxima série' : `Próximo sugerido: ${continuation.name}`) : 'Ver visão geral'}</Button>
     </View>
   </Screen>;
 }

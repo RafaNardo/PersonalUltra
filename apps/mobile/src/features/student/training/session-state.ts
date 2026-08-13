@@ -1,5 +1,6 @@
 import { create } from 'zustand';
 import type { StudentSession, StudentSetPerformance } from '@/src/features/student/invite/api';
+import type { PendingSetDetail } from '@/src/features/student/offline/training-db';
 
 export type SessionExercise = StudentSession['exercises'][number];
 export type ExerciseProgressState = 'completed' | 'current' | 'pending';
@@ -52,13 +53,22 @@ export function currentExercise(session: StudentSession): SessionExercise | unde
 
 /** Merge only locally queued facts. Server progress remains the base and can
  * never be made smaller by an offline snapshot or a retry refresh. */
-export function withPendingProgress(session: StudentSession, pending: Record<string, number>): StudentSession {
+export function withPendingProgress(session: StudentSession, pending: Record<string, number[]> | PendingSetDetail[]): StudentSession {
+  const pendingNumbers = Array.isArray(pending)
+    ? pending.reduce<Record<string, number[]>>((result, item) => { (result[item.exerciseId] ??= []).push(item.setNumber); return result; }, {})
+    : pending;
+  const pendingPerformances = Array.isArray(pending) ? pending : [];
   return {
     ...session,
-    exercises: session.exercises.map((exercise) => ({
-      ...exercise,
-      completedSets: Math.min(exercise.sets, Math.max(exercise.completedSets, pending[exercise.id] ?? 0)),
-    })),
+    exercises: session.exercises.map((exercise) => {
+      const pendingSetNumbers = new Set(pendingNumbers[exercise.id] ?? []);
+      let completedSets = Math.min(exercise.sets, exercise.completedSets);
+      // Only merge a contiguous local tail. A stale/future row must never
+      // make the UI skip a server-authoritative set after a restart.
+      while (completedSets < exercise.sets && pendingSetNumbers.has(completedSets + 1)) completedSets += 1;
+      const performances = pendingPerformances.filter((item) => item.exerciseId === exercise.id).reduce((result, item) => result.some((current) => current.setNumber === item.setNumber) ? result : [...result, { setNumber: item.setNumber, weightKg: item.weightKg, repetitions: item.repetitions, completedAt: item.completedAt }], [...(exercise.performances ?? [])]).sort((left, right) => left.setNumber - right.setNumber);
+      return { ...exercise, completedSets, performances };
+    }),
   };
 }
 
