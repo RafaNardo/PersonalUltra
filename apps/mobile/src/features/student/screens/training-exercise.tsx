@@ -7,7 +7,7 @@ import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { cacheWorkout, cachedSession, pendingSetNumbers, queueSet, updateCachedExerciseProgress } from '@/src/features/student/offline/training-db';
+import { cachedSession, pendingSetNumbers, queueSet, updateCachedExerciseProgress } from '@/src/features/student/offline/training-db';
 import { currentExercise, orderedExercises, useStudentTrainingSessionStore } from '@/src/features/student/training/session-state';
 import { parseActualSetPerformance } from '@/src/features/student/training/set-performance';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
@@ -63,9 +63,8 @@ function FocusedExercise({ session, exercise, authToken, isOfflineSnapshot, posi
       const response = await inviteApi.completeSet(authToken, session.sessionId, exercise.id, input);
       const completedSets = Math.max(setNumber, response.completedSets);
       updateExerciseProgress(exercise.id, completedSets);
-      try { await updateCachedExerciseProgress(session.sessionId, exercise.id, completedSets); } catch { /* Server-confirmed progress remains authoritative. */ }
-      if (completedSets >= exercise.sets) router.replace({ pathname: '/student/training/[id]', params: { id: session.workoutId } });
-      else { setWeight(''); setRepetitions(''); }
+      await updateCachedExerciseProgress(session.sessionId, exercise.id, completedSets).catch(() => undefined);
+      router.replace({ pathname: '/student/rest/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });
     } catch (saveError) {
       if (!(saveError instanceof ApiError) || saveError.status !== 0) { setMessage({ tone: 'error', text: saveError instanceof Error ? saveError.message : 'Não foi possível salvar esta série.' }); setSaving(false); return; }
       try {
@@ -74,8 +73,7 @@ function FocusedExercise({ session, exercise, authToken, isOfflineSnapshot, posi
         setOfflineSnapshot(true);
         try { await updateCachedExerciseProgress(session.sessionId, exercise.id, setNumber); } catch { /* Pending sets hydrate from local_sets. */ }
         setMessage({ tone: 'offline', text: 'Série salva neste dispositivo e pendente para sincronização.' });
-        if (setNumber >= exercise.sets) router.replace({ pathname: '/student/training/[id]', params: { id: session.workoutId } });
-        else { setWeight(''); setRepetitions(''); }
+        router.replace({ pathname: '/student/rest/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });
       } catch { setMessage({ tone: 'error', text: 'Não foi possível salvar a série no dispositivo.' }); }
     }
     setSaving(false);
