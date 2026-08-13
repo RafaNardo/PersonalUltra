@@ -58,16 +58,28 @@
 - `PU-M3-014`: histórico de sessões/séries no Trainer.
 - `PU-M3-015`: integrar treino e histórico ao detalhe do aluno no Trainer.
 
-Implementação concluída na demo: templates e editor inicial no Trainer, duplicação,
-aplicação por snapshot ao Student, grade recomendada, execução com registro de
-séries, histórico e persistência compatível com a fundação SQLite/offline.
+A primeira implementação conectou prescrição/aplicação/execução ao backend, porém a superfície Trainer ficou simplificada demais: criação baseada em texto livre, editor visual começando com um único exercício e templates tratados como o centro do fluxo. Isso não atende a experiência comercial desejada.
 
-Revisão pós-implementação: a prescrição, aplicação, escolha e execução estão
-conectadas ao backend. O editor visual ainda começa com um exercício por modelo;
-edição completa de múltiplos exercícios e ajuste visual da grade do aluno seguem
-como refinamento de produto, sem dados fictícios na leitura.
+### M3R — Refactor obrigatório antes de considerar M3 fechada
 
-**DoD M3:** Trainer prescreve; Student escolhe/executa; Trainer vê resultado.
+A direção aprovada está em `docs/design/trainer-training-refactor.md` e no adendo de `docs/architecture/domain.md`.
+
+- `PU-M3R-001`: introduzir/refatorar `Exercise` como catálogo global reutilizável, system-owned e abastecido exclusivamente por seed na V1; remover exercício por texto livre como caminho principal de prescrição.
+- `PU-M3R-002`: ampliar o seed com catálogo demonstrável de exercícios, reaproveitando nomes/assets do SVR donor quando disponíveis; cada exercício deve carregar ao menos grupo muscular e referência de imagem.
+- `PU-M3R-003`: refatorar `WorkoutTemplateExercise` para referenciar `ExerciseId` e suportar `Sequence`, `Sets`, `RepetitionsMin`, `RepetitionsMax`, `RestSeconds` e `Notes`.
+- `PU-M3R-004`: refatorar snapshots de `StudentWorkoutExercise`/`WorkoutSessionExercise` para preservar o contexto visual/histórico necessário sem depender do estado atual do template/catálogo.
+- `PU-M3R-005`: criar endpoint/query Trainer para pesquisar/listar catálogo por texto e grupo muscular; somente leitura na V1.
+- `PU-M3R-006`: substituir a tela atual `Meus treinos`/editor simplificado por fluxo student-centric: Student > Treinos > workout > editor multi-exercício.
+- `PU-M3R-007`: implementar seletor de catálogo no Trainer com busca, filtros e thumbnails; selecionar exercício abre configuração de prescrição.
+- `PU-M3R-008`: implementar editor real multi-exercício: adicionar/remover/editar vários exercícios, rep range, descanso, notas e ordenação arbitrária.
+- `PU-M3R-009`: manter templates como aceleradores opcionais; template deve aceitar múltiplos exercícios e continuar aplicando snapshot editável ao Student.
+- `PU-M3R-010`: preservar a UX Student derivada do SVR Method e apenas adaptá-la para consumir imagens/instruções/rep ranges do novo modelo; não redesenhar o fluxo Student durante este refactor.
+- `PU-M3R-011`: garantir que Student execute treino atualizado, registre carga/reps reais e Trainer veja histórico sem regressão do SQLite/offline existente.
+- `PU-M3R-012`: demo seed deve entregar Student principal com pelo menos quatro workouts completos e múltiplos exercícios/imagens, tornando a montagem e execução demonstráveis ponta a ponta.
+
+**Non-goals M3R V1:** sem admin do catálogo, sem upload de mídia, sem vídeos, sem IA gerando treino, sem recommended load, sem versionamento enterprise de treino, sem microserviços.
+
+**DoD M3/M3R:** Trainer abre um aluno, visualiza vários treinos completos, adiciona exercícios pesquisando o catálogo seeded, configura séries/faixa de reps/descanso/notas, reordena e salva; Student recebe a atualização no fluxo já consolidado, executa e registra carga/reps; Trainer vê o histórico.
 
 ## M4 — Nutrition, Progress, Coach & Polish
 - `PU-M4-001`: adaptar domínio nutrição.
@@ -89,21 +101,21 @@ como refinamento de produto, sem dados fictícios na leitura.
 - `PU-M4-017`: integrar alimentação e progresso ao detalhe do aluno no Trainer, consolidando as seções disponíveis.
 - `PU-M4-018`: concluída antecipadamente por decisão de produto: o fluxo legado SVR baseado em `Member` foi retirado, e a entrada do aluno permanece apoiada apenas em `Student`. A autenticação demo por e-mail permanece até a fundação de autenticação real na M5.
 
-Implementação concluída na demo: alimentação Trainer/Student, registro e consulta
-de peso, Coach explicativo read-only, seed ampliado, reset demo, branding validado
-por Trainer e aplicado ao contexto Student, além da consolidação no detalhe do aluno.
+Implementação concluída na demo: alimentação Trainer/Student, registro e consulta de peso, Coach explicativo read-only, seed ampliado, reset demo, branding validado por Trainer e aplicado ao contexto Student, além da consolidação no detalhe do aluno.
 
-Revisão pós-implementação: os fluxos principais estão conectados a dados reais do
-backend/seed. Permanecem como refinamentos explícitos antes de considerar a M4
-comercialmente fechada: gráfico visual de peso, editor completo de múltiplas
-refeições/exercícios, tela Trainer para configurar cor/logo e botão mobile para
-reset demo. Esses itens não são mockados; são apenas superfícies de edição/polish
-ainda simplificadas.
+Antes de considerar a demo comercialmente fechada, o refactor `M3R` acima tem prioridade sobre novos refinamentos de M4, pois montagem/prescrição de treino é uma superfície central do produto.
 
 **DoD M4:** demo comercial completa, incluindo branding dinâmico por Trainer.
 
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
+
+## V2 addendum
+- Admin interno para gerenciar catálogo de exercícios.
+- Upload/gestão de imagens e vídeos.
+- Vídeo por exercício.
+- Curadoria e lifecycle do catálogo.
+- AI-assisted workout generation baseada na metodologia do Trainer, sempre revisada/publicada pelo profissional.
 
 ## Prompt padrão Codex
 `Read AGENTS.md and all docs relevant to PU-MX-YYY. Implement only that task. Preserve Trainer/Student boundaries and future mobile splitability. Do not implement future tasks. Run relevant tests/typecheck and report architecture ambiguity before changing documented boundaries.`
