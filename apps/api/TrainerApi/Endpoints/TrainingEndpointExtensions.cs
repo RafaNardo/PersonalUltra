@@ -194,18 +194,6 @@ public static class TrainingEndpointExtensions
                 return context.ApiError("TEMPLATE_NOT_FOUND", "Treino não encontrado.", 404);
             if (!await db.TrainerStudents.AnyAsync(x => x.TrainerId == trainerId && x.StudentId == request.StudentId && x.EndedAt == null, ct))
                 return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
-            if (request.RecommendedDay is < 1 or > 7)
-                return context.ApiError("VALIDATION_ERROR", "Escolha um dia da semana válido.", 400);
-
-            if (request.IsRecommended)
-            {
-                var currentRecommendations = await db.StudentWorkouts
-                    .Where(x => x.TrainerId == trainerId && x.StudentId == request.StudentId && x.IsRecommended)
-                    .ToListAsync(ct);
-                foreach (var current in currentRecommendations)
-                    current.IsRecommended = false;
-            }
-
             var suggestedOrder = await NextSuggestedOrder(db, request.StudentId, ct);
 
             var applied = new StudentWorkout
@@ -216,15 +204,13 @@ public static class TrainingEndpointExtensions
                 Name = source.Name,
                 Notes = source.Notes,
                 SuggestedOrder = suggestedOrder,
-                RecommendedDay = request.RecommendedDay,
-                IsRecommended = request.IsRecommended,
                 CreatedAt = clock.GetUtcNow(),
             };
             applied.Exercises.AddRange(source.Exercises.Select(x => StudentWorkoutExercise.FromTemplate(applied.Id, x)));
 
             db.StudentWorkouts.Add(applied);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(new AppliedWorkoutResponse(applied.Id, applied.StudentId, applied.Name, applied.RecommendedDay, applied.IsRecommended, applied.SuggestedOrder, applied.Exercises.Count));
+            return Results.Ok(new AppliedWorkoutResponse(applied.Id, applied.StudentId, applied.Name, applied.SuggestedOrder, applied.Exercises.Count));
         });
 
         app.MapGet("/api/v1/students/{studentId:guid}/workouts", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
@@ -236,9 +222,10 @@ public static class TrainingEndpointExtensions
             var workouts = await db.StudentWorkouts
                 .AsNoTracking()
                 .Where(x => x.TrainerId == trainerId && x.StudentId == studentId && x.IsActive)
-                .OrderBy(x => x.RecommendedDay)
-                .ThenBy(x => x.Name)
-                .Select(x => new TrainerStudentWorkoutSummary(x.Id, x.Name, x.Notes, x.RecommendedDay, x.IsRecommended, x.SuggestedOrder, x.Exercises.Count, x.CreatedAt))
+                .OrderBy(x => x.SuggestedOrder)
+                .ThenBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
+                .Select(x => new TrainerStudentWorkoutSummary(x.Id, x.Name, x.Notes, x.SuggestedOrder, x.Exercises.Count, x.CreatedAt))
                 .ToListAsync(ct);
             return Results.Ok(new TrainerStudentWorkoutListResponse(workouts));
         }).RequireAuthorization();
@@ -255,9 +242,6 @@ public static class TrainingEndpointExtensions
                 return context.ApiError("VALIDATION_ERROR", "Informe um nome de treino com até 200 caracteres.", 400);
             if (notes.Length > 2000)
                 return context.ApiError("VALIDATION_ERROR", "As observações devem ter até 2000 caracteres.", 400);
-            if (request.RecommendedDay is < 1 or > 7)
-                return context.ApiError("VALIDATION_ERROR", "Escolha um dia da semana válido.", 400);
-
             var suggestedOrder = await NextSuggestedOrder(db, studentId, ct);
             var workout = new StudentWorkout
             {
@@ -267,8 +251,6 @@ public static class TrainingEndpointExtensions
                 Name = name,
                 Notes = notes,
                 SuggestedOrder = suggestedOrder,
-                RecommendedDay = request.RecommendedDay,
-                IsRecommended = false,
                 CreatedAt = clock.GetUtcNow(),
             };
             db.StudentWorkouts.Add(workout);
@@ -290,8 +272,6 @@ public static class TrainingEndpointExtensions
                     x.StudentId,
                     x.Name,
                     x.Notes,
-                    x.RecommendedDay,
-                    x.IsRecommended,
                     x.SuggestedOrder,
                     x.CreatedAt,
                     x.Exercises
@@ -302,6 +282,39 @@ public static class TrainingEndpointExtensions
             return workout is null
                 ? context.ApiError("WORKOUT_NOT_FOUND", "Treino não encontrado para este aluno.", 404)
                 : Results.Ok(workout);
+        }).RequireAuthorization();
+
+        app.MapPut("/api/v1/students/{studentId:guid}/workouts/order", async (Guid studentId, ReorderTrainerStudentWorkoutsRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        {
+            var trainerId = TrainerId(user);
+            if (!await OwnsStudent(db, trainerId, studentId, ct))
+                return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+
+            var workoutIds = request.WorkoutIds?.ToArray() ?? [];
+            var workouts = await db.StudentWorkouts
+                .Include(x => x.Exercises)
+                .Where(x => x.TrainerId == trainerId && x.StudentId == studentId && x.IsActive)
+                .ToListAsync(ct);
+            var expectedIds = workouts.Select(x => x.Id).ToHashSet();
+            if (workoutIds.Length != workouts.Count || workoutIds.Distinct().Count() != workoutIds.Length || !workoutIds.All(expectedIds.Contains))
+                return context.ApiError("VALIDATION_ERROR", "A ordem precisa incluir cada treino disponível uma única vez.", 400);
+
+            await using var transaction = db.Database.IsRelational() ? await db.Database.BeginTransactionAsync(ct) : null;
+            foreach (var (workout, index) in workouts.Select((workout, index) => (workout, index)))
+                workout.SuggestedOrder = -(index + 1);
+            await db.SaveChangesAsync(ct);
+            foreach (var (workoutId, index) in workoutIds.Select((id, index) => (id, index)))
+                workouts.Single(x => x.Id == workoutId).SuggestedOrder = index + 1;
+            await db.SaveChangesAsync(ct);
+            if (transaction is not null)
+                await transaction.CommitAsync(ct);
+
+            return Results.Ok(new TrainerStudentWorkoutListResponse(workouts
+                .OrderBy(x => x.SuggestedOrder)
+                .ThenBy(x => x.CreatedAt)
+                .ThenBy(x => x.Id)
+                .Select(x => new TrainerStudentWorkoutSummary(x.Id, x.Name, x.Notes, x.SuggestedOrder, x.Exercises.Count, x.CreatedAt))
+                .ToArray()));
         }).RequireAuthorization();
 
         app.MapDelete("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
@@ -355,13 +368,6 @@ public static class TrainingEndpointExtensions
 
             try
             {
-                if (workout.Exercises.Count == 0 && request.Exercises.Count > 0)
-                {
-                    var hasRecommendation = await db.StudentWorkouts.AnyAsync(x => x.Id != workout.Id && x.TrainerId == trainerId && x.StudentId == studentId && x.IsRecommended, ct);
-                    if (!hasRecommendation)
-                        workout.IsRecommended = true;
-                }
-
                 if (transaction is not null)
                 {
                     // Free the unique (workout, sequence) slots before arbitrary reorder.
@@ -480,8 +486,6 @@ public static class TrainingEndpointExtensions
         workout.StudentId,
         workout.Name,
         workout.Notes,
-        workout.RecommendedDay,
-        workout.IsRecommended,
         workout.SuggestedOrder,
         workout.CreatedAt,
         workout.Exercises

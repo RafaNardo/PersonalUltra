@@ -762,7 +762,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     }
 
     [Fact]
-    public async Task Applying_template_enforces_template_and_student_ownership_and_replaces_current_recommendation()
+    public async Task Applying_template_enforces_template_and_student_ownership_and_appends_to_suggested_order()
     {
         var exercise = await GetActiveExercise();
         var ownedTemplateId = Guid.NewGuid();
@@ -770,12 +770,10 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var otherTrainerId = Guid.NewGuid();
         var otherStudentId = Guid.NewGuid();
         Guid existingRecommendedId;
-        Guid[] priorRecommendedIds;
         int expectedSuggestedOrder;
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
-            priorRecommendedIds = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId && x.IsRecommended).Select(x => x.Id).ToArrayAsync();
             expectedSuggestedOrder = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId).MaxAsync(x => x.SuggestedOrder) + 1;
             db.Trainers.Add(new Trainer { Id = otherTrainerId, Name = "Outro personal", CreatedAt = DateTimeOffset.UtcNow });
             db.Students.Add(new Student { Id = otherStudentId, FirstName = "Aluno", LastName = "Sem vínculo", CreatedAt = DateTimeOffset.UtcNow });
@@ -790,32 +788,24 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             await db.SaveChangesAsync();
         }
 
-        var otherTemplateResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{otherTemplateId}/apply", new { studentId = DemoIds.StudentId, recommendedDay = 2, isRecommended = false });
-        var otherStudentResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{ownedTemplateId}/apply", new { studentId = otherStudentId, recommendedDay = 2, isRecommended = false });
-        var invalidDayResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{ownedTemplateId}/apply", new { studentId = DemoIds.StudentId, recommendedDay = 8, isRecommended = false });
-        var applyResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{ownedTemplateId}/apply", new { studentId = DemoIds.StudentId, recommendedDay = 4, isRecommended = true });
+        var otherTemplateResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{otherTemplateId}/apply", new { studentId = DemoIds.StudentId });
+        var otherStudentResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{ownedTemplateId}/apply", new { studentId = otherStudentId });
+        var applyResponse = await client.PostAsJsonAsync($"/api/v1/training/templates/{ownedTemplateId}/apply", new { studentId = DemoIds.StudentId });
 
         Assert.Equal(HttpStatusCode.NotFound, otherTemplateResponse.StatusCode);
         Assert.Equal("TEMPLATE_NOT_FOUND", (await otherTemplateResponse.Content.ReadFromJsonAsync<ErrorResponse>())!.Code);
         Assert.Equal(HttpStatusCode.NotFound, otherStudentResponse.StatusCode);
         Assert.Equal("STUDENT_NOT_FOUND", (await otherStudentResponse.Content.ReadFromJsonAsync<ErrorResponse>())!.Code);
-        Assert.Equal(HttpStatusCode.BadRequest, invalidDayResponse.StatusCode);
-        Assert.Equal("VALIDATION_ERROR", (await invalidDayResponse.Content.ReadFromJsonAsync<ErrorResponse>())!.Code);
         Assert.Equal(HttpStatusCode.OK, applyResponse.StatusCode);
         var applied = await applyResponse.Content.ReadFromJsonAsync<AppliedWorkoutResponse>();
         Assert.NotNull(applied);
 
         using var cleanupScope = factory.Services.CreateScope();
         var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
-        Assert.False((await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == existingRecommendedId)).IsRecommended);
+        Assert.True((await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == existingRecommendedId)).IsRecommended);
         var created = await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == applied!.Id);
-        Assert.True(created.IsRecommended);
-        Assert.Equal(4, created.RecommendedDay);
         Assert.Equal(expectedSuggestedOrder, created.SuggestedOrder);
         Assert.Equal(expectedSuggestedOrder, applied.SuggestedOrder);
-        var priorRecommendations = await cleanupDb.StudentWorkouts.Where(x => priorRecommendedIds.Contains(x.Id)).ToListAsync();
-        foreach (var prior in priorRecommendations)
-            prior.IsRecommended = true;
         cleanupDb.StudentWorkoutExercises.RemoveRange(cleanupDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == applied.Id));
         cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == applied.Id || x.Id == existingRecommendedId));
         cleanupDb.WorkoutTemplateExercises.RemoveRange(cleanupDb.WorkoutTemplateExercises.Where(x => x.WorkoutTemplateId == ownedTemplateId || x.WorkoutTemplateId == otherTemplateId));
@@ -826,15 +816,13 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     }
 
     [Fact]
-    public async Task Trainer_can_create_an_empty_student_workout_without_exposing_a_recommendation()
+    public async Task Trainer_can_create_an_empty_student_workout_at_the_end_of_the_suggested_order()
     {
         Guid existingRecommendedId;
-        Guid[] priorRecommendedIds;
         int expectedSuggestedOrder;
         using (var scope = factory.Services.CreateScope())
         {
             var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
-            priorRecommendedIds = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId && x.IsRecommended).Select(x => x.Id).ToArrayAsync();
             expectedSuggestedOrder = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId).MaxAsync(x => x.SuggestedOrder) + 1;
             var existing = new StudentWorkout { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Recomendação temporária", RecommendedDay = 2, IsRecommended = true, CreatedAt = DateTimeOffset.UtcNow };
             existingRecommendedId = existing.Id;
@@ -842,8 +830,8 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             await db.SaveChangesAsync();
         }
 
-        var invalid = await client.PostAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts", new { name = " ", recommendedDay = 9 });
-        var response = await client.PostAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts", new { name = "  Novo treino  ", notes = "  Montado do zero  ", recommendedDay = 5 });
+        var invalid = await client.PostAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts", new { name = " " });
+        var response = await client.PostAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts", new { name = "  Novo treino  ", notes = "  Montado do zero  " });
 
         Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
         Assert.Equal(HttpStatusCode.OK, response.StatusCode);
@@ -856,15 +844,40 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var persisted = await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == created.Id);
         Assert.Equal("Novo treino", persisted.Name);
         Assert.Equal("Montado do zero", persisted.Notes);
-        Assert.Equal(5, persisted.RecommendedDay);
         Assert.False(persisted.IsRecommended);
         Assert.Equal(expectedSuggestedOrder, persisted.SuggestedOrder);
         Assert.Equal(expectedSuggestedOrder, created.SuggestedOrder);
         Assert.True((await cleanupDb.StudentWorkouts.SingleAsync(x => x.Id == existingRecommendedId)).IsRecommended);
-        foreach (var prior in await cleanupDb.StudentWorkouts.Where(x => priorRecommendedIds.Contains(x.Id)).ToListAsync())
-            prior.IsRecommended = true;
         cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == created.Id || x.Id == existingRecommendedId));
         await cleanupDb.SaveChangesAsync();
+    }
+
+    [Fact]
+    public async Task Trainer_can_reorder_owned_student_workouts_and_api_returns_the_new_suggested_order()
+    {
+        var list = await client.GetFromJsonAsync<StudentWorkoutListResponse>($"/api/v1/students/{DemoIds.StudentId}/workouts");
+        Assert.NotNull(list);
+        var originalIds = list!.Workouts.Select(x => x.Id).ToArray();
+        var reorderedIds = originalIds.Reverse().ToArray();
+
+        var invalid = await client.PutAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/order", new { workoutIds = reorderedIds.Take(reorderedIds.Length - 1).ToArray() });
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+
+        var response = await client.PutAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/order", new { workoutIds = reorderedIds });
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var reordered = await response.Content.ReadFromJsonAsync<StudentWorkoutListResponse>();
+        Assert.Equal(reorderedIds, reordered!.Workouts.Select(x => x.Id));
+        Assert.Equal(Enumerable.Range(1, reorderedIds.Length), reordered.Workouts.Select(x => x.SuggestedOrder));
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var persisted = await db.StudentWorkouts.AsNoTracking().Where(x => x.StudentId == DemoIds.StudentId).OrderBy(x => x.SuggestedOrder).Select(x => x.Id).ToArrayAsync();
+            Assert.Equal(reorderedIds, persisted);
+        }
+
+        var restore = await client.PutAsJsonAsync($"/api/v1/students/{DemoIds.StudentId}/workouts/order", new { workoutIds = originalIds });
+        Assert.Equal(HttpStatusCode.OK, restore.StatusCode);
     }
 
     private async Task<Exercise> GetActiveExercise()

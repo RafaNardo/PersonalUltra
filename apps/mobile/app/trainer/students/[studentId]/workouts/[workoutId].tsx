@@ -69,8 +69,8 @@ export default function TrainerStudentWorkoutScreen() {
   };
 
   return <Screen withinTabs style={styles.page}>
-    <TopBar eyebrow={`${studentData.firstName} ${studentData.lastName}`} title={workoutData.name} onBack={() => router.back()} action={workoutData.isRecommended ? <Tag tone="success">RECOMENDADO</Tag> : undefined} />
-    <View style={styles.metaRow}><Text style={styles.schedule}>{weekday(workoutData.recommendedDay)} · {editor.exercises.length} {editor.exercises.length === 1 ? 'exercício' : 'exercícios'}</Text>{editor.dirty ? <Tag tone="primary">NÃO PUBLICADO</Tag> : <Tag tone="success">PUBLICADO</Tag>}</View>
+    <TopBar eyebrow={`${studentData.firstName} ${studentData.lastName}`} title={workoutData.name} onBack={() => router.back()} />
+    <View style={styles.metaRow}><Text style={styles.schedule}>Ordem sugerida {workoutData.suggestedOrder} · {editor.exercises.length} {editor.exercises.length === 1 ? 'exercício' : 'exercícios'}</Text>{editor.dirty ? <Tag tone="primary">NÃO PUBLICADO</Tag> : <Tag tone="success">PUBLICADO</Tag>}</View>
     {workoutData.notes ? <Text style={styles.copy}>{workoutData.notes}</Text> : null}
     <View style={styles.sectionHeader}><View style={styles.sectionCopy}><Text style={styles.sectionTitle}>Exercícios prescritos</Text><Text style={styles.copy}>Edite, remova ou reorganize antes de publicar.</Text></View><Text style={styles.count}>{editor.exercises.length}</Text></View>
     {editor.exercises.length > 0 ? <Button variant="secondary" disabled={editor.exercises.length >= 30} accessibilityHint="Abre a busca no catálogo" onPress={addExercise}>+ Adicionar exercício</Button> : null}
@@ -101,10 +101,6 @@ function ExerciseCard({ exercise, index, count, onMove, onEdit, onRemove }: { ex
       <Pressable accessibilityRole="button" accessibilityLabel={`Remover ${exercise.name}`} onPress={onRemove} style={styles.textButton}><Text style={styles.removeText}>Remover</Text></Pressable>
     </View>
   </Card>;
-}
-
-function weekday(day: number) {
-  return ['Dia não definido', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'][day] ?? 'Dia não definido';
 }
 
 const styles = StyleSheet.create({

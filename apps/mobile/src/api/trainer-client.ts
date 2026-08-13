@@ -32,7 +32,7 @@ export type StudentInvite = { id: string; token: string; inviteCode: string; inv
 export type WorkoutTemplate = { id: string; name: string; notes: string; exerciseCount?: number; updatedAt?: string; muscleGroups?: string[]; exercises?: WorkoutExercise[] };
 export type WorkoutExercise = { exerciseId: string; name: string; primaryMuscleGroup: string; equipment?: string; imageRef: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string };
 export type WorkoutExerciseInput = Omit<WorkoutExercise, 'name'>;
-export type TrainerStudentWorkoutSummary = { id: string; name: string; notes: string; recommendedDay: number; isRecommended: boolean; exerciseCount: number; createdAt: string };
+export type TrainerStudentWorkoutSummary = { id: string; name: string; notes: string; suggestedOrder: number; exerciseCount: number; createdAt: string };
 export type TrainerStudentWorkoutExercise = { id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string };
 export type TrainerStudentWorkout = Omit<TrainerStudentWorkoutSummary, 'exerciseCount'> & { studentId: string; exercises: TrainerStudentWorkoutExercise[] };
 export type TrainerStudentWorkoutExerciseInput = { id?: string; exerciseId?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string };
@@ -80,10 +80,11 @@ export const trainerClient = {
   updateTemplate: (id: string, input: { name: string; notes?: string; exercises: Array<Pick<WorkoutExerciseInput, 'exerciseId' | 'sequence' | 'sets' | 'repetitionsMin' | 'repetitionsMax' | 'restSeconds' | 'notes'>> }) => request<WorkoutTemplate>(`/training/templates/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
   deleteTemplate: (id: string) => request<void>(`/training/templates/${id}`, { method: 'DELETE' }),
   duplicateTemplate: (id: string) => request<WorkoutTemplate>(`/training/templates/${id}/duplicate`, { method: 'POST' }),
-  applyTemplate: (id: string, studentId: string, recommendedDay = 1, isRecommended = false) => request<{ id: string; studentId: string; name: string; recommendedDay: number; isRecommended: boolean; exerciseCount: number }>(`/training/templates/${id}/apply`, { method: 'POST', body: JSON.stringify({ studentId, recommendedDay, isRecommended }) }),
+  applyTemplate: (id: string, studentId: string) => request<{ id: string; studentId: string; name: string; suggestedOrder: number; exerciseCount: number }>(`/training/templates/${id}/apply`, { method: 'POST', body: JSON.stringify({ studentId }) }),
   studentWorkouts: async (studentId: string) => (await request<{ workouts: TrainerStudentWorkoutSummary[] }>(`/students/${studentId}/workouts`)).workouts,
-  createStudentWorkout: (studentId: string, input: { name: string; notes?: string; recommendedDay: number }) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts`, { method: 'POST', body: JSON.stringify(input) }),
+  createStudentWorkout: (studentId: string, input: { name: string; notes?: string }) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts`, { method: 'POST', body: JSON.stringify(input) }),
   studentWorkout: (studentId: string, workoutId: string) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts/${workoutId}`),
+  reorderStudentWorkouts: (studentId: string, workoutIds: string[]) => request<{ workouts: TrainerStudentWorkoutSummary[] }>(`/students/${studentId}/workouts/order`, { method: 'PUT', body: JSON.stringify({ workoutIds }) }),
   updateStudentWorkout: (studentId: string, workoutId: string, exercises: TrainerStudentWorkoutExerciseInput[]) => request<TrainerStudentWorkout>(`/students/${studentId}/workouts/${workoutId}`, { method: 'PUT', body: JSON.stringify({ exercises }) }),
   deleteStudentWorkout: (studentId: string, workoutId: string) => request<void>(`/students/${studentId}/workouts/${workoutId}`, { method: 'DELETE' }),
   exerciseCatalog: ({ search, muscleGroup }: { search?: string; muscleGroup?: string } = {}) => {

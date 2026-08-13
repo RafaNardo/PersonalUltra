@@ -14,6 +14,7 @@ Base: `/api/v1`
 - `POST /students/{id}/training/from-template/{templateId}`
 - `GET/PUT /students/{id}/training`
 - `DELETE /students/{id}/workouts/{workoutId}` (remoção lógica; preserva histórico)
+- `PUT /students/{id}/workouts/order`
 - `PUT /students/{id}/training/schedule`
 - `GET/PUT /students/{id}/nutrition`
 - `POST /students/{id}/messages`
@@ -28,11 +29,12 @@ associados ao `Student`; o endpoint não inventa esses dados durante a transiç�
 exercícios de cada modelo para busca/filtro no mobile; não existe categoria
 manual duplicada no modelo de domínio.
 
-Durante a transição M3RF, as respostas Trainer de treino do aluno expõem
-`suggestedOrder` de forma aditiva, preservando temporariamente `recommendedDay`
-e `isRecommended`. Criar do zero ou aplicar um modelo já reserva no servidor a
-próxima ordem persistida; os requests legados continuam válidos até suas telas
-serem migradas em `PU-M3RF-002`.
+As respostas Trainer de treino do aluno expõem `suggestedOrder`. Criar do zero
+ou aplicar um modelo reserva no servidor a próxima posição persistida, sem
+receber dia da semana ou indicador de recomendação. A reordenação exige todos os
+treinos ativos do aluno exatamente uma vez e sempre valida o vínculo com o
+Trainer autenticado. Os campos legados permanecem apenas no domínio e nas
+superfícies Student até os gates de compatibilidade seguintes.
 
 ## Student API
 - `GET /bootstrap`

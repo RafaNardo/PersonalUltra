@@ -2,11 +2,11 @@ import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
-import { Button, Card, EmptyState, ErrorView, ListItem, LoadingView, Tag } from '@/src/components/ui';
+import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { useCreateTrainerMessage, useTrainerAnamnesis, useTrainerStudent } from '@/src/features/trainer/students/hooks';
-import { useTrainerStudentWorkouts } from '@/src/features/trainer/training/hooks';
+import { useReorderTrainerStudentWorkouts, useTrainerStudentWorkouts } from '@/src/features/trainer/training/hooks';
 import { feedback } from '@/src/platform/feedback';
 import { trainerClient } from '@/src/api/trainer-client';
 
@@ -20,6 +20,7 @@ export default function TrainerStudentDetailScreen() {
   const createMessage = useCreateTrainerMessage(id);
   const anamnesis = useTrainerAnamnesis(id, student.data?.anamnesisStatus === 'Completed');
   const workouts = useTrainerStudentWorkouts(id);
+  const reorderWorkouts = useReorderTrainerStudentWorkouts(id ?? '');
   const history = useQuery({ queryKey: ['trainer', 'students', id, 'training-history'], queryFn: () => trainerClient.trainingHistory(id!), enabled: Boolean(id) });
   const nutrition = useQuery({ queryKey: ['trainer', 'students', id, 'nutrition'], queryFn: () => trainerClient.nutrition(id!), enabled: Boolean(id) });
   const weight = useQuery({ queryKey: ['trainer', 'students', id, 'weight'], queryFn: () => trainerClient.weight(id!), enabled: Boolean(id) });
@@ -73,12 +74,17 @@ export default function TrainerStudentDetailScreen() {
     </>}
 
     {section === 'training' && <>
-      <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Treinos atuais</Text><Text style={styles.copy}>Continuam disponíveis para {data.firstName} até você alterá-los. O dia organiza a semana, mas não define validade.</Text></View></View>
+      <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Treinos disponíveis</Text><Text style={styles.copy}>Organize a ordem sugerida para {data.firstName}. A lista não define dias obrigatórios.</Text></View></View>
       <Button onPress={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/add', params: { studentId: id! } })}>+ Adicionar treino</Button>
       {workouts.isLoading && <Card><Text style={styles.copy}>Carregando treinos…</Text></Card>}
       {workouts.isError && <Card style={styles.card}><Text style={styles.errorText}>Não foi possível carregar os treinos.</Text><Button variant="secondary" onPress={() => workouts.refetch()}>Tentar novamente</Button></Card>}
       {!workouts.isLoading && !workouts.isError && workouts.data?.length === 0 && <EmptyState status="PRIMEIRA PRESCRIÇÃO" symbol="+" title="Prepare o primeiro treino deste aluno." message="Escolha como deseja começar e revise a prescrição antes de disponibilizá-la." actionLabel="Adicionar treino" onAction={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/add', params: { studentId: id! } })} />}
-      {workouts.data?.map((workout) => <ListItem key={workout.id} title={workout.name} metadata={`${weekday(workout.recommendedDay)} · ${workout.exerciseCount} ${workout.exerciseCount === 1 ? 'exercício' : 'exercícios'}`} description={workout.notes || undefined} badge={workout.exerciseCount === 0 ? <Tag tone="primary">EM CONSTRUÇÃO</Tag> : workout.isRecommended ? <Tag tone="success">RECOMENDADO</Tag> : <Tag tone="neutral">ATIVO</Tag>} actionLabel="Abrir treino" onPress={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/[workoutId]', params: { studentId: id!, workoutId: workout.id } })} accessibilityLabel={`Abrir treino ${workout.name}`} accessibilityHint="Mostra os exercícios prescritos para este aluno" />)}
+      {workouts.data?.map((workout, index, items) => <WorkoutOrderItem key={workout.id} workout={workout} index={index} count={items.length} busy={reorderWorkouts.isPending} onMove={(to) => {
+        const reordered = items.map((item) => item.id);
+        const [moved] = reordered.splice(index, 1);
+        reordered.splice(to, 0, moved);
+        void reorderWorkouts.mutateAsync(reordered).then(() => feedback.success()).catch((error) => Alert.alert('Não foi possível reorganizar', error instanceof Error ? error.message : 'Tente novamente.'));
+      }} onPress={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/[workoutId]', params: { studentId: id!, workoutId: workout.id } })} />)}
       <Card style={styles.card}>
         <Text style={styles.cardTitle}>Histórico recente</Text>
         {history.isLoading && <Text style={styles.copy}>Carregando histórico…</Text>}
@@ -104,8 +110,19 @@ function StudentTab({ label, selected, onPress }: { label: string; selected: boo
   return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} onPress={onPress} style={[styles.tab, selected && styles.tabSelected]}><Text style={[styles.tabText, selected && styles.tabTextSelected]}>{label}</Text></Pressable>;
 }
 
-function weekday(day: number) {
-  return ['Dia não definido', 'Segunda-feira', 'Terça-feira', 'Quarta-feira', 'Quinta-feira', 'Sexta-feira', 'Sábado', 'Domingo'][day] ?? 'Dia não definido';
+function WorkoutOrderItem({ workout, index, count, busy, onMove, onPress }: { workout: { id: string; name: string; notes: string; exerciseCount: number }; index: number; count: number; busy: boolean; onMove: (to: number) => void; onPress: () => void }) {
+  return <Card style={styles.workoutItem}>
+    <Pressable accessibilityRole="button" accessibilityLabel={`Abrir treino ${workout.name}`} accessibilityHint="Mostra os exercícios prescritos para este aluno" onPress={onPress} style={({ pressed }) => [styles.workoutPressable, pressed && styles.pressed]}>
+      <Text numberOfLines={2} style={styles.workoutTitle}>{workout.name}</Text>
+      <Text style={styles.workoutMeta}>Ordem sugerida {index + 1} · {workout.exerciseCount} {workout.exerciseCount === 1 ? 'exercício' : 'exercícios'}</Text>
+      {workout.notes ? <Text numberOfLines={2} style={styles.copy}>{workout.notes}</Text> : null}
+      <Text style={styles.openHint}>Abrir treino</Text>
+    </Pressable>
+    <View style={styles.orderActions}>
+      <Pressable disabled={busy || index === 0} accessibilityRole="button" accessibilityLabel={`Mover ${workout.name} para cima`} accessibilityState={{ disabled: busy || index === 0 }} onPress={() => onMove(index - 1)} style={[styles.orderButton, (busy || index === 0) && styles.disabled]}><Text style={styles.orderText}>↑</Text></Pressable>
+      <Pressable disabled={busy || index === count - 1} accessibilityRole="button" accessibilityLabel={`Mover ${workout.name} para baixo`} accessibilityState={{ disabled: busy || index === count - 1 }} onPress={() => onMove(index + 1)} style={[styles.orderButton, (busy || index === count - 1) && styles.disabled]}><Text style={styles.orderText}>↓</Text></Pressable>
+    </View>
+  </Card>;
 }
 
 function anamnesisLabel(status: 'NotStarted' | 'InProgress' | 'Completed') {
@@ -119,5 +136,5 @@ function anamnesisCopy(status: 'NotStarted' | 'InProgress' | 'Completed') {
 function Detail({ label, value }: { label: string; value: string }) { return <View style={styles.detail}><Text style={styles.label}>{label}</Text><Text style={styles.detailValue}>{value}</Text></View>; }
 
 const styles = StyleSheet.create({
-  page: { paddingVertical: spacing.xl, gap: spacing.md }, identityCopy: { ...typography.bodyMD, color: colors.textSecondary, marginTop: -spacing.sm }, tabs: { flexDirection: 'row', padding: spacing.xxs, gap: spacing.xxs, borderRadius: radius.md, backgroundColor: colors.surface }, tab: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.sm }, tabSelected: { backgroundColor: colors.surfaceElevated }, tabText: { ...typography.caption, color: colors.textMuted }, tabTextSelected: { color: colors.primary }, card: { gap: spacing.md }, cardTitle: { ...typography.headingMD, color: colors.textPrimary }, row: { gap: spacing.xxs }, label: { ...typography.caption, color: colors.textMuted }, value: { ...typography.bodyLG, color: colors.textPrimary }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, errorText: { ...typography.bodyMD, color: colors.danger }, anamnesis: { gap: spacing.sm }, detail: { gap: spacing.xxs }, detailValue: { ...typography.bodyMD, color: colors.textPrimary }, input: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 112, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md, textAlignVertical: 'top' }, sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.md }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, historySession: { gap: spacing.xxs, paddingTop: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border }, historySet: { ...typography.caption, color: colors.titanium },
+  page: { paddingVertical: spacing.xl, gap: spacing.md }, identityCopy: { ...typography.bodyMD, color: colors.textSecondary, marginTop: -spacing.sm }, tabs: { flexDirection: 'row', padding: spacing.xxs, gap: spacing.xxs, borderRadius: radius.md, backgroundColor: colors.surface }, tab: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.sm }, tabSelected: { backgroundColor: colors.surfaceElevated }, tabText: { ...typography.caption, color: colors.textMuted }, tabTextSelected: { color: colors.primary }, card: { gap: spacing.md }, cardTitle: { ...typography.headingMD, color: colors.textPrimary }, row: { gap: spacing.xxs }, label: { ...typography.caption, color: colors.textMuted }, value: { ...typography.bodyLG, color: colors.textPrimary }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, errorText: { ...typography.bodyMD, color: colors.danger }, anamnesis: { gap: spacing.sm }, detail: { gap: spacing.xxs }, detailValue: { ...typography.bodyMD, color: colors.textPrimary }, input: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 112, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md, textAlignVertical: 'top' }, sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.md }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, workoutItem: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm, padding: 0, overflow: 'hidden' }, workoutPressable: { flex: 1, gap: spacing.xxs, padding: spacing.md }, workoutTitle: { ...typography.headingMD, color: colors.textPrimary }, workoutMeta: { ...typography.caption, color: colors.primary }, openHint: { ...typography.caption, color: colors.titanium }, orderActions: { justifyContent: 'center', gap: spacing.xs, padding: spacing.sm, borderLeftWidth: 1, borderLeftColor: colors.border }, orderButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, disabled: { opacity: .3 }, pressed: { opacity: .75 }, historySession: { gap: spacing.xxs, paddingTop: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border }, historySet: { ...typography.caption, color: colors.titanium },
 });

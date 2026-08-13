@@ -8,8 +8,17 @@ export function useCreateTrainerTemplate() { const client = useQueryClient(); re
 export function useUpdateTrainerTemplate(templateId: string) { const client = useQueryClient(); return useMutation({ mutationFn: (input: Parameters<typeof trainerClient.updateTemplate>[1]) => trainerClient.updateTemplate(templateId, input), onSuccess: (template) => { client.setQueryData(['trainer', 'training', 'templates', templateId], template); void client.invalidateQueries({ queryKey: ['trainer', 'training', 'templates'], exact: true }); } }); }
 export function useDeleteTrainerTemplate() { const client = useQueryClient(); return useMutation({ mutationFn: trainerClient.deleteTemplate, onSuccess: (_, templateId) => { client.removeQueries({ queryKey: ['trainer', 'training', 'templates', templateId] }); void client.invalidateQueries({ queryKey: ['trainer', 'training', 'templates'], exact: true }); } }); }
 export function useDuplicateTrainerTemplate() { const client = useQueryClient(); return useMutation({ mutationFn: trainerClient.duplicateTemplate, onSuccess: () => client.invalidateQueries({ queryKey: ['trainer', 'training', 'templates'] }) }); }
-export function useApplyTrainerTemplate() { const client = useQueryClient(); return useMutation({ mutationFn: ({ templateId, studentId, recommendedDay, isRecommended }: { templateId: string; studentId: string; recommendedDay: number; isRecommended: boolean }) => trainerClient.applyTemplate(templateId, studentId, recommendedDay, isRecommended), onSuccess: (_, input) => client.invalidateQueries({ queryKey: ['trainer', 'students', input.studentId, 'workouts'] }) }); }
+export function useApplyTrainerTemplate() { const client = useQueryClient(); return useMutation({ mutationFn: ({ templateId, studentId }: { templateId: string; studentId: string }) => trainerClient.applyTemplate(templateId, studentId), onSuccess: (_, input) => client.invalidateQueries({ queryKey: ['trainer', 'students', input.studentId, 'workouts'] }) }); }
 export function useTrainerStudentWorkouts(studentId: string) { return useQuery({ queryKey: ['trainer', 'students', studentId, 'workouts'], queryFn: () => trainerClient.studentWorkouts(studentId), enabled: Boolean(studentId) }); }
+export function useReorderTrainerStudentWorkouts(studentId: string) {
+  const client = useQueryClient();
+  return useMutation({
+    mutationFn: (workoutIds: string[]) => trainerClient.reorderStudentWorkouts(studentId, workoutIds),
+    onSuccess: (result) => {
+      client.setQueryData(['trainer', 'students', studentId, 'workouts'], result.workouts);
+    },
+  });
+}
 export function useCreateTrainerStudentWorkout(studentId: string) { const client = useQueryClient(); return useMutation({ mutationFn: (input: Parameters<typeof trainerClient.createStudentWorkout>[1]) => trainerClient.createStudentWorkout(studentId, input), onSuccess: (workout) => { client.setQueryData(['trainer', 'students', studentId, 'workouts', workout.id], workout); void client.invalidateQueries({ queryKey: ['trainer', 'students', studentId, 'workouts'], exact: true }); } }); }
 export function useTrainerStudentWorkout(studentId: string, workoutId: string) { return useQuery({ queryKey: ['trainer', 'students', studentId, 'workouts', workoutId], queryFn: () => trainerClient.studentWorkout(studentId, workoutId), enabled: Boolean(studentId && workoutId) }); }
 export function useUpdateTrainerStudentWorkout(studentId: string, workoutId: string) {
