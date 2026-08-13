@@ -41,7 +41,7 @@ export default function TrainerInviteScreen() {
     await Linking.openURL(`https://wa.me/${phoneDigits}?text=${encodeURIComponent(inviteMessage!)}`);
   };
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="NOVO ALUNO" title="Envie um convite" onBack={() => router.back()} />
     <Text style={styles.copy}>Compartilhe o código para que o aluno faça o cadastro e preencha a anamnese. O convite expira em sete dias.</Text>
     <Card style={styles.card}>

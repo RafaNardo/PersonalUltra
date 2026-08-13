@@ -36,7 +36,7 @@ export default function TrainerTemplateDetailScreen() {
     } },
   ]);
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="DETALHES DO MODELO" title={value.name} onBack={() => router.back()} />
     {value.notes ? <Text style={styles.intro}>{value.notes}</Text> : <Text style={styles.intro}>Modelo reutilizável da sua biblioteca.</Text>}
     <Card style={styles.summary}><View><Text style={styles.summaryLabel}>ESTRUTURA</Text><Text style={styles.summaryValue}>{value.exercises?.length ?? 0} {(value.exercises?.length ?? 0) === 1 ? 'exercício configurado' : 'exercícios configurados'}</Text></View><Ionicons name="albums-outline" size={28} color={colors.primary} /></Card>

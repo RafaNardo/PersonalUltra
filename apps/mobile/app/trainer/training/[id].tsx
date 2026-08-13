@@ -127,7 +127,7 @@ export default function TrainerTemplateEditorScreen() {
       Alert.alert('Não foi possível salvar', error instanceof Error ? error.message : 'Tente novamente.');
     }
   };
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow={isNew ? 'NOVO MODELO' : 'MODELO DE TREINO'} title={isNew ? 'Criar modelo' : name || 'Modelo'} onBack={() => router.back()} action={!isNew ? <Tag tone="neutral">MODELO</Tag> : undefined} />
     <Card style={styles.form}>
       <Field label="Nome do modelo" value={name} onChangeText={changeName} maxLength={200} placeholder="Ex.: Upper A" />

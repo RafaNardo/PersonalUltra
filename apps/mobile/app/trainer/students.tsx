@@ -17,7 +17,7 @@ export default function TrainerStudentsScreen() {
     ? students.data!.filter((student) => `${student.firstName} ${student.lastName} ${student.email ?? ''}`.toLocaleLowerCase('pt-BR').includes(normalizedQuery))
     : students.data!;
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="GESTÃO DE ALUNOS" title="Seus alunos" onBack={() => router.back()} />
     <Text style={styles.copy}>{students.data!.length} {students.data!.length === 1 ? 'aluno ativo' : 'alunos ativos'}</Text>
     <SearchField value={query} onChangeText={setQuery} placeholder="Buscar por nome ou e-mail" accessibilityLabel="Buscar alunos" />

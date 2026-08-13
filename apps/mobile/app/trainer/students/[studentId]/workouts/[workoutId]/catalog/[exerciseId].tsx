@@ -63,7 +63,7 @@ export default function TrainerExerciseConfigurationScreen() {
     router.replace(workoutEditorRoute);
   };
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow={`${student.data!.firstName} ${student.data!.lastName} · ${workout.data!.name}`} title={exercise.name} onBack={leaveConfiguration} />
     <Text style={styles.meta}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text>
     <View style={styles.heroFrame}>{source ? <Image source={source} accessibilityLabel={`Demonstração do exercício ${exercise.name}`} resizeMode="cover" style={styles.heroImage} /> : <View accessibilityLabel="Imagem indisponível" style={styles.heroFallback}><Text style={styles.heroFallbackText}>Imagem indisponível</Text></View>}</View>

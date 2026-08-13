@@ -17,7 +17,7 @@ export default function TrainerTemplateLibraryScreen() {
   if (templates.isLoading) return <LoadingView message="Carregando modelos…" />;
   if (templates.isError) return <ErrorView message={templates.error.message} onRetry={() => templates.refetch()} />;
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="BIBLIOTECA DO PERSONAL" title="Modelos de treino" onBack={() => router.back()} />
     <Text style={styles.copy}>Encontre rapidamente uma estrutura pronta, consulte os detalhes e escolha como reutilizá-la.</Text>
     <Button onPress={() => router.push({ pathname: '/trainer/training/[id]', params: { id: 'new' } })}>+ Novo modelo</Button>

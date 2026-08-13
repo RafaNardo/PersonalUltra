@@ -55,7 +55,7 @@ export default function TrainerStudentWorkoutScreen() {
     }
   };
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow={`${studentData.firstName} ${studentData.lastName}`} title={workoutData.name} onBack={() => router.back()} action={workoutData.isRecommended ? <Tag tone="success">RECOMENDADO</Tag> : undefined} />
     <View style={styles.metaRow}><Text style={styles.schedule}>{weekday(workoutData.recommendedDay)} · {editor.exercises.length} {editor.exercises.length === 1 ? 'exercício' : 'exercícios'}</Text>{editor.dirty ? <Tag tone="primary">NÃO PUBLICADO</Tag> : <Tag tone="success">PUBLICADO</Tag>}</View>
     {workoutData.notes ? <Text style={styles.copy}>{workoutData.notes}</Text> : null}

@@ -42,7 +42,7 @@ export default function TrainerSettingsScreen() {
     }
   };
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="SEU JEITO DE PRESCREVER" title="Configurações" />
     <Text style={styles.intro}>Defina um ponto de partida para novos exercícios. Você ainda poderá ajustar cada prescrição antes de publicá-la.</Text>
 

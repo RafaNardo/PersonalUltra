@@ -41,7 +41,7 @@ export default function TrainerStudentDetailScreen() {
     }
   };
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="ALUNO" title={`${data.firstName} ${data.lastName}`} onBack={() => router.back()} />
     <Text style={styles.identityCopy}>{anamnesis.data?.goal ? `Objetivo: ${anamnesis.data.goal}` : 'Acompanhamento individual'}</Text>
     <View accessibilityRole="tablist" style={styles.tabs}>

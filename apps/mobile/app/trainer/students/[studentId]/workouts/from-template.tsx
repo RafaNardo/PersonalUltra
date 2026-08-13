@@ -50,7 +50,7 @@ export default function ApplyTemplateToStudentScreen() {
   if (selectedTemplateId && selectedTemplate.data) {
     const template = selectedTemplate.data;
     const exercises = template.exercises ?? [];
-    return <Screen style={styles.page}>
+    return <Screen withinTabs style={styles.page}>
       <TopBar eyebrow="ETAPA 2 DE 2 · REVISAR" title={template.name} onBack={() => setSelectedTemplateId(undefined)} action={<Tag tone="neutral">MODELO</Tag>} />
       <Text style={styles.intro}>Confira o conteúdo e escolha como este treino entrará na semana de {student.data!.firstName}.</Text>
 
@@ -82,7 +82,7 @@ export default function ApplyTemplateToStudentScreen() {
     </Screen>;
   }
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="ETAPA 1 DE 2 · ESCOLHER" title="Adicionar por modelo" onBack={() => router.back()} />
     <Card style={styles.studentCard}><Text style={styles.label}>NOVO TREINO PARA</Text><Text style={styles.studentName}>{studentName}</Text><Text style={styles.copy}>Escolha uma prescrição pronta. Antes de adicionar, você poderá revisar os exercícios e definir o dia.</Text></Card>
 

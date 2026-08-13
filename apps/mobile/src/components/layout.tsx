@@ -4,9 +4,9 @@ import { SafeAreaView } from 'react-native-safe-area-context';
 import { Pressable } from 'react-native';
 import { colors, spacing, typography } from '@/src/design/tokens';
 
-export function Screen({ children, scroll = true, style }: PropsWithChildren<{ scroll?: boolean; style?: StyleProp<ViewStyle> }>) {
+export function Screen({ children, scroll = true, style, withinTabs = false }: PropsWithChildren<{ scroll?: boolean; style?: StyleProp<ViewStyle>; withinTabs?: boolean }>) {
   const content = <View style={[styles.content, style]}>{children}</View>;
-  return <SafeAreaView style={styles.safe}><KeyboardAvoidingView style={styles.keyboard} behavior={Platform.select({ ios: 'padding', android: 'height' })}>{scroll ? <ScrollView contentContainerStyle={styles.scroll} keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled">{content}</ScrollView> : content}</KeyboardAvoidingView></SafeAreaView>;
+  return <SafeAreaView edges={withinTabs ? ['top', 'left', 'right'] : undefined} style={styles.safe}><KeyboardAvoidingView style={styles.keyboard} behavior={Platform.select({ ios: 'padding', android: 'height' })}>{scroll ? <ScrollView contentContainerStyle={styles.scroll} keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled">{content}</ScrollView> : content}</KeyboardAvoidingView></SafeAreaView>;
 }
 
 export function TopBar({ eyebrow, title, action, onBack }: { eyebrow?: string; title: string; action?: React.ReactNode; onBack?: () => void }) {

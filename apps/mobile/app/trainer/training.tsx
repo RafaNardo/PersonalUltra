@@ -16,7 +16,7 @@ export default function TrainerTrainingScreen() {
   if (students.isLoading) return <LoadingView message="Carregando alunos…" />;
   if (students.isError) return <ErrorView message={students.error.message} onRetry={() => students.refetch()} />;
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="PRESCRIÇÃO" title="Treinos dos alunos" />
     <Text style={styles.copy}>Escolha um aluno para consultar seus treinos e abrir uma prescrição.</Text>
     <Button variant="secondary" onPress={() => router.push('/trainer/training/templates')}>Biblioteca de modelos</Button>

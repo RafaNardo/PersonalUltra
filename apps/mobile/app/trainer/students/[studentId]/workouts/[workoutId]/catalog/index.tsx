@@ -26,7 +26,7 @@ export default function TrainerExerciseCatalogScreen() {
   const results = catalog.data ?? [];
   const clearFilters = () => { setSearch(''); setMuscleGroup('Todos'); };
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow={`${student.data!.firstName} ${student.data!.lastName} · ${workout.data!.name}`} title="Adicionar exercício" onBack={() => router.back()} />
     <View style={styles.searchShell}>
       <Text style={styles.searchIcon}>⌕</Text>

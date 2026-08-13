@@ -35,7 +35,7 @@ export default function CreateStudentWorkoutScreen() {
     }
   };
 
-  return <Screen style={styles.page}>
+  return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="NOVO TREINO" title="Começar do zero" onBack={() => router.back()} />
     <Card style={styles.context}><Text style={styles.label}>CRIANDO PARA</Text><Text style={styles.studentName}>{student.data!.firstName} {student.data!.lastName}</Text><Text style={styles.copy}>Defina a identidade do treino. Na próxima tela, você adicionará os exercícios pelo catálogo e publicará a prescrição.</Text></Card>
 
