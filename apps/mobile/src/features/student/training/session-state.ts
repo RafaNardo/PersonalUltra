@@ -1,5 +1,5 @@
 import { create } from 'zustand';
-import type { StudentSession } from '@/src/features/student/invite/api';
+import type { StudentSession, StudentSetPerformance } from '@/src/features/student/invite/api';
 
 export type SessionExercise = StudentSession['exercises'][number];
 export type ExerciseProgressState = 'completed' | 'current' | 'pending';
@@ -10,7 +10,7 @@ type StudentTrainingSessionState = {
   isOfflineSnapshot: boolean;
   setSession: (session: StudentSession, isOfflineSnapshot?: boolean, studentId?: string) => void;
   setOfflineSnapshot: (isOfflineSnapshot: boolean) => void;
-  updateExerciseProgress: (exerciseId: string, completedSets: number) => void;
+  updateExerciseProgress: (exerciseId: string, completedSets: number, performance?: StudentSetPerformance) => void;
   clearSession: () => void;
 };
 
@@ -20,14 +20,20 @@ export const useStudentTrainingSessionStore = create<StudentTrainingSessionState
   isOfflineSnapshot: false,
   setSession: (session, isOfflineSnapshot = false, studentId) => set({ session, isOfflineSnapshot, studentId }),
   setOfflineSnapshot: (isOfflineSnapshot) => set({ isOfflineSnapshot }),
-  updateExerciseProgress: (exerciseId, completedSets) => set((state) => {
+  updateExerciseProgress: (exerciseId, completedSets, performance) => set((state) => {
     if (!state.session) return state;
     return {
       ...state,
       session: {
         ...state.session,
         exercises: state.session.exercises.map((exercise) => exercise.id === exerciseId
-          ? { ...exercise, completedSets: Math.max(exercise.completedSets, completedSets) }
+          ? {
+              ...exercise,
+              completedSets: Math.max(exercise.completedSets, completedSets),
+              performances: performance
+                ? [...(exercise.performances ?? []).filter((item) => item.setNumber !== performance.setNumber), performance].sort((left, right) => left.setNumber - right.setNumber)
+                : exercise.performances,
+            }
           : exercise),
       },
     };

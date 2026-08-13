@@ -42,8 +42,8 @@ public static class TrainingEndpointExtensions
             if (!StudentId(user, out var studentId)) return ApiEndpointExtensions.ApiError("STUDENT_SESSION_REQUIRED", "Use uma sessão de aluno válida.", 403);
             var workout = await db.StudentWorkouts.Include(x => x.Exercises).SingleOrDefaultAsync(x => x.Id == workoutId && x.StudentId == studentId && x.Exercises.Any(), ct); if (workout is null) return ApiEndpointExtensions.ApiError("WORKOUT_NOT_FOUND", "Este treino não está disponível.", 404);
             var existing = await db.WorkoutSessions.Include(x => x.StudentWorkout).Include(x => x.Exercises).SingleOrDefaultAsync(x => x.StudentId == studentId && x.StudentWorkoutId == workoutId && x.Status == "InProgress", ct);
-            if (existing is not null) return Results.Ok(ToResponse(existing));
-            var session = new PersonalUltra.Domain.WorkoutSession { Id = Guid.NewGuid(), StudentId = studentId, StudentWorkoutId = workoutId, StudentWorkout = workout, StartedAt = clock.GetUtcNow(), Status = "InProgress" }; session.Exercises.AddRange(workout.Exercises.OrderBy(x => x.Sequence).Select(x => PersonalUltra.Domain.WorkoutSessionExercise.FromStudentWorkout(session.Id, x))); db.WorkoutSessions.Add(session); await db.SaveChangesAsync(ct); return Results.Ok(ToResponse(session));
+            if (existing is not null) return Results.Ok(ToResponse(existing, await PreviousPerformances(db, studentId, existing.Id, existing.Exercises, ct)));
+            var session = new PersonalUltra.Domain.WorkoutSession { Id = Guid.NewGuid(), StudentId = studentId, StudentWorkoutId = workoutId, StudentWorkout = workout, StartedAt = clock.GetUtcNow(), Status = "InProgress" }; session.Exercises.AddRange(workout.Exercises.OrderBy(x => x.Sequence).Select(x => PersonalUltra.Domain.WorkoutSessionExercise.FromStudentWorkout(session.Id, x))); db.WorkoutSessions.Add(session); await db.SaveChangesAsync(ct); return Results.Ok(ToResponse(session, await PreviousPerformances(db, studentId, session.Id, session.Exercises, ct)));
         });
         api.MapGet("/sessions/{sessionId:guid}", async (Guid sessionId, PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         {
@@ -54,7 +54,7 @@ public static class TrainingEndpointExtensions
                     .ThenInclude(x => x.Performances)
                 .SingleOrDefaultAsync(x => x.Id == sessionId && x.StudentId == studentId, ct);
             if (session is null) return ApiEndpointExtensions.ApiError("SESSION_NOT_FOUND", "Sessão de treino não encontrada.", 404);
-            return Results.Ok(ToDetailResponse(session));
+            return Results.Ok(ToDetailResponse(session, await PreviousPerformances(db, studentId, session.Id, session.Exercises, ct)));
         });
         api.MapPost("/sessions/{sessionId:guid}/exercises/{exerciseId:guid}/sets", async (Guid sessionId, Guid exerciseId, CompleteSetRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
         {
@@ -104,6 +104,18 @@ public static class TrainingEndpointExtensions
         });
     }
     private static bool StudentId(ClaimsPrincipal user, out Guid id) => Guid.TryParse(user.FindFirstValue(ClaimTypes.NameIdentifier), out id) && user.FindFirstValue("subject") == "student";
-    private static StudentWorkoutSessionResponse ToResponse(PersonalUltra.Domain.WorkoutSession session) => new(session.Id, session.StudentWorkoutId, session.StudentWorkout?.Name ?? "Treino", session.Status, session.StartedAt, session.CompletedAt, session.Exercises.OrderBy(x => x.Sequence).Select(x => new StudentSessionExercise(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes, x.CompletedSets)).ToArray());
-    private static StudentSessionDetailResponse ToDetailResponse(PersonalUltra.Domain.WorkoutSession session) => new(session.Id, session.StudentWorkoutId, session.StudentWorkout?.Name ?? "Treino", session.Status, session.StartedAt, session.CompletedAt, session.Exercises.OrderBy(x => x.Sequence).Select(x => new StudentSessionExerciseDetail(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes, x.CompletedSets, x.Performances.OrderBy(p => p.SetNumber).Select(p => new StudentSetPerformance(p.SetNumber, p.WeightKg, p.Repetitions, p.CompletedAt)).ToArray())).ToArray());
+    private static StudentWorkoutSessionResponse ToResponse(PersonalUltra.Domain.WorkoutSession session, IReadOnlyDictionary<Guid, StudentSetPerformance> previous) => new(session.Id, session.StudentWorkoutId, session.StudentWorkout?.Name ?? "Treino", session.Status, session.StartedAt, session.CompletedAt, session.Exercises.OrderBy(x => x.Sequence).Select(x => new StudentSessionExercise(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes, x.CompletedSets, PreviousFor(x, previous))).ToArray());
+    private static StudentSessionDetailResponse ToDetailResponse(PersonalUltra.Domain.WorkoutSession session, IReadOnlyDictionary<Guid, StudentSetPerformance> previous) => new(session.Id, session.StudentWorkoutId, session.StudentWorkout?.Name ?? "Treino", session.Status, session.StartedAt, session.CompletedAt, session.Exercises.OrderBy(x => x.Sequence).Select(x => new StudentSessionExerciseDetail(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes, x.CompletedSets, PreviousFor(x, previous), x.Performances.OrderBy(p => p.SetNumber).Select(p => new StudentSetPerformance(p.SetNumber, p.WeightKg, p.Repetitions, p.CompletedAt)).ToArray())).ToArray());
+    private static StudentSetPerformance? PreviousFor(PersonalUltra.Domain.WorkoutSessionExercise exercise, IReadOnlyDictionary<Guid, StudentSetPerformance> previous) => exercise.ExerciseId is Guid exerciseId && previous.TryGetValue(exerciseId, out var performance) ? performance : null;
+    private static async Task<IReadOnlyDictionary<Guid, StudentSetPerformance>> PreviousPerformances(PersonalUltraDbContext db, Guid studentId, Guid currentSessionId, IEnumerable<PersonalUltra.Domain.WorkoutSessionExercise> exercises, CancellationToken ct)
+    {
+        var exerciseIds = exercises.Where(x => x.ExerciseId.HasValue).Select(x => x.ExerciseId!.Value).Distinct().ToArray();
+        if (exerciseIds.Length == 0) return new Dictionary<Guid, StudentSetPerformance>();
+        var history = await db.SetPerformances.AsNoTracking()
+            .Where(x => x.WorkoutSessionExercise.WorkoutSession.StudentId == studentId && x.WorkoutSessionExercise.WorkoutSessionId != currentSessionId && x.WorkoutSessionExercise.ExerciseId.HasValue && exerciseIds.Contains(x.WorkoutSessionExercise.ExerciseId.Value))
+            .OrderByDescending(x => x.CompletedAt)
+            .Select(x => new { ExerciseId = x.WorkoutSessionExercise.ExerciseId!.Value, x.SetNumber, x.WeightKg, x.Repetitions, x.CompletedAt })
+            .ToListAsync(ct);
+        return history.GroupBy(x => x.ExerciseId).ToDictionary(x => x.Key, x => { var latest = x.First(); return new StudentSetPerformance(latest.SetNumber, latest.WeightKg, latest.Repetitions, latest.CompletedAt); });
+    }
 }

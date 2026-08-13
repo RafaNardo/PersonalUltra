@@ -8,7 +8,7 @@ export type CachedWorkoutSnapshot = {
   workoutId: string;
   workoutName: string;
   status: string;
-  exercises: Array<{ id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string; completedSets: number }>;
+  exercises: Array<{ id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string; completedSets: number; previousPerformance?: { setNumber: number; weightKg: number; repetitions: number; completedAt: string }; performances?: Array<{ setNumber: number; weightKg: number; repetitions: number; completedAt: string }> }>;
 };
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
@@ -91,9 +91,9 @@ export async function pendingSetNumbers(sessionId: string, studentId: string): P
 export async function pendingSetCount(sessionId: string, studentId: string): Promise<number> {
   const db = await database(); const row = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM local_sets WHERE session_id = ? AND student_id = ?', sessionId, studentId); return row?.count ?? 0;
 }
-export async function updateCachedExerciseProgress(sessionId: string, studentId: string, exerciseId: string, completedSets: number) {
+export async function updateCachedExerciseProgress(sessionId: string, studentId: string, exerciseId: string, completedSets: number, performance?: { setNumber: number; weightKg: number; repetitions: number; completedAt: string }) {
   const db = await database(); const row = await db.getFirstAsync<{ payload: string }>('SELECT payload FROM cached_workout WHERE session_id = ? AND student_id = ?', sessionId, studentId); if (!row) return;
-  const snapshot = JSON.parse(row.payload) as CachedWorkoutSnapshot; const exercise = snapshot.exercises.find((item) => item.id === exerciseId); if (!exercise || exercise.completedSets >= completedSets) return; exercise.completedSets = completedSets; const updatedAt = new Date().toISOString();
+  const snapshot = JSON.parse(row.payload) as CachedWorkoutSnapshot; const exercise = snapshot.exercises.find((item) => item.id === exerciseId); if (!exercise) return; exercise.completedSets = Math.max(exercise.completedSets, completedSets); if (performance) exercise.performances = [...(exercise.performances ?? []).filter((item) => item.setNumber !== performance.setNumber), performance].sort((left, right) => left.setNumber - right.setNumber); const updatedAt = new Date().toISOString();
   await db.withTransactionAsync(async () => { await db.runAsync('UPDATE cached_workout SET payload = ?, updated_at = ? WHERE session_id = ? AND student_id = ?', JSON.stringify(snapshot), updatedAt, sessionId, studentId); await db.runAsync('UPDATE cached_exercises SET payload = ?, updated_at = ? WHERE exercise_id = ? AND session_id = ? AND student_id = ?', JSON.stringify(exercise), updatedAt, exerciseId, sessionId, studentId); });
 }
 export async function removePendingSet(clientOperationId: string, studentId: string) { const db = await database(); await db.runAsync('DELETE FROM pending_operations WHERE client_operation_id = ? AND student_id = ?', clientOperationId, studentId); await db.runAsync('DELETE FROM local_sets WHERE client_operation_id = ? AND student_id = ?', clientOperationId, studentId); }

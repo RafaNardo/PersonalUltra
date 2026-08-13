@@ -204,6 +204,57 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     }
 
     [Fact]
+    public async Task Starting_a_workout_suggests_the_students_latest_performance_for_each_exercise()
+    {
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
+        var previousWorkoutId = Guid.NewGuid();
+        var previousSessionId = Guid.NewGuid();
+        var currentWorkoutId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var catalog = await db.Exercises.AsNoTracking().FirstAsync(x => x.IsActive);
+            var previousWorkout = new StudentWorkout { Id = previousWorkoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino anterior", RecommendedDay = 1, CreatedAt = DateTimeOffset.UtcNow.AddDays(-8) };
+            var previousPrescription = StudentWorkoutExercise.FromCatalog(previousWorkoutId, catalog, 1, 3, 8, 12, 60);
+            previousWorkout.Exercises.Add(previousPrescription);
+            var previousSession = new WorkoutSession { Id = previousSessionId, StudentId = DemoIds.StudentId, StudentWorkoutId = previousWorkoutId, StartedAt = DateTimeOffset.UtcNow.AddDays(-7), CompletedAt = DateTimeOffset.UtcNow.AddDays(-7).AddHours(1), Status = "Completed" };
+            var previousExercise = WorkoutSessionExercise.FromStudentWorkout(previousSessionId, previousPrescription);
+            previousExercise.CompletedSets = 2;
+            previousExercise.Performances.Add(new SetPerformance { Id = Guid.NewGuid(), WorkoutSessionExerciseId = previousExercise.Id, ClientOperationId = $"previous-{Guid.NewGuid():N}", SetNumber = 1, WeightKg = 30m, Repetitions = 12, CompletedAt = DateTimeOffset.UtcNow.AddDays(-7) });
+            previousExercise.Performances.Add(new SetPerformance { Id = Guid.NewGuid(), WorkoutSessionExerciseId = previousExercise.Id, ClientOperationId = $"latest-{Guid.NewGuid():N}", SetNumber = 2, WeightKg = 32.5m, Repetitions = 10, CompletedAt = DateTimeOffset.UtcNow.AddDays(-7).AddMinutes(5) });
+            previousSession.Exercises.Add(previousExercise);
+            var currentWorkout = new StudentWorkout { Id = currentWorkoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino atual", RecommendedDay = 2, CreatedAt = DateTimeOffset.UtcNow };
+            currentWorkout.Exercises.Add(StudentWorkoutExercise.FromCatalog(currentWorkoutId, catalog, 1, 3, 8, 12, 60));
+            db.StudentWorkouts.AddRange(previousWorkout, currentWorkout);
+            db.WorkoutSessions.Add(previousSession);
+            await db.SaveChangesAsync();
+        }
+
+        var response = await client.PostAsync($"/api/v1/training/{currentWorkoutId}/start", null);
+        var session = await response.Content.ReadFromJsonAsync<SessionResponse>();
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var suggestion = Assert.Single(session!.Exercises).PreviousPerformance;
+        Assert.NotNull(suggestion);
+        Assert.Equal(32.5m, suggestion.WeightKg);
+        Assert.Equal(10, suggestion.Repetitions);
+
+        using var cleanupScope = factory.Services.CreateScope();
+        var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        var workoutIds = new[] { previousWorkoutId, currentWorkoutId };
+        var sessionIds = await cleanupDb.WorkoutSessions.Where(x => workoutIds.Contains(x.StudentWorkoutId)).Select(x => x.Id).ToArrayAsync();
+        cleanupDb.SetPerformances.RemoveRange(cleanupDb.SetPerformances.Where(x => sessionIds.Contains(x.WorkoutSessionExercise.WorkoutSessionId)));
+        cleanupDb.WorkoutSessionExercises.RemoveRange(cleanupDb.WorkoutSessionExercises.Where(x => sessionIds.Contains(x.WorkoutSessionId)));
+        cleanupDb.WorkoutSessions.RemoveRange(cleanupDb.WorkoutSessions.Where(x => sessionIds.Contains(x.Id)));
+        cleanupDb.StudentWorkoutExercises.RemoveRange(cleanupDb.StudentWorkoutExercises.Where(x => workoutIds.Contains(x.StudentWorkoutId)));
+        cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => workoutIds.Contains(x.Id)));
+        await cleanupDb.SaveChangesAsync();
+    }
+
+    [Fact]
     public async Task Workout_preview_is_read_only_and_returns_ordered_student_snapshot()
     {
         var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
@@ -251,7 +302,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     private sealed record StudentTrainingListResponse(StudentWorkoutSummary? Recommended, IReadOnlyList<StudentWorkoutSummary> Available);
     private sealed record StudentWorkoutSummary(Guid Id);
     private sealed record SessionResponse(Guid SessionId, IReadOnlyList<SessionExerciseResponse> Exercises);
-    private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets);
+    private sealed record SessionExerciseResponse(Guid Id, string Name, string? ImageRef, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets, SessionDetailPerformanceResponse? PreviousPerformance);
     private sealed record TrainingResponse(IReadOnlyList<TrainingHistoryItem> History);
     private sealed record TrainingHistoryItem(Guid SessionId, string Status, int CompletedSets);
     private sealed record PreviewResponse(Guid Id, string State, Guid? ActiveSessionId, IReadOnlyList<PreviewExerciseResponse> Exercises);
