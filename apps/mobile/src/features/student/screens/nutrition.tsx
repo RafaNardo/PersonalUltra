@@ -9,7 +9,7 @@ import { useInviteSessionStore } from '@/src/features/student/invite/session-sto
 
 export function StudentNutritionScreen() {
   const session = useInviteSessionStore((state) => state.session);
-  const query = useQuery({ queryKey: ['student', 'nutrition'], queryFn: () => inviteApi.nutrition(session!.accessToken), enabled: Boolean(session) });
+  const query = useQuery({ queryKey: ['student', session?.studentId, 'nutrition'], queryFn: () => inviteApi.nutrition(session!.accessToken), enabled: Boolean(session) });
   if (!session) { router.replace('/login'); return null; }
   if (query.isLoading) return <LoadingView message="Carregando sua alimentação…" />;
   if (query.isError) return <ErrorView message={query.error.message} onRetry={() => query.refetch()} />;

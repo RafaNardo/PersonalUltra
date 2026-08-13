@@ -7,8 +7,8 @@ import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { cachedSession, pendingSetNumbers, queueSet, updateCachedExerciseProgress } from '@/src/features/student/offline/training-db';
-import { currentExercise, orderedExercises, useStudentTrainingSessionStore } from '@/src/features/student/training/session-state';
+import { cacheWorkout, cachedSession, pendingSetNumbers, queueSet, updateCachedExerciseProgress } from '@/src/features/student/offline/training-db';
+import { currentExercise, orderedExercises, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
 import { parseActualSetPerformance } from '@/src/features/student/training/set-performance';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
 
@@ -16,19 +16,34 @@ export function StudentTrainingExerciseScreen() {
   const { sessionId, exerciseId } = useLocalSearchParams<{ sessionId: string; exerciseId: string }>();
   const authSession = useInviteSessionStore((state) => state.session);
   const session = useStudentTrainingSessionStore((state) => state.session);
+  const ownerStudentId = useStudentTrainingSessionStore((state) => state.studentId);
   const isOfflineSnapshot = useStudentTrainingSessionStore((state) => state.isOfflineSnapshot);
   const setSession = useStudentTrainingSessionStore((state) => state.setSession);
-  const [loading, setLoading] = useState(!session || session.sessionId !== sessionId);
+  const [loading, setLoading] = useState(!session || session.sessionId !== sessionId || ownerStudentId !== authSession?.studentId);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (session?.sessionId === sessionId || !sessionId) return;
-    void cachedSession<StudentSession>(sessionId).then(async (cached) => {
-      if (!cached) { setError('A sessão não está disponível neste dispositivo.'); return; }
-      const pending = await pendingSetNumbers(cached.sessionId);
-      setSession({ ...cached, exercises: cached.exercises.map((exercise) => ({ ...exercise, completedSets: Math.max(exercise.completedSets, pending[exercise.id] ?? 0) })) }, true);
-    }).catch(() => setError('Não foi possível recuperar a sessão salva.')).finally(() => setLoading(false));
-  }, [session?.sessionId, sessionId, setSession]);
+    if (session?.sessionId === sessionId && ownerStudentId === authSession?.studentId) return;
+    if (!sessionId || !authSession) return;
+    void (async () => {
+      try {
+        const server = await inviteApi.session(authSession.accessToken, sessionId);
+        const pending = await pendingSetNumbers(server.sessionId, authSession.studentId);
+        const hydrated = withPendingProgress(server, pending);
+        setSession(hydrated, false, authSession.studentId);
+        await cacheWorkout(hydrated, authSession.studentId).catch(() => undefined);
+        return;
+      } catch (loadError) {
+        if (!(loadError instanceof ApiError) || loadError.status !== 0) { setError(loadError instanceof Error ? loadError.message : 'Não foi possível recuperar a sessão.'); return; }
+      }
+      try {
+        const cached = await cachedSession<StudentSession>(sessionId, authSession.studentId);
+        if (!cached) { setError('A sessão não está disponível neste dispositivo.'); return; }
+        const pending = await pendingSetNumbers(cached.sessionId, authSession.studentId);
+        setSession(withPendingProgress(cached, pending), true, authSession.studentId);
+      } catch { setError('Não foi possível recuperar a sessão salva.'); }
+    })().finally(() => setLoading(false));
+  }, [session?.sessionId, ownerStudentId, sessionId, authSession, setSession]);
 
   if (!authSession) { router.replace('/login'); return null; }
   if (loading) return <LoadingView message="Abrindo seu exercício…" />;
@@ -42,10 +57,10 @@ export function StudentTrainingExerciseScreen() {
     router.replace({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });
     return null;
   }
-  return <FocusedExercise session={session} exercise={exercise} authToken={authSession.accessToken} isOfflineSnapshot={isOfflineSnapshot} position={ordered.findIndex((item) => item.id === exercise.id) + 1} />;
+  return <FocusedExercise session={session} exercise={exercise} authToken={authSession.accessToken} studentId={authSession.studentId} isOfflineSnapshot={isOfflineSnapshot} position={ordered.findIndex((item) => item.id === exercise.id) + 1} />;
 }
 
-function FocusedExercise({ session, exercise, authToken, isOfflineSnapshot, position }: { session: StudentSession; exercise: StudentSession['exercises'][number]; authToken: string; isOfflineSnapshot: boolean; position: number }) {
+function FocusedExercise({ session, exercise, authToken, studentId, isOfflineSnapshot, position }: { session: StudentSession; exercise: StudentSession['exercises'][number]; authToken: string; studentId: string; isOfflineSnapshot: boolean; position: number }) {
   const updateExerciseProgress = useStudentTrainingSessionStore((state) => state.updateExerciseProgress);
   const setOfflineSnapshot = useStudentTrainingSessionStore((state) => state.setOfflineSnapshot);
   const [weight, setWeight] = useState('');
@@ -63,15 +78,15 @@ function FocusedExercise({ session, exercise, authToken, isOfflineSnapshot, posi
       const response = await inviteApi.completeSet(authToken, session.sessionId, exercise.id, input);
       const completedSets = Math.max(setNumber, response.completedSets);
       updateExerciseProgress(exercise.id, completedSets);
-      await updateCachedExerciseProgress(session.sessionId, exercise.id, completedSets).catch(() => undefined);
+      await updateCachedExerciseProgress(session.sessionId, studentId, exercise.id, completedSets).catch(() => undefined);
       router.replace({ pathname: '/student/rest/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });
     } catch (saveError) {
       if (!(saveError instanceof ApiError) || saveError.status !== 0) { setMessage({ tone: 'error', text: saveError instanceof Error ? saveError.message : 'Não foi possível salvar esta série.' }); setSaving(false); return; }
       try {
-        await queueSet({ sessionId: session.sessionId, exerciseId: exercise.id, input });
+        await queueSet({ studentId, sessionId: session.sessionId, exerciseId: exercise.id, input });
         updateExerciseProgress(exercise.id, setNumber);
         setOfflineSnapshot(true);
-        try { await updateCachedExerciseProgress(session.sessionId, exercise.id, setNumber); } catch { /* Pending sets hydrate from local_sets. */ }
+        try { await updateCachedExerciseProgress(session.sessionId, studentId, exercise.id, setNumber); } catch { /* Pending sets hydrate from local_sets. */ }
         setMessage({ tone: 'offline', text: 'Série salva neste dispositivo e pendente para sincronização.' });
         router.replace({ pathname: '/student/rest/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } });
       } catch { setMessage({ tone: 'error', text: 'Não foi possível salvar a série no dispositivo.' }); }

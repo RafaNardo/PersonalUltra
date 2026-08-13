@@ -11,7 +11,7 @@ import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
 export function StudentTrainingPreviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const session = useInviteSessionStore((state) => state.session);
-  const preview = useQuery({ queryKey: ['student', 'training-preview', id], queryFn: () => inviteApi.trainingPreview(session!.accessToken, id!), enabled: Boolean(session && id) });
+  const preview = useQuery({ queryKey: ['student', session?.studentId, 'training-preview', id], queryFn: () => inviteApi.trainingPreview(session!.accessToken, id!), enabled: Boolean(session && id) });
 
   if (!session) { router.replace('/login'); return null; }
   if (preview.isLoading) return <LoadingView message="Carregando detalhes do treino…" />;

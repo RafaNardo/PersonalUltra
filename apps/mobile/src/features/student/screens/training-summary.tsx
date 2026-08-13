@@ -16,7 +16,7 @@ export function StudentTrainingSummaryScreen() {
   const { sessionId } = useLocalSearchParams<{ sessionId: string }>();
   const authSession = useInviteSessionStore((state) => state.session);
   const summary = useQuery({
-    queryKey: ['student', 'training-session', sessionId],
+    queryKey: ['student', authSession?.studentId, 'training-session', sessionId],
     queryFn: () => inviteApi.session(authSession!.accessToken, sessionId!),
     enabled: Boolean(authSession && sessionId),
   });

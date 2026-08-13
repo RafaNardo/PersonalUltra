@@ -12,8 +12,8 @@ export function StudentProgressScreen() {
   const session = useInviteSessionStore((state) => state.session);
   const client = useQueryClient();
   const [weight, setWeight] = useState('');
-  const query = useQuery({ queryKey: ['student', 'weight'], queryFn: () => inviteApi.weight(session!.accessToken), enabled: Boolean(session) });
-  const add = useMutation({ mutationFn: () => inviteApi.addWeight(session!.accessToken, Number(weight.replace(',', '.'))), onSuccess: () => { setWeight(''); client.invalidateQueries({ queryKey: ['student', 'weight'] }); } });
+  const query = useQuery({ queryKey: ['student', session?.studentId, 'weight'], queryFn: () => inviteApi.weight(session!.accessToken), enabled: Boolean(session) });
+  const add = useMutation({ mutationFn: () => inviteApi.addWeight(session!.accessToken, Number(weight.replace(',', '.'))), onSuccess: () => { setWeight(''); client.invalidateQueries({ queryKey: ['student', session?.studentId, 'weight'] }); } });
   if (!session) { router.replace('/login'); return null; }
   if (query.isLoading) return <LoadingView message="Carregando seu progresso…" />;
   if (query.isError) return <ErrorView message={query.error.message} onRetry={() => query.refetch()} />;

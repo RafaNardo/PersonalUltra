@@ -9,14 +9,16 @@ import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
 import { cacheWorkout, cachedWorkout, pendingSetCount, pendingSetNumbers, syncPendingSets } from '@/src/features/student/offline/training-db';
-import { currentExercise, exerciseProgressState, orderedExercises, sessionProgress, useStudentTrainingSessionStore } from '@/src/features/student/training/session-state';
+import { currentExercise, exerciseProgressState, orderedExercises, sessionProgress, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
 import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
 
 export function StudentTrainingSessionScreen() {
   const { id, start } = useLocalSearchParams<{ id: string; start?: string }>();
   const authSession = useInviteSessionStore((state) => state.session);
   const session = useStudentTrainingSessionStore((state) => state.session);
-  const activeSession = session?.workoutId === id ? session : undefined;
+  const ownerStudentId = useStudentTrainingSessionStore((state) => state.studentId);
+  const ownerMatches = ownerStudentId === authSession?.studentId;
+  const activeSession = ownerMatches && session?.workoutId === id ? session : undefined;
   const isOfflineSnapshot = useStudentTrainingSessionStore((state) => state.isOfflineSnapshot);
   const setSession = useStudentTrainingSessionStore((state) => state.setSession);
   const [error, setError] = useState<string>();
@@ -24,18 +26,21 @@ export function StudentTrainingSessionScreen() {
 
   const startWorkout = useMutation({
     mutationFn: async () => {
-      await synchronizePendingSets(authSession!.accessToken);
-      return hydratePendingProgress(await inviteApi.startWorkout(authSession!.accessToken, id!));
+      const sync = await synchronizePendingSets(authSession!.accessToken, authSession!.studentId);
+      const resumed = await inviteApi.activeSession(authSession!.accessToken, id!);
+      if (resumed) return hydratePendingProgress(resumed, authSession!.studentId);
+      if (sync.failed > 0) throw new Error('Não foi possível sincronizar as séries pendentes.');
+      return hydratePendingProgress(await inviteApi.startWorkout(authSession!.accessToken, id!), authSession!.studentId);
     },
     onSuccess: async (started) => {
-      setSession(started, false);
-      try { await cacheWorkout(started); } catch { /* The API response remains usable if local storage fails. */ }
+      setSession(started, false, authSession!.studentId);
+      try { await cacheWorkout(started, authSession!.studentId); } catch { /* The API response remains usable if local storage fails. */ }
     },
     onError: async (startError: Error) => {
       if (startError instanceof ApiError && startError.status === 0) {
         try {
-          const cached = await cachedWorkout<StudentSession>(id);
-          if (cached) { setSession(await hydratePendingProgress(cached), true); setError(undefined); return; }
+          const cached = await cachedWorkout<StudentSession>(id, authSession!.studentId);
+          if (cached) { setSession(await hydratePendingProgress(cached, authSession!.studentId), true, authSession!.studentId); setError(undefined); return; }
         } catch { /* Show the original connectivity error when no snapshot is available. */ }
       }
       setError(startError.message);
@@ -45,10 +50,12 @@ export function StudentTrainingSessionScreen() {
   const refresh = async () => {
     if (!authSession || !id || !activeSession) return;
     try {
-      await synchronizePendingSets(authSession.accessToken);
-      const refreshed = await hydratePendingProgress(await inviteApi.startWorkout(authSession.accessToken, id));
-      setSession(refreshed, false);
-      await cacheWorkout(refreshed);
+      await synchronizePendingSets(authSession.accessToken, authSession.studentId);
+      const refreshed = await inviteApi.activeSession(authSession.accessToken, id);
+      if (!refreshed) return;
+      const hydrated = await hydratePendingProgress(refreshed, authSession.studentId);
+      setSession(hydrated, false, authSession.studentId);
+      await cacheWorkout(hydrated, authSession.studentId);
     } catch { /* Keep the shared snapshot visible while offline. */ }
   };
 
@@ -59,7 +66,7 @@ export function StudentTrainingSessionScreen() {
 
   useEffect(() => {
     if (!authSession) return;
-    const retry = () => { void synchronizePendingSets(authSession.accessToken).catch(() => undefined); };
+    const retry = () => { void synchronizePendingSets(authSession.accessToken, authSession.studentId).then(() => refresh()).catch(() => undefined); };
     const interval = setInterval(retry, 15_000);
     const subscription = AppState.addEventListener('change', (state) => { if (state === 'active' && !startWorkout.isPending) void refresh(); });
     return () => { clearInterval(interval); subscription.remove(); };
@@ -68,8 +75,8 @@ export function StudentTrainingSessionScreen() {
   useEffect(() => {
     if (!authSession || !id || activeSession || start === '1' || loadingSnapshot) return;
     setLoadingSnapshot(true);
-    void cachedWorkout<StudentSession>(id).then(async (cached) => {
-      if (cached) setSession(await hydratePendingProgress(cached), true);
+    void cachedWorkout<StudentSession>(id, authSession.studentId).then(async (cached) => {
+      if (cached) setSession(await hydratePendingProgress(cached, authSession.studentId), true, authSession.studentId);
       else setError('Abra a prévia do treino e confirme o início para criar uma sessão.');
     }).catch(() => setError('Não foi possível recuperar a sessão salva neste dispositivo.')).finally(() => setLoadingSnapshot(false));
   }, [authSession, id, activeSession, start, loadingSnapshot]);
@@ -89,10 +96,15 @@ function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: S
   const allComplete = Boolean(session.exercises.length) && !current;
   const [completionError, setCompletionError] = useState<string>();
   const clearSession = useStudentTrainingSessionStore((state) => state.clearSession);
+  const studentId = useInviteSessionStore((state) => state.session?.studentId) ?? '';
   const complete = useMutation({
     mutationFn: async () => {
-      const pending = await pendingSetCount(session.sessionId);
+      const sync = await synchronizePendingSets(authToken, studentId);
+      if (sync.failed > 0) throw new Error('Conecte-se e aguarde a sincronização das séries pendentes antes de concluir.');
+      const pending = await pendingSetCount(session.sessionId, studentId);
       if (pending > 0) throw new Error(`${pending} ${pending === 1 ? 'série ainda está pendente' : 'séries ainda estão pendentes'}. Conecte-se e tente novamente antes de concluir.`);
+      const authoritative = await inviteApi.session(authToken, session.sessionId);
+      if (authoritative.exercises.some((exercise) => exercise.completedSets < exercise.sets)) throw new Error('A sessão ainda não está completa no servidor.');
       return inviteApi.completeWorkout(authToken, session.sessionId);
     },
     onSuccess: () => {
@@ -128,7 +140,7 @@ function OverviewExercise({ session, exercise }: { session: StudentSession; exer
 }
 
 function Prescription({ label, value }: { label: string; value: string }) { return <View style={styles.prescriptionItem}><Text style={styles.prescriptionLabel}>{label}</Text><Text style={styles.prescriptionValue}>{value}</Text></View>; }
-async function synchronizePendingSets(token: string) { return syncPendingSets(async (item) => { await inviteApi.completeSet(token, item.sessionId, item.exerciseId, item.input); }); }
-async function hydratePendingProgress(workout: StudentSession): Promise<StudentSession> { const pending = await pendingSetNumbers(workout.sessionId); return { ...workout, exercises: workout.exercises.map((exercise) => ({ ...exercise, completedSets: Math.max(exercise.completedSets, pending[exercise.id] ?? 0) })) }; }
+async function synchronizePendingSets(token: string, studentId: string) { return syncPendingSets(studentId, async (item) => { await inviteApi.completeSet(token, item.sessionId, item.exerciseId, item.input); }); }
+async function hydratePendingProgress(workout: StudentSession, studentId: string): Promise<StudentSession> { const pending = await pendingSetNumbers(workout.sessionId, studentId); return withPendingProgress(workout, pending); }
 
 const styles = StyleSheet.create({ page: { paddingVertical: spacing.xl, gap: spacing.lg }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, intro: { ...typography.bodyLG, color: colors.titaniumLight, lineHeight: 24 }, progressHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md }, progressCopy: { gap: spacing.xxs, flex: 1 }, progressTitle: { ...typography.headingMD, color: colors.textPrimary }, progressValue: { ...typography.headingLG, color: colors.primary }, progressTrack: { height: 8, borderRadius: 8, backgroundColor: colors.surfaceElevated, overflow: 'hidden' }, progressFill: { height: '100%', backgroundColor: colors.primary, borderRadius: 8 }, card: { gap: spacing.md, overflow: 'hidden' }, currentCard: { borderColor: colors.primary }, exerciseRow: { flexDirection: 'row', alignItems: 'flex-start', gap: spacing.sm }, thumbnail: { width: 64, height: 64, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, exerciseIdentity: { flex: 1, gap: spacing.xxs }, sequence: { ...typography.headingMD, color: colors.textPrimary }, context: { ...typography.caption, color: colors.titanium }, note: { ...typography.caption, color: colors.titaniumLight }, prescription: { flexDirection: 'row', gap: spacing.xs }, prescriptionItem: { flex: 1, gap: spacing.xxs, padding: spacing.sm, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, prescriptionLabel: { ...typography.caption, color: colors.textMuted }, prescriptionValue: { ...typography.bodyLG, color: colors.textPrimary }, offlineCard: { gap: spacing.xs, borderColor: colors.warning }, offlineTitle: { ...typography.headingMD, color: colors.warning }, error: { ...typography.caption, color: colors.danger } });

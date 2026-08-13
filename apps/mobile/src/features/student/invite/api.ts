@@ -47,6 +47,11 @@ export const inviteApi = {
   trainingPreview: (token: string, workoutId: string) => request<StudentWorkoutPreview>(`/training/${workoutId}`, {}, token),
   startWorkout: (token: string, workoutId: string) => request<StudentSession>(`/training/${workoutId}/start`, { method: 'POST' }, token),
   session: (token: string, sessionId: string) => request<StudentSessionDetail>(`/training/sessions/${sessionId}`, {}, token),
+  activeSession: async (token: string, workoutId: string) => {
+    const training = await request<StudentTraining>('/training', {}, token);
+    const workout = [training.recommended, ...training.available].find((item) => item?.id === workoutId);
+    return workout?.activeSessionId ? request<StudentSessionDetail>(`/training/sessions/${workout.activeSessionId}`, {}, token) : undefined;
+  },
   completeSet: (token: string, sessionId: string, exerciseId: string, input: { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number }) => request<{ saved: boolean; completedSets: number }>(`/training/sessions/${sessionId}/exercises/${exerciseId}/sets`, { method: 'POST', body: JSON.stringify(input) }, token),
   completeWorkout: (token: string, sessionId: string) => request(`/training/sessions/${sessionId}/complete`, { method: 'POST' }, token),
   nutrition: (token: string) => request<StudentNutrition | null>('/nutrition', {}, token),

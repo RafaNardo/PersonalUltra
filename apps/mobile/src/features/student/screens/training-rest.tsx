@@ -4,10 +4,11 @@ import { AppState, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
-import { type StudentSession } from '@/src/features/student/invite/api';
+import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
+import { ApiError } from '@/src/api/shared-http';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { cachedSession, pendingSetNumbers } from '@/src/features/student/offline/training-db';
-import { currentExercise, orderedExercises, useStudentTrainingSessionStore } from '@/src/features/student/training/session-state';
+import { cacheWorkout, cachedSession, pendingSetNumbers } from '@/src/features/student/offline/training-db';
+import { currentExercise, orderedExercises, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
 
 /**
  * Rest is deliberately UI-only. The set has already been persisted (or
@@ -18,19 +19,34 @@ export function StudentTrainingRestScreen() {
   const { sessionId, exerciseId } = useLocalSearchParams<{ sessionId: string; exerciseId: string }>();
   const authSession = useInviteSessionStore((state) => state.session);
   const session = useStudentTrainingSessionStore((state) => state.session);
+  const ownerStudentId = useStudentTrainingSessionStore((state) => state.studentId);
   const isOfflineSnapshot = useStudentTrainingSessionStore((state) => state.isOfflineSnapshot);
   const setSession = useStudentTrainingSessionStore((state) => state.setSession);
-  const [loading, setLoading] = useState(!session || session.sessionId !== sessionId);
+  const [loading, setLoading] = useState(!session || session.sessionId !== sessionId || ownerStudentId !== authSession?.studentId);
   const [error, setError] = useState<string>();
 
   useEffect(() => {
-    if (session?.sessionId === sessionId || !sessionId) return;
-    void cachedSession<StudentSession>(sessionId).then(async (cached) => {
-      if (!cached) { setError('A sessão não está disponível neste dispositivo.'); return; }
-      const pending = await pendingSetNumbers(cached.sessionId);
-      setSession({ ...cached, exercises: cached.exercises.map((exercise) => ({ ...exercise, completedSets: Math.max(exercise.completedSets, pending[exercise.id] ?? 0) })) }, true);
-    }).catch(() => setError('Não foi possível recuperar a sessão salva.')).finally(() => setLoading(false));
-  }, [session?.sessionId, sessionId, setSession]);
+    if (session?.sessionId === sessionId && ownerStudentId === authSession?.studentId) return;
+    if (!sessionId || !authSession) return;
+    void (async () => {
+      try {
+        const server = await inviteApi.session(authSession.accessToken, sessionId);
+        const pending = await pendingSetNumbers(server.sessionId, authSession.studentId);
+        const hydrated = withPendingProgress(server, pending);
+        setSession(hydrated, false, authSession.studentId);
+        await cacheWorkout(hydrated, authSession.studentId).catch(() => undefined);
+        return;
+      } catch (loadError) {
+        if (!(loadError instanceof ApiError) || loadError.status !== 0) { setError(loadError instanceof Error ? loadError.message : 'Não foi possível recuperar a sessão.'); return; }
+      }
+      try {
+        const cached = await cachedSession<StudentSession>(sessionId, authSession.studentId);
+        if (!cached) { setError('A sessão não está disponível neste dispositivo.'); return; }
+        const pending = await pendingSetNumbers(cached.sessionId, authSession.studentId);
+        setSession(withPendingProgress(cached, pending), true, authSession.studentId);
+      } catch { setError('Não foi possível recuperar a sessão salva.'); }
+    })().finally(() => setLoading(false));
+  }, [session?.sessionId, ownerStudentId, sessionId, authSession, setSession]);
 
   if (!authSession) { router.replace('/login'); return null; }
   if (loading) return <LoadingView message="Preparando seu descanso…" />;
