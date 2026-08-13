@@ -138,7 +138,7 @@ function RestTimer({ session, exercise, isOfflineSnapshot, authToken, studentId 
       <Text style={styles.copy}>{finished ? (exerciseComplete ? 'Escolha qualquer exercício pendente para continuar. A sequência do personal é uma sugestão.' : 'Descanso concluído. Continue quando estiver pronto.') : 'Use este intervalo conforme a prescrição do seu personal.'}</Text>
     </Card>
     {exerciseComplete ? <PendingExerciseList session={session} exercises={pendingExercises} restFinished={finished} /> : null}
-    {!exerciseComplete ? <View style={styles.actions}><Button disabled={!finished} onPress={continueFromRest}>Próxima série</Button></View> : null}
+    {!exerciseComplete ? <View style={styles.actions}><Button onPress={continueFromRest}>{finished ? 'Próxima série' : 'Pular descanso'}</Button></View> : null}
   </Screen>;
 }
 
