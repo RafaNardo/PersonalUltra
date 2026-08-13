@@ -11,7 +11,7 @@ export default function InviteCompleteScreen() {
   const { token } = useLocalSearchParams<{ token: string }>();
   const clear = useInviteSessionStore((state) => state.clear);
   const session = useInviteSessionStore((state) => state.session);
-  const trainerMessage = useQuery({ queryKey: ['student', 'trainer-message', session?.studentId], queryFn: () => inviteApi.activeTrainerMessage(session!.accessToken), enabled: Boolean(session?.accessToken) });
+  const trainerMessage = useQuery({ queryKey: ['student', session?.studentId, 'trainer-message'], queryFn: () => inviteApi.activeTrainerMessage(session!.accessToken), enabled: Boolean(session?.accessToken) });
   return <Screen style={styles.page}><View style={styles.hero}><Text style={styles.eyebrow}>ANAMNESE ENVIADA</Text><Text style={styles.title}>Seu personal já recebeu seu ponto de partida.</Text><Text style={styles.copy}>Em breve, ele liberará seu protocolo de acompanhamento.</Text></View>{trainerMessage.data && <Card style={styles.message}><Text style={styles.messageEyebrow}>MENSAGEM DO SEU PERSONAL</Text><Text style={styles.messageText}>{trainerMessage.data.message}</Text></Card>}<Card style={styles.card}><Text style={styles.cardText}>Seu cadastro foi salvo. Entre com seu e-mail para acessá-lo novamente.</Text><Button variant="secondary" onPress={() => { clear(); router.replace('/login'); }}>Sair</Button></Card></Screen>;
 }
 

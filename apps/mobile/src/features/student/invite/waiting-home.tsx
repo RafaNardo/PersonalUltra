@@ -9,8 +9,8 @@ import { useInviteSessionStore } from './session-store';
 
 export function StudentWaitingHome() {
   const session = useInviteSessionStore((s) => s.session); const clear = useInviteSessionStore((s) => s.clear);
-  const message = useQuery({ queryKey: ['student', 'trainer-message', session?.studentId], queryFn: () => inviteApi.activeTrainerMessage(session!.accessToken), enabled: Boolean(session) });
-  const branding = useQuery({ queryKey: ['student', 'branding', session?.studentId], queryFn: () => inviteApi.branding(session!.accessToken), enabled: Boolean(session) });
+  const message = useQuery({ queryKey: ['student', session?.studentId, 'trainer-message'], queryFn: () => inviteApi.activeTrainerMessage(session!.accessToken), enabled: Boolean(session) });
+  const branding = useQuery({ queryKey: ['student', session?.studentId, 'branding'], queryFn: () => inviteApi.branding(session!.accessToken), enabled: Boolean(session) });
   if (!session) { router.replace('/login'); return null; }
   if (message.isLoading || branding.isLoading) return <LoadingView message="Abrindo seu acompanhamento…" />;
   if (message.isError) return <ErrorView message={message.error.message} onRetry={() => message.refetch()} />;

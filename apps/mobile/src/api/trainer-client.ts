@@ -46,12 +46,14 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   } catch {
     throw new ApiError(0, 'Sem conexão com a API do Trainer.');
   }
+  const payload = await response.text();
+  let body: unknown;
+  try { body = payload ? JSON.parse(payload) : undefined; } catch { throw new ApiError(response.status, 'A API do Trainer retornou uma resposta inválida.'); }
   if (!response.ok) {
-    let error: { code?: string; message?: string } | undefined;
-    try { error = await response.json() as { code?: string; message?: string }; } catch { /* Keep the safe fallback below. */ }
+    const error = body as { code?: string; message?: string } | undefined;
     throw new ApiError(response.status, error?.message ?? 'Não foi possível carregar os dados do Trainer.', error?.code);
   }
-  return response.json() as Promise<T>;
+  return body as T;
 }
 
 export const trainerClient = {
@@ -90,7 +92,7 @@ export const trainerClient = {
     return request<TrainerExerciseCatalogItem[]>(`/training/exercises/${suffix ? `?${suffix}` : ''}`);
   },
   trainingHistory: (studentId: string) => request<{ sessions: Array<{ sessionId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number; exercises: Array<{ name: string; sequence: number; sets: Array<{ setNumber: number; weightKg: number; repetitions: number; completedAt: string }> }> }> }>(`/students/${studentId}/training-history`),
-  nutrition: (studentId: string) => request<TrainerNutrition | null>(`/students/${studentId}/nutrition`),
+  nutrition: async (studentId: string) => (await request<TrainerNutrition | null>(`/students/${studentId}/nutrition`)) ?? null,
   saveNutrition: (studentId: string, input: { name: string; notes?: string; meals: Array<{ name: string; sequence: number; notes?: string; foods: Array<{ foodName: string; quantityGrams: number }> }> }) => request<TrainerNutrition>(`/students/${studentId}/nutrition`, { method: 'PUT', body: JSON.stringify(input) }),
   weight: (studentId: string) => request<Array<{ id: string; weightKg: number; recordedAt: string }>>(`/students/${studentId}/progress/weight`),
 };

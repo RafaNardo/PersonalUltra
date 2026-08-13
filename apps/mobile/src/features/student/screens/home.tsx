@@ -30,11 +30,11 @@ export function StudentHomeScreen() {
   const session = useInviteSessionStore((state) => state.session);
   const clear = useInviteSessionStore((state) => state.clear);
   const studentKey = session?.studentId;
-  const training = useQuery({ queryKey: ['student', 'training', studentKey], queryFn: () => inviteApi.training(session!.accessToken), enabled: Boolean(session) });
-  const message = useQuery({ queryKey: ['student', 'trainer-message', studentKey], queryFn: () => inviteApi.activeTrainerMessage(session!.accessToken), enabled: Boolean(session) });
-  const nutrition = useQuery({ queryKey: ['student', 'nutrition', studentKey], queryFn: () => inviteApi.nutrition(session!.accessToken), enabled: Boolean(session) });
-  const weight = useQuery({ queryKey: ['student', 'weight', studentKey], queryFn: () => inviteApi.weight(session!.accessToken), enabled: Boolean(session) });
-  const branding = useQuery({ queryKey: ['student', 'branding', studentKey], queryFn: () => inviteApi.branding(session!.accessToken), enabled: Boolean(session) });
+  const training = useQuery({ queryKey: ['student', studentKey, 'training'], queryFn: () => inviteApi.training(session!.accessToken), enabled: Boolean(session) });
+  const message = useQuery({ queryKey: ['student', studentKey, 'trainer-message'], queryFn: () => inviteApi.activeTrainerMessage(session!.accessToken), enabled: Boolean(session) });
+  const nutrition = useQuery({ queryKey: ['student', studentKey, 'nutrition'], queryFn: () => inviteApi.nutrition(session!.accessToken), enabled: Boolean(session) });
+  const weight = useQuery({ queryKey: ['student', studentKey, 'weight'], queryFn: () => inviteApi.weight(session!.accessToken), enabled: Boolean(session) });
+  const branding = useQuery({ queryKey: ['student', studentKey, 'branding'], queryFn: () => inviteApi.branding(session!.accessToken), enabled: Boolean(session) });
 
   if (!session) {
     router.replace('/login');

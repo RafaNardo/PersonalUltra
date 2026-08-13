@@ -33,6 +33,10 @@ async function request<T>(path: string, options: RequestInit = {}, token?: strin
   return body as T;
 }
 
+async function requestNullable<T>(path: string, token: string): Promise<T | null> {
+  return (await request<T | null>(path, {}, token)) ?? null;
+}
+
 export const inviteApi = {
   resolve: (token: string) => request<Invite>(`/invite/${token}`),
   resolveCode: (code: string) => request<Invite>(`/invite/code/${code.replace(/\D/g, '')}`),
@@ -42,7 +46,7 @@ export const inviteApi = {
   anamnesis: (token: string) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis', {}, token),
   saveAnamnesis: (token: string, answers: AnamnesisAnswers) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis', { method: 'PUT', body: JSON.stringify(answers) }, token),
   completeAnamnesis: (token: string) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis/complete', { method: 'POST' }, token),
-  activeTrainerMessage: async (token: string) => (await request<ActiveTrainerMessage | null>('/home/trainer-message', {}, token)) ?? null,
+  activeTrainerMessage: (token: string) => requestNullable<ActiveTrainerMessage>('/home/trainer-message', token),
   training: (token: string) => request<StudentTraining>('/training', {}, token),
   trainingPreview: (token: string, workoutId: string) => request<StudentWorkoutPreview>(`/training/${workoutId}`, {}, token),
   startWorkout: (token: string, workoutId: string) => request<StudentSession>(`/training/${workoutId}/start`, { method: 'POST' }, token),
@@ -54,9 +58,9 @@ export const inviteApi = {
   },
   completeSet: (token: string, sessionId: string, exerciseId: string, input: { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number }) => request<{ saved: boolean; completedSets: number }>(`/training/sessions/${sessionId}/exercises/${exerciseId}/sets`, { method: 'POST', body: JSON.stringify(input) }, token),
   completeWorkout: (token: string, sessionId: string) => request(`/training/sessions/${sessionId}/complete`, { method: 'POST' }, token),
-  nutrition: (token: string) => request<StudentNutrition | null>('/nutrition', {}, token),
+  nutrition: (token: string) => requestNullable<StudentNutrition>('/nutrition', token),
   weight: (token: string) => request<StudentWeight[]>('/progress/weight', {}, token),
   addWeight: (token: string, weightKg: number) => request<StudentWeight>('/progress/weight', { method: 'POST', body: JSON.stringify({ weightKg }) }, token),
   coachAnswer: (token: string, question: string) => request<CoachAnswer>(`/coach/answer?question=${encodeURIComponent(question)}`, {}, token),
-  branding: (token: string) => request<StudentBranding | null>('/branding', {}, token),
+  branding: (token: string) => requestNullable<StudentBranding>('/branding', token),
 };
