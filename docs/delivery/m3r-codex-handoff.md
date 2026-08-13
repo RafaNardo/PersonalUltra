@@ -1,5 +1,7 @@
 # Codex handoff — M3R Training Refactor
 
+Status: **concluído em 2026-08-13**. Este documento permanece como registro das decisões e dos critérios de regressão; não deve ser usado para repetir os gates PU-M3R-001–012.
+
 Use this handoff after reading `AGENTS.md`, `docs/design/trainer-training-refactor.md`, `docs/architecture/domain.md` and the M3R section of `docs/delivery/backlog.md`.
 
 ## Why this refactor exists

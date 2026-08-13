@@ -81,6 +81,8 @@ A direção aprovada está em `docs/design/trainer-training-refactor.md` e no ad
 
 **DoD M3/M3R:** Trainer abre um aluno, visualiza vários treinos completos, adiciona exercícios pesquisando o catálogo seeded, configura séries/faixa de reps/descanso/notas, reordena e salva; Student recebe a atualização no fluxo já consolidado, executa e registra carga/reps; Trainer vê o histórico.
 
+**Status M3R (2026-08-13): concluído.** O catálogo global seeded, snapshots históricos, busca Trainer, fluxo student-centric, editor multi-exercício, templates opcionais, execução Student com mídia e carga/repetições reais, sincronização offline idempotente e quatro treinos completos do Student demo foram implementados e validados. O catálogo continua system-owned e sem administração na V1.
+
 ## M4 — Nutrition, Progress, Coach & Polish
 - `PU-M4-001`: adaptar domínio nutrição.
 - `PU-M4-002`: editor de alimentação Trainer.
