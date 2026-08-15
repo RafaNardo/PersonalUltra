@@ -6,7 +6,7 @@ Cada milestone é um gate. Implementar, revisar e validar antes de avançar. O p
 
 ### `PU-ECF-001` — Baseline do projeto
 
-Criar o repositório standalone e uma CLI TypeScript/Node LTS com configuração, logging estruturado, testes, formatter e armazenamento local de jobs.
+Criar uma CLI Console .NET 10 isolada dentro da solution, com configuração, logging estruturado redigido, testes, convenções de formatação da solution e armazenamento local de jobs. Esta decisão substitui explicitamente a proposta inicial de repositório TypeScript/Node, sem alterar os contratos ou gates posteriores.
 
 Entregas:
 
@@ -172,4 +172,3 @@ Aceite final:
 ## DoD do projeto
 
 Uma lista de exercícios validada produz, com revisão humana e execução retomável, um pacote determinístico que amplia o catálogo real do Personal Ultra. O pacote contém metadados, assets e todos os bindings estáticos necessários; não escreve diretamente no banco e não publica conteúdo não aprovado.
-

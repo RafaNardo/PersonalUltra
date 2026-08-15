@@ -1,6 +1,9 @@
 # Exercise Catalog Factory
 
-Status: **planejado**. Este diretório é um handoff para um projeto externo; nenhum robô foi implementado neste repositório.
+Status: **baseline local implementada**. A aplicação Console .NET 10 já existe
+em `tools/PersonalUltra.ExerciseCatalogFactory`, com dry-run, manifesto local,
+diagnóstico e testes. Adapters OpenAI/S3, geração e publicação continuam
+pendentes e não fazem parte desta casca.
 
 ## Objetivo
 
@@ -76,6 +79,8 @@ O formato visual existente é uma ilustração esportiva estilizada, majoritaria
 - [image-style-guide.md](image-style-guide.md): consistência visual e QA das artes.
 - [validation.md](validation.md): critérios técnicos, humanos e de integração.
 - [codex-handoff.md](codex-handoff.md): prompt e sequência para iniciar o outro repositório/thread.
+- [personal-ultra-integration-milestone.md](personal-ultra-integration-milestone.md): proposta faseada para factory .NET, bucket privado e consumo remoto no app.
+- [exercise-inventory-v1.md](exercise-inventory-v1.md): inventário de 232 candidatos para revisão antes de qualquer geração paga.
 
 ## Decisões que precisam ser confirmadas antes da primeira geração paga
 
@@ -84,4 +89,3 @@ O formato visual existente é uma ilustração esportiva estilizada, majoritaria
 3. Se todo o catálogo novo seguirá 1024 × 1536 ou se haverá uma migração coordenada de proporção.
 4. Quem fará a aprovação biomecânica e qual evidência ficará registrada.
 5. Política para corrigir um exercício já publicado: preservar slug/ID e gerar nova `contentVersion`, ou criar outro item.
-

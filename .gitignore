@@ -20,3 +20,8 @@ dist/
 *.suo
 Thumbs.db
 Desktop.ini
+
+# Exercise Catalog Factory runtime artifacts
+/workspace/
+tools/PersonalUltra.ExerciseCatalogFactory/workspace/
+tools/PersonalUltra.ExerciseCatalogFactory/outputs/

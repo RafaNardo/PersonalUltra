@@ -2,7 +2,7 @@
 
 ## Forma do produto
 
-Ferramenta CLI standalone, pensada para execução manual esporádica. Uma API/web UI não é necessária para V1. TypeScript/Node é a recomendação inicial pela integração simples com schemas, SDKs de IA, CSV e geração de arquivos TypeScript; a escolha pode mudar sem alterar os contratos deste diretório.
+Ferramenta CLI standalone, pensada para execução manual esporádica. Uma API/web UI não é necessária para V1. A recomendação inicial de TypeScript/Node foi explicitamente substituída por uma aplicação Console .NET 10 dentro da solution Personal Ultra, conforme `personal-ultra-integration-milestone.md`. A ferramenta continua isolada das APIs e os contratos deste diretório permanecem independentes da linguagem.
 
 ```text
 Input adapter (CSV/JSON)
@@ -214,4 +214,3 @@ O verifier precisa conhecer uma limitação específica do Expo: `require('../..
 - remover seed/asset ausente no input mais recente;
 - publicar instruções ou imagens sem aprovação;
 - aplicar no banco ou criar migration automaticamente.
-
