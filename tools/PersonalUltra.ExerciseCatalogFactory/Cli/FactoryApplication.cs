@@ -2,6 +2,7 @@ using PersonalUltra.ExerciseCatalogFactory.Configuration;
 using PersonalUltra.ExerciseCatalogFactory.Contracts;
 using PersonalUltra.ExerciseCatalogFactory.Domain;
 using PersonalUltra.ExerciseCatalogFactory.Logging;
+using PersonalUltra.ExerciseCatalogFactory.Intake;
 using PersonalUltra.ExerciseCatalogFactory.Persistence;
 
 namespace PersonalUltra.ExerciseCatalogFactory.Cli;
@@ -28,6 +29,7 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
             {
                 "init" => await InitializeAsync(command, store, cancellationToken),
                 "import" => await ImportAsync(command, store, cancellationToken),
+                "intake" => await IntakeAsync(command, store, cancellationToken),
                 "status" => await StatusAsync(command, store, cancellationToken),
                 "doctor" => await DoctorAsync(command, store, cancellationToken),
                 _ => UnknownCommand(command.Name)
@@ -104,9 +106,10 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
                 "information", "run.resumed", "Run retomado após verificação de integridade.",
                 new Dictionary<string, object?> { ["runId"] = resumed.RunId, ["resumeCount"] = resumed.ResumeCount },
                 cancellationToken);
+            var result = await new IntakeProcessor(store).ExecuteAsync(resumed, cancellationToken);
             await output.WriteLineAsync($"Run retomado: {resumed.RunId}");
             await output.WriteLineAsync($"Source imutável verificado. Retomadas: {resumed.ResumeCount}");
-            await output.WriteLineAsync("Nenhuma chamada externa ou alteração no produto foi executada.");
+            WriteIntake(result);
             return 0;
         }
 
@@ -152,6 +155,7 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
             Outputs: []);
 
         await store.SaveAsync(run, cancellationToken);
+        var intake = await new IntakeProcessor(store).ExecuteAsync(run, cancellationToken);
         await importLogger.WriteAsync(
             "information", "run.imported", "Source importado em modo dry-run.",
             new Dictionary<string, object?>
@@ -165,7 +169,27 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
         await output.WriteLineAsync($"Run criado: {run.RunId}");
         await output.WriteLineAsync($"Fonte copiada para o run: {run.Source.FileName} ({run.Source.Length} bytes)");
         await output.WriteLineAsync($"SHA-256: {run.Source.Sha256}");
-        await output.WriteLineAsync("Nenhuma chamada externa ou alteração no produto foi executada.");
+        WriteIntake(intake);
+        return 0;
+    }
+
+    private async Task<int> IntakeAsync(
+        ParsedCommand command,
+        RunStore store,
+        CancellationToken cancellationToken)
+    {
+        command.EnsureOnly("--workspace", "--run");
+        var runId = command.Option("--run") ?? throw new ArgumentException("Use --run <runId>.");
+        var run = await store.LoadAsync(runId, cancellationToken);
+        if (run is null)
+        {
+            await error.WriteLineAsync($"Run não encontrado: {runId}");
+            return 2;
+        }
+
+        var result = await new IntakeProcessor(store).ExecuteAsync(run, cancellationToken);
+        await output.WriteLineAsync($"Intake reaberto: {runId}");
+        WriteIntake(result);
         return 0;
     }
 
@@ -266,6 +290,14 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
             $"{run.RunId} | {run.Status} | dry-run={run.DryRun} | resumes={run.ResumeCount} | " +
             $"{run.Source.FileName} | {run.CreatedAt:O}");
 
+    private void WriteIntake(IntakeResult result)
+    {
+        output.WriteLine($"Intake: {(result.CacheHit ? "cache hit" : "processado")}; " +
+                         $"itens={result.Catalog.Items.Count}; pendências={result.Catalog.Issues.Count}; status={result.Run.Status}");
+        output.WriteLine("Relatório: normalization/intake-report.v1.md");
+        output.WriteLine("Nenhuma IA, chamada externa, custo ou alteração no produto foi executada.");
+    }
+
     private int UnknownCommand(string command)
     {
         error.WriteLine($"Comando desconhecido: {command}");
@@ -281,6 +313,7 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
         output.WriteLine("  init [--workspace <pasta>]");
         output.WriteLine("  import --file <csv-ou-json> [--workspace <pasta>]");
         output.WriteLine("  import --resume <runId> [--workspace <pasta>]");
+        output.WriteLine("  intake --run <runId> [--workspace <pasta>]");
         output.WriteLine("  status [--run <id>] [--workspace <pasta>]");
         output.WriteLine("  doctor [--workspace <pasta>]");
         output.WriteLine();

@@ -256,6 +256,13 @@ downstream. Intake/canonicalização completos permanecem em `PU-ECF-003`.
 
 Gate: usuário aprova o relatório canônico.
 
+Situação: intake local implementado sobre o input canônico v1 com 232
+candidatos. A normalização é determinística, itens novos recebem UUID v5 e o
+profile congelado preserva exatamente os 28 slugs/GUIDs atuais. Duplicatas,
+colisões e ambiguidades documentadas permanecem em `needs_review`; catálogo e
+relatório retomáveis registram o impacto da taxonomia sem IA ou custo. O gate
+humano continua aberto.
+
 ### `PU-ECF-004` — Enriquecimento estruturado
 
 - adapter OpenAI de texto;

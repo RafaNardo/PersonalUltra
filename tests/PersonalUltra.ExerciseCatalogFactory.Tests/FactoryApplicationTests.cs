@@ -97,7 +97,7 @@ public sealed class FactoryApplicationTests : IDisposable
     }
 
     [Fact]
-    public async Task Import_initializes_only_source_stage_contracts()
+    public async Task Import_executes_local_intake_without_provider_calls()
     {
         Directory.CreateDirectory(_root);
         var sourcePath = Path.Combine(_root, "valid.json");
@@ -108,11 +108,12 @@ public sealed class FactoryApplicationTests : IDisposable
         Assert.Equal(0, await application.RunAsync(["import", "--file", sourcePath]));
         var run = Assert.Single(await new RunStore(workspace).LoadAllAsync());
 
-        Assert.Empty(run.Items!);
-        Assert.Equal(run.Source.Sha256, Assert.Single(run.StageHashes!).Value);
-        Assert.Equal("pending", run.Versions!.TaxonomyVersion);
+        Assert.Single(run.Items!);
+        Assert.Equal(2, run.StageHashes!.Count);
+        Assert.Equal("personal-ultra-catalog-v1", run.Versions!.TaxonomyVersion);
         Assert.Empty(run.Attempts!);
-        Assert.Empty(run.Outputs!);
+        Assert.Equal(2, run.Outputs!.Count);
+        Assert.Equal(0, run.Usage!.ObservedCost);
     }
 
     [Theory]

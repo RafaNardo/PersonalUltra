@@ -1,10 +1,11 @@
 # Exercise Catalog Factory
 
-Status: **fundação e contratos v1 implementados**. A aplicação Console .NET 10
+Status: **fundação, contratos v1 e intake determinístico implementados**. A aplicação Console .NET 10
 já existe em `tools/PersonalUltra.ExerciseCatalogFactory`, com dry-run,
 manifesto local versionado, retomada atômica, diagnóstico e testes. Adapters
 OpenAI/S3, geração e publicação continuam pendentes e não fazem parte desta
-etapa.
+etapa. O input canônico v1 contém 232 candidatos e pode ser importado/reaberto
+localmente; ambiguidades permanecem bloqueadas para revisão humana.
 
 ## Objetivo
 

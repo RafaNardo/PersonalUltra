@@ -25,6 +25,59 @@ public sealed partial class RunStore
     public string RunsRoot => Path.Combine(WorkspaceRoot, "runs");
     public string LogsRoot => Path.Combine(WorkspaceRoot, "logs");
 
+    public string GetStoredSourcePath(FactoryRun run)
+    {
+        ValidateRun(run);
+        return ResolveDescendant(GetRunDirectory(run.RunId), run.Source.StoredRelativePath);
+    }
+
+    public async Task<ArtifactReference> SaveArtifactAsync(
+        string runId,
+        string stage,
+        string relativePath,
+        ReadOnlyMemory<byte> content,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRunId(runId);
+        if (stage is not ("normalization" or "metadata" or "image" or "export"))
+            throw new ArgumentException("Estágio de artefato inválido.", nameof(stage));
+        var runDirectory = GetRunDirectory(runId);
+        var destination = ResolveDescendant(runDirectory, relativePath);
+        Directory.CreateDirectory(Path.GetDirectoryName(destination)!);
+        var temporary = Path.Combine(Path.GetDirectoryName(destination)!, $".{Guid.NewGuid():N}.tmp");
+        try
+        {
+            await using (var stream = new FileStream(temporary, FileMode.CreateNew, FileAccess.Write, FileShare.None,
+                81920, FileOptions.Asynchronous | FileOptions.WriteThrough))
+            {
+                await stream.WriteAsync(content, cancellationToken);
+                await stream.FlushAsync(cancellationToken);
+                stream.Flush(flushToDisk: true);
+            }
+            File.Move(temporary, destination, overwrite: true);
+            var (sha256, length) = await ComputeIntegrityAsync(destination, cancellationToken);
+            return new ArtifactReference(stage, relativePath.Replace(Path.DirectorySeparatorChar, '/'), sha256, length);
+        }
+        finally
+        {
+            if (File.Exists(temporary)) File.Delete(temporary);
+        }
+    }
+
+    public async Task<byte[]> ReadVerifiedArtifactAsync(
+        string runId,
+        ArtifactReference artifact,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRunId(runId);
+        var path = ResolveDescendant(GetRunDirectory(runId), artifact.RelativePath);
+        if (!File.Exists(path)) throw new InvalidDataException($"Artefato ausente: {artifact.RelativePath}");
+        var (sha256, length) = await ComputeIntegrityAsync(path, cancellationToken);
+        if (sha256 != artifact.Sha256 || length != artifact.Length)
+            throw new InvalidDataException($"Artefato falhou na verificação de integridade: {artifact.RelativePath}");
+        return await File.ReadAllBytesAsync(path, cancellationToken);
+    }
+
     public void Initialize()
     {
         Directory.CreateDirectory(RunsRoot);
