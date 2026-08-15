@@ -292,6 +292,17 @@ Gate: os dez itens piloto precisam estar aprovados.
 Pode ser desenvolvido em paralelo com `PU-ECF-002/003`, mas o smoke real ocorre
 somente após rotação das credenciais.
 
+Situação: adapter `AWSSDK.S3` implementado atrás de uma porta interna, com
+credenciais opacas, validação estrita de endpoint/região/addressing e object key
+exclusiva para smoke. `bucket doctor` é somente leitura; `bucket smoke` é
+dry-run sem `--execute` e o modo real valida PUT/HEAD/GET, bytes, SHA-256, MIME,
+GET assinado e cleanup exato em `finally`, sem listar/remover prefixos nem
+exibir secrets ou URLs assinadas. A validação externa atual alcançou o endpoint:
+`HEAD bucket` retornou `Forbidden` e o `PUT` delimitado retornou
+`InvalidAccessKeyId` em virtual-hosted style; path-style também retornou 403.
+O gate real permanece bloqueado até o access key configurado ser aceito pelo
+bucket/endpoint correspondente.
+
 ### `PU-ECF-007` — Prompt visual e piloto pago
 
 - Image API com prompt versionado;

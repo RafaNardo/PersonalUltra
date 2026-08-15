@@ -1,7 +1,8 @@
 # Personal Ultra Exercise Catalog Factory
 
-Baseline local da ferramenta sob demanda. Nesta etapa ela não chama OpenAI,
-Railway ou PostgreSQL e não modifica as APIs nem o app.
+Ferramenta sob demanda. O intake continua local e não chama OpenAI, PostgreSQL,
+APIs ou app. O adapter S3 privado pode ser acionado apenas pelos comandos
+explícitos descritos abaixo.
 
 ## Uso local
 
@@ -31,10 +32,33 @@ identidades legadas permanecem congeladas; duplicatas, colisões, aliases
 prováveis e impactos de taxonomia são reportados para gate humano, sem IA,
 rede, custo ou resolução silenciosa.
 
-`doctor` separa readiness local de integrações pendentes. Nesta milestone ele
-não tenta acessar OpenAI, Railway ou o target profile.
+`doctor` separa readiness local de integrações pendentes e não acessa serviços
+externos. O diagnóstico específico do bucket é somente leitura:
 
-## User Secrets pendentes
+```powershell
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- bucket doctor
+```
+
+O smoke é dry-run por padrão e não faz chamadas externas:
+
+```powershell
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- bucket smoke
+```
+
+Somente `--execute` permite criar o objeto exclusivo
+`smoke/<runId>/<guid>.txt`. O fluxo faz PUT, HEAD, GET autenticado, GET por URL
+assinada, DELETE exatamente dessa chave e confirma `NotFound` em `finally`.
+Ele nunca lista objetos, remove prefixos, imprime secrets ou mostra a URL
+assinada/query:
+
+```powershell
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- bucket smoke --execute
+```
+
+Railway usa virtual-hosted style nos buckets atuais; somente buckets antigos
+indicados dessa forma na aba Credentials exigem `ForcePathStyle: true`.
+
+## User Secrets
 
 ```powershell
 $factoryProject = 'tools/PersonalUltra.ExerciseCatalogFactory/PersonalUltra.ExerciseCatalogFactory.csproj'
@@ -54,3 +78,6 @@ execute no notebook:
 ```powershell
 ./scripts/Copy-RedAiOpenAiSecret.ps1
 ```
+
+Referências primárias: [Railway Storage Buckets](https://docs.railway.com/storage-buckets)
+e [AWS SDK for .NET — presigned URLs](https://docs.aws.amazon.com/code-library/latest/ug/s3_example_s3_Scenario_PresignedUrl_section.html).

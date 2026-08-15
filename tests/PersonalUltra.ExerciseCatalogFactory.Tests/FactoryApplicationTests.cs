@@ -58,7 +58,7 @@ public sealed class FactoryApplicationTests : IDisposable
 
         Assert.Equal(0, exitCode);
         Assert.Contains("Readiness local: READY", output.ToString());
-        Assert.Contains("Integrações externas: PENDING", output.ToString());
+        Assert.Contains("Integrações externas: configuração verificada", output.ToString());
         Assert.Contains("ai-api-key", output.ToString());
         Assert.DoesNotContain("sk-", output.ToString());
         Assert.Equal(string.Empty, error.ToString());

@@ -20,21 +20,25 @@ public sealed class FactorySettingsTests
     }
 
     [Fact]
-    public void ToString_never_exposes_secret_values()
+    public void Settings_and_credentials_use_type_name_instead_of_secret_values()
     {
         var settings = CreateSettings(
-            openAiApiKey: "sk-test-openai-value",
+            openAiApiKey: "openai-test-value",
             bucketName: "bucket-private-value",
-            bucketAccessKeyId: "tid_test-access-value",
-            bucketSecretAccessKey: "tsec_test-secret-value");
+            bucketAccessKeyId: "access-test-value",
+            bucketSecretAccessKey: "secret-test-value");
 
-        var description = settings.ToString();
+        var description = settings.ToString()!;
+        var credentialsDescription = settings.GetBucketCredentials().ToString()!;
 
-        Assert.DoesNotContain("sk-test-openai-value", description);
+        Assert.DoesNotContain("openai-test-value", description);
         Assert.DoesNotContain("bucket-private-value", description);
-        Assert.DoesNotContain("tid_test-access-value", description);
-        Assert.DoesNotContain("tsec_test-secret-value", description);
-        Assert.Contains("ExternalSecretsConfigured = True", description);
+        Assert.DoesNotContain("access-test-value", description);
+        Assert.DoesNotContain("secret-test-value", description);
+        Assert.DoesNotContain("bucket-private-value", credentialsDescription);
+        Assert.DoesNotContain("access-test-value", credentialsDescription);
+        Assert.DoesNotContain("secret-test-value", credentialsDescription);
+        Assert.Equal(typeof(FactorySettings).FullName, description);
     }
 
     [Fact]
@@ -46,7 +50,9 @@ public sealed class FactorySettingsTests
 
         var errors = settings.ValidateLocalConfiguration();
 
-        Assert.Equal(5, errors.Count);
+        Assert.Contains(errors, error => error.Contains("SchemaVersion", StringComparison.Ordinal));
+        Assert.Contains(errors, error => error.Contains("ImageModel", StringComparison.Ordinal));
+        Assert.Contains(errors, error => error.Contains("EndpointUrl", StringComparison.Ordinal));
     }
 
     [Fact]

@@ -4,6 +4,7 @@ using PersonalUltra.ExerciseCatalogFactory.Domain;
 using PersonalUltra.ExerciseCatalogFactory.Logging;
 using PersonalUltra.ExerciseCatalogFactory.Intake;
 using PersonalUltra.ExerciseCatalogFactory.Persistence;
+using PersonalUltra.ExerciseCatalogFactory.Publishing.S3;
 
 namespace PersonalUltra.ExerciseCatalogFactory.Cli;
 
@@ -19,6 +20,12 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
 
         try
         {
+            if (args[0].Equals("bucket", StringComparison.OrdinalIgnoreCase))
+            {
+                return await new BucketCommands(settings, output, error)
+                    .RunAsync(args[1..], cancellationToken);
+            }
+
             var command = CommandLine.Parse(args);
             var workspace = command.Option("--workspace") is { } configuredWorkspace
                 ? FactorySettings.ResolveWorkspaceRoot(configuredWorkspace)
@@ -35,10 +42,30 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
                 _ => UnknownCommand(command.Name)
             };
         }
+        catch (BucketSmokeException exception)
+        {
+            await error.WriteLineAsync(BucketCommands.DescribeSmokeFailure(exception));
+            return 3;
+        }
+        catch (BucketCleanupException exception)
+        {
+            await error.WriteLineAsync(BucketCommands.DescribeCleanupFailure(exception));
+            return 3;
+        }
         catch (OperationCanceledException)
         {
             await error.WriteLineAsync("Operação cancelada. O último checkpoint íntegro pode ser retomado.");
             return 130;
+        }
+        catch (BucketOperationException exception)
+        {
+            await error.WriteLineAsync($"Bucket: FAILED | {BucketCommands.DescribeFailure(exception)}");
+            return 3;
+        }
+        catch (HttpRequestException)
+        {
+            await error.WriteLineAsync("Bucket: FAILED | GET assinado não pôde ser concluído; URL omitida.");
+            return 3;
         }
         catch (Exception exception) when (exception is
             IOException or UnauthorizedAccessException or InvalidDataException or
@@ -254,7 +281,7 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
         }
 
         var missing = settings.MissingSecretNames();
-        output.WriteLine("Integrações externas: PENDING (fora do escopo de PU-ECF-001)");
+        output.WriteLine("Integrações externas: configuração verificada sem conexão automática");
         if (missing.Count > 0)
         {
             output.WriteLine("Nomes de secrets ainda ausentes:");
@@ -265,7 +292,8 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
             output.WriteLine("Secrets esperados: configurados, valores não exibidos.");
         }
 
-        output.WriteLine("Adapters OpenAI/S3: não implementados nesta baseline; nenhuma conexão foi tentada.");
+        output.WriteLine("Adapter S3: disponível; use 'bucket doctor' para probe somente leitura.");
+        output.WriteLine("Adapter OpenAI: pendente; nenhuma conexão OpenAI foi tentada.");
         output.WriteLine("Target profile: validação planejada para PU-ECF-009/010.");
 
         if (localErrors.Count == 0)
@@ -316,16 +344,28 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
         output.WriteLine("  intake --run <runId> [--workspace <pasta>]");
         output.WriteLine("  status [--run <id>] [--workspace <pasta>]");
         output.WriteLine("  doctor [--workspace <pasta>]");
+        output.WriteLine("  bucket doctor");
+        output.WriteLine("  bucket smoke [--execute]");
         output.WriteLine();
-        output.WriteLine("Esta baseline opera somente localmente e sempre em dry-run.");
+        output.WriteLine("Comandos mutáveis operam em dry-run, salvo confirmação explícita com --execute.");
     }
 }
 
-internal sealed class ParsedCommand(string name, IReadOnlyDictionary<string, string> options)
+internal sealed class ParsedCommand(string name, IReadOnlyDictionary<string, string?> options)
 {
     public string Name { get; } = name;
 
     public string? Option(string name) => options.GetValueOrDefault(name);
+
+    public bool HasOption(string name) => options.ContainsKey(name);
+
+    public void EnsureFlag(string name)
+    {
+        if (options.TryGetValue(name, out var value) && value is not null)
+        {
+            throw new ArgumentException($"A opção {name} não aceita valor.");
+        }
+    }
 
     public void EnsureOnly(params string[] allowed)
     {
@@ -344,8 +384,8 @@ internal static class CommandLine
             throw new ArgumentException("O primeiro argumento deve ser um comando.");
         }
 
-        var options = new Dictionary<string, string>(StringComparer.OrdinalIgnoreCase);
-        for (var index = 1; index < args.Length; index += 2)
+        var options = new Dictionary<string, string?>(StringComparer.OrdinalIgnoreCase);
+        for (var index = 1; index < args.Length; index++)
         {
             var name = args[index];
             if (!name.StartsWith("--", StringComparison.Ordinal) || name.Length == 2)
@@ -353,12 +393,10 @@ internal static class CommandLine
                 throw new ArgumentException($"Argumento posicional inesperado: {name}");
             }
 
-            if (index + 1 >= args.Length || args[index + 1].StartsWith("--", StringComparison.Ordinal))
-            {
-                throw new ArgumentException($"A opção {name} exige um valor.");
-            }
-
-            if (!options.TryAdd(name, args[index + 1]))
+            var value = index + 1 < args.Length && !args[index + 1].StartsWith("--", StringComparison.Ordinal)
+                ? args[++index]
+                : null;
+            if (!options.TryAdd(name, value))
             {
                 throw new ArgumentException($"Opção duplicada: {name}");
             }

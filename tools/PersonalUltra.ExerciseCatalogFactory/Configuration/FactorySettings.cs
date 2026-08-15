@@ -46,6 +46,24 @@ public sealed class FactorySettings
     public bool BucketForcePathStyle { get; }
     public int SignedUrlLifetimeMinutes { get; }
 
+    internal BucketOptions GetBucketOptions() => new(
+        BucketEndpointUrl,
+        BucketRegion,
+        BucketForcePathStyle,
+        TimeSpan.FromMinutes(SignedUrlLifetimeMinutes));
+
+    internal BucketCredentials GetBucketCredentials()
+    {
+        var missing = MissingBucketSecretNames();
+        if (missing.Count > 0)
+        {
+            throw new InvalidOperationException(
+                $"Bucket não configurado. Secrets ausentes: {string.Join(", ", missing)}.");
+        }
+
+        return new BucketCredentials(_bucketName!, _bucketAccessKeyId!, _bucketSecretAccessKey!);
+    }
+
     public static FactorySettings Load()
     {
         var configuration = new ConfigurationBuilder()
@@ -106,30 +124,31 @@ public sealed class FactorySettings
         return missing;
     }
 
+    public IReadOnlyList<string> MissingBucketSecretNames()
+    {
+        var missing = new List<string>();
+        if (_bucketName is null) missing.Add("RailwayBucket:BucketName");
+        if (_bucketAccessKeyId is null) missing.Add("RailwayBucket:AccessKeyId");
+        if (_bucketSecretAccessKey is null) missing.Add("RailwayBucket:SecretAccessKey");
+        return missing;
+    }
+
     public IReadOnlyList<string> ValidateLocalConfiguration()
     {
         var errors = new List<string>();
         if (SchemaVersion != "1") errors.Add($"Factory:SchemaVersion não suportado: {SchemaVersion}");
         if (string.IsNullOrWhiteSpace(ImageModel)) errors.Add("OpenAI:ImageModel não pode ficar vazio.");
-        if (!Uri.TryCreate(BucketEndpointUrl, UriKind.Absolute, out var endpoint) || endpoint.Scheme != Uri.UriSchemeHttps)
+        try
         {
-            errors.Add("RailwayBucket:EndpointUrl deve ser uma URL HTTPS absoluta.");
+            _ = GetBucketOptions();
         }
-
-        if (string.IsNullOrWhiteSpace(BucketRegion)) errors.Add("RailwayBucket:Region não pode ficar vazio.");
-        if (SignedUrlLifetimeMinutes is < 1 or > 10_080)
+        catch (InvalidOperationException exception)
         {
-            errors.Add("RailwayBucket:SignedUrlLifetimeMinutes deve ficar entre 1 e 10080.");
+            errors.Add(exception.Message);
         }
 
         return errors;
     }
-
-    public override string ToString() =>
-        $"FactorySettings {{ WorkspaceRoot = {WorkspaceRoot}, SchemaVersion = {SchemaVersion}, " +
-        $"MetadataModelConfigured = {MetadataModel is not null}, ImageModel = {ImageModel}, " +
-        $"BucketEndpointConfigured = {!string.IsNullOrWhiteSpace(BucketEndpointUrl)}, " +
-        $"ExternalSecretsConfigured = {MissingSecretNames().Count == 0} }}";
 
     private static string? FindRepositoryRoot(string startPath)
     {
