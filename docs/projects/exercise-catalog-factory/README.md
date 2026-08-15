@@ -1,9 +1,10 @@
 # Exercise Catalog Factory
 
-Status: **baseline local implementada**. A aplicação Console .NET 10 já existe
-em `tools/PersonalUltra.ExerciseCatalogFactory`, com dry-run, manifesto local,
-diagnóstico e testes. Adapters OpenAI/S3, geração e publicação continuam
-pendentes e não fazem parte desta casca.
+Status: **fundação e contratos v1 implementados**. A aplicação Console .NET 10
+já existe em `tools/PersonalUltra.ExerciseCatalogFactory`, com dry-run,
+manifesto local versionado, retomada atômica, diagnóstico e testes. Adapters
+OpenAI/S3, geração e publicação continuam pendentes e não fazem parte desta
+etapa.
 
 ## Objetivo
 

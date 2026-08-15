@@ -1,0 +1,18 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://personalultra.local/schemas/exercise-catalog-factory/v1/review-decision.schema.json",
+  "title": "Exercise Catalog Factory review decision v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["itemKey", "stage", "decision", "reasonCode", "reviewer", "reviewedAt", "artifactHash"],
+  "properties": {
+    "itemKey": { "type": "string", "minLength": 1 },
+    "stage": { "enum": ["metadata", "visual", "biomechanics"] },
+    "decision": { "enum": ["approved", "rejected"] },
+    "reasonCode": { "type": "string", "minLength": 1 },
+    "notes": { "type": ["string", "null"] },
+    "reviewer": { "type": "string", "minLength": 1 },
+    "reviewedAt": { "type": "string", "format": "date-time" },
+    "artifactHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  }
+}

@@ -1,0 +1,28 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://personalultra.local/schemas/exercise-catalog-factory/v1/output-package.schema.json",
+  "title": "Exercise Catalog Factory output package v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runId", "status", "artifacts", "manifestHash"],
+  "properties": {
+    "schemaVersion": { "const": 1 },
+    "runId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "status": { "enum": ["ready", "blocked", "partial"] },
+    "artifacts": { "type": "array", "items": { "$ref": "#/$defs/artifact" } },
+    "manifestHash": { "type": "string", "pattern": "^[a-f0-9]{64}$" }
+  },
+  "$defs": {
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "relativePath", "sha256", "length"],
+      "properties": {
+        "stage": { "enum": ["source", "normalization", "metadata", "image", "export"] },
+        "relativePath": { "type": "string", "minLength": 1 },
+        "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+        "length": { "type": "integer", "minimum": 0 }
+      }
+    }
+  }
+}

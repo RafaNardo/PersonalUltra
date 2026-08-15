@@ -12,7 +12,7 @@ public sealed class FactoryApplicationTests : IDisposable
     {
         Directory.CreateDirectory(_root);
         var sourcePath = Path.Combine(_root, "input.json");
-        await File.WriteAllTextAsync(sourcePath, "{\"items\":[]}");
+        await File.WriteAllTextAsync(sourcePath, ValidInputJson);
         var workspace = Path.Combine(_root, "workspace");
         var (application, output, error) = CreateApplication(workspace);
 
@@ -35,7 +35,7 @@ public sealed class FactoryApplicationTests : IDisposable
     {
         Directory.CreateDirectory(_root);
         var sourcePath = Path.Combine(_root, "input.json");
-        await File.WriteAllTextAsync(sourcePath, "original");
+        await File.WriteAllTextAsync(sourcePath, ValidInputJson);
         var workspace = Path.Combine(_root, "workspace");
         var (application, _, error) = CreateApplication(workspace);
         Assert.Equal(0, await application.RunAsync(["import", "--file", sourcePath]));
@@ -80,6 +80,41 @@ public sealed class FactoryApplicationTests : IDisposable
         Assert.Contains("Readiness local: BLOCKED", output.ToString());
     }
 
+    [Fact]
+    public async Task Import_rejects_invalid_contract_before_creating_a_run()
+    {
+        Directory.CreateDirectory(_root);
+        var sourcePath = Path.Combine(_root, "invalid.json");
+        await File.WriteAllTextAsync(sourcePath, "{ \"schemaVersion\": 1, \"source\": \"batch\", \"items\": [{ \"name\": \"\" }] }");
+        var workspace = Path.Combine(_root, "workspace");
+        var (application, _, error) = CreateApplication(workspace);
+
+        var exitCode = await application.RunAsync(["import", "--file", sourcePath]);
+
+        Assert.Equal(2, exitCode);
+        Assert.Contains("invalid.json [items[0].name]", error.ToString());
+        Assert.False(Directory.Exists(Path.Combine(workspace, "runs")));
+    }
+
+    [Fact]
+    public async Task Import_initializes_only_source_stage_contracts()
+    {
+        Directory.CreateDirectory(_root);
+        var sourcePath = Path.Combine(_root, "valid.json");
+        await File.WriteAllTextAsync(sourcePath, ValidInputJson);
+        var workspace = Path.Combine(_root, "workspace");
+        var (application, _, _) = CreateApplication(workspace);
+
+        Assert.Equal(0, await application.RunAsync(["import", "--file", sourcePath]));
+        var run = Assert.Single(await new RunStore(workspace).LoadAllAsync());
+
+        Assert.Empty(run.Items!);
+        Assert.Equal(run.Source.Sha256, Assert.Single(run.StageHashes!).Value);
+        Assert.Equal("pending", run.Versions!.TaxonomyVersion);
+        Assert.Empty(run.Attempts!);
+        Assert.Empty(run.Outputs!);
+    }
+
     [Theory]
     [InlineData("import", "--file")]
     [InlineData("status", "unexpected")]
@@ -107,4 +142,8 @@ public sealed class FactoryApplicationTests : IDisposable
         var settings = FactorySettingsTests.CreateSettings(workspace);
         return (new FactoryApplication(settings, output, error), output, error);
     }
+
+    private const string ValidInputJson = """
+        { "schemaVersion": 1, "source": "test", "items": [{ "externalKey": "bench", "name": "Supino" }] }
+        """;
 }

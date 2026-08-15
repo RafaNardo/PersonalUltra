@@ -1,4 +1,5 @@
 using PersonalUltra.ExerciseCatalogFactory.Configuration;
+using PersonalUltra.ExerciseCatalogFactory.Contracts;
 using PersonalUltra.ExerciseCatalogFactory.Domain;
 using PersonalUltra.ExerciseCatalogFactory.Logging;
 using PersonalUltra.ExerciseCatalogFactory.Persistence;
@@ -74,10 +75,10 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
             return 2;
         }
 
-        store.VerifyWritable();
-        var logger = new StructuredLog(store.LogsRoot);
         if (resumeRunId is not null)
         {
+            store.VerifyWritable();
+            var logger = new StructuredLog(store.LogsRoot);
             var existing = await store.LoadAsync(resumeRunId, cancellationToken);
             if (existing is null)
             {
@@ -116,6 +117,21 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
             return 2;
         }
 
+        var diagnostics = await CatalogInputValidator.ValidateFileAsync(absolutePath, cancellationToken);
+        if (diagnostics.Count > 0)
+        {
+            await error.WriteLineAsync("Arquivo de entrada inválido:");
+            foreach (var diagnostic in diagnostics)
+            {
+                var location = diagnostic.Line is null ? diagnostic.File : $"{diagnostic.File}:{diagnostic.Line}";
+                await error.WriteLineAsync($"- {location} [{diagnostic.Field}]: {diagnostic.Message}");
+            }
+            return 2;
+        }
+
+        store.VerifyWritable();
+        var importLogger = new StructuredLog(store.LogsRoot);
+
         var now = DateTimeOffset.UtcNow;
         var runId = $"{now:yyyyMMddHHmmss}-{Guid.NewGuid():N}"[..27];
         var source = await store.CopySourceAsync(runId, absolutePath, cancellationToken);
@@ -127,10 +143,16 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
             "imported",
             DryRun: true,
             ResumeCount: 0,
-            source);
+            source,
+            new PipelineVersions("factory-v1", "pending", "pending", "pending", "pending", "pending"),
+            Items: [],
+            Attempts: [],
+            Usage: new UsageSummary("USD", 0, 0, 0),
+            StageHashes: new Dictionary<string, string>(StringComparer.Ordinal) { ["source"] = source.Sha256 },
+            Outputs: []);
 
         await store.SaveAsync(run, cancellationToken);
-        await logger.WriteAsync(
+        await importLogger.WriteAsync(
             "information", "run.imported", "Source importado em modo dry-run.",
             new Dictionary<string, object?>
             {

@@ -239,6 +239,13 @@ entram apenas nas milestones próprias, sem placeholders prematuros.
 - estados, tentativas, custos e respostas redigidas;
 - testes de interrupção/reabertura.
 
+Situação: contratos JSON v1 de input, manifesto, revisão e pacote disponíveis.
+O manifesto rejeita schema/estado/propriedade desconhecidos, referências com
+aparência de credencial e chaves externas duplicadas. Checkpoints são validados
+antes da troca atômica; uma interrupção mantém o último manifesto íntegro. A
+reconciliação determinística de hashes invalida apenas artefatos e reviews
+downstream. Intake/canonicalização completos permanecem em `PU-ECF-003`.
+
 ### `PU-ECF-003` — Intake, identidade e deduplicação
 
 - importar os 232 candidatos;

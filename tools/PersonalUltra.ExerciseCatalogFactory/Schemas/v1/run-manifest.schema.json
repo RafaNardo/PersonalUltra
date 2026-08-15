@@ -1,0 +1,161 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://personalultra.local/schemas/exercise-catalog-factory/v1/run-manifest.schema.json",
+  "title": "Exercise Catalog Factory run manifest v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["schemaVersion", "runId", "createdAt", "updatedAt", "status", "dryRun", "resumeCount", "source"],
+  "properties": {
+    "schemaVersion": { "const": "1" },
+    "runId": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$" },
+    "createdAt": { "type": "string", "format": "date-time" },
+    "updatedAt": { "type": "string", "format": "date-time" },
+    "status": { "enum": ["imported", "processing", "needs_review", "ready", "partial", "blocked", "failed", "completed"] },
+    "dryRun": { "type": "boolean" },
+    "resumeCount": { "type": "integer", "minimum": 0 },
+    "source": { "$ref": "#/$defs/sourceArtifact" },
+    "versions": { "$ref": "#/$defs/versions" },
+    "items": { "type": ["array", "null"], "items": { "$ref": "#/$defs/item" } },
+    "attempts": { "type": ["array", "null"], "items": { "$ref": "#/$defs/attempt" } },
+    "usage": { "$ref": "#/$defs/usage" },
+    "stageHashes": { "type": ["object", "null"], "additionalProperties": { "$ref": "#/$defs/sha256" } },
+    "outputs": { "type": ["array", "null"], "items": { "$ref": "#/$defs/artifact" } }
+  },
+  "$defs": {
+    "sha256": { "type": "string", "pattern": "^[a-f0-9]{64}$" },
+    "sourceArtifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["fileName", "originalAbsolutePath", "storedRelativePath", "sha256", "length"],
+      "properties": {
+        "fileName": { "type": "string", "minLength": 1 },
+        "originalAbsolutePath": { "type": "string", "minLength": 1 },
+        "storedRelativePath": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "length": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "artifact": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "relativePath", "sha256", "length"],
+      "properties": {
+        "stage": { "enum": ["source", "normalization", "metadata", "image", "export"] },
+        "relativePath": { "type": "string", "minLength": 1 },
+        "sha256": { "$ref": "#/$defs/sha256" },
+        "length": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "versions": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["pipelineVersion", "taxonomyVersion", "metadataPromptVersion", "imagePromptVersion", "styleVersion", "targetProfileVersion"],
+      "properties": {
+        "pipelineVersion": { "type": "string", "minLength": 1 },
+        "taxonomyVersion": { "type": "string", "minLength": 1 },
+        "metadataPromptVersion": { "type": "string", "minLength": 1 },
+        "imagePromptVersion": { "type": "string", "minLength": 1 },
+        "styleVersion": { "type": "string", "minLength": 1 },
+        "targetProfileVersion": { "type": "string", "minLength": 1 }
+      }
+    },
+    "usage": {
+      "type": ["object", "null"],
+      "additionalProperties": false,
+      "required": ["currency", "estimatedCost", "observedCost", "attempts"],
+      "properties": {
+        "currency": { "type": "string", "minLength": 1 },
+        "estimatedCost": { "type": "number", "minimum": 0 },
+        "observedCost": { "type": "number", "minimum": 0 },
+        "attempts": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "itemSource": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["file", "row", "sourceHash"],
+      "properties": {
+        "file": { "type": "string", "minLength": 1 },
+        "row": { "type": "integer", "minimum": 1 },
+        "sourceHash": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "itemHashes": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["source"],
+      "properties": {
+        "source": { "$ref": "#/$defs/sha256" },
+        "normalizationInput": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "metadataInput": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "imageInput": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] },
+        "exportInput": { "anyOf": [{ "$ref": "#/$defs/sha256" }, { "type": "null" }] }
+      }
+    },
+    "review": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["itemKey", "stage", "decision", "reasonCode", "reviewer", "reviewedAt", "artifactHash"],
+      "properties": {
+        "itemKey": { "type": "string", "minLength": 1 },
+        "stage": { "enum": ["metadata", "visual", "biomechanics"] },
+        "decision": { "enum": ["approved", "rejected"] },
+        "reasonCode": { "type": "string", "minLength": 1 },
+        "notes": { "type": ["string", "null"] },
+        "reviewer": { "type": "string", "minLength": 1 },
+        "reviewedAt": { "type": "string", "format": "date-time" },
+        "artifactHash": { "$ref": "#/$defs/sha256" }
+      }
+    },
+    "item": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["externalKey", "state", "source", "hashes"],
+      "properties": {
+        "externalKey": { "type": "string", "minLength": 1 },
+        "state": { "enum": ["imported", "normalized", "metadata_pending", "metadata_generated", "metadata_review", "metadata_approved", "image_pending", "image_generated", "image_review", "approved", "exported", "needs_review", "rejected", "failed_retryable", "failed_terminal", "deprecated"] },
+        "source": { "$ref": "#/$defs/itemSource" },
+        "hashes": { "$ref": "#/$defs/itemHashes" },
+        "artifacts": { "type": ["array", "null"], "items": { "$ref": "#/$defs/artifact" } },
+        "reviews": { "type": ["array", "null"], "items": { "$ref": "#/$defs/review" } }
+      }
+    },
+    "attempt": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["stage", "provider", "model", "attempt", "startedAt", "inputHash", "status", "cost"],
+      "properties": {
+        "stage": { "enum": ["metadata", "image"] },
+        "provider": { "type": "string", "minLength": 1 },
+        "model": { "type": "string", "minLength": 1 },
+        "requestId": { "type": ["string", "null"] },
+        "attempt": { "type": "integer", "minimum": 1 },
+        "startedAt": { "type": "string", "format": "date-time" },
+        "finishedAt": { "type": ["string", "null"], "format": "date-time" },
+        "inputHash": { "$ref": "#/$defs/sha256" },
+        "promptVersion": { "type": ["string", "null"] },
+        "status": { "enum": ["started", "succeeded", "failed_retryable", "failed_terminal"] },
+        "cost": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["currency", "estimated", "observed"],
+          "properties": {
+            "currency": { "type": "string", "minLength": 1 },
+            "estimated": { "type": ["number", "null"], "minimum": 0 },
+            "observed": { "type": ["number", "null"], "minimum": 0 }
+          }
+        },
+        "usage": {
+          "type": ["object", "null"],
+          "additionalProperties": false,
+          "required": ["inputTokens", "outputTokens", "images"],
+          "properties": {
+            "inputTokens": { "type": ["integer", "null"], "minimum": 0 },
+            "outputTokens": { "type": ["integer", "null"], "minimum": 0 },
+            "images": { "type": ["integer", "null"], "minimum": 0 }
+          }
+        }
+      }
+    }
+  }
+}

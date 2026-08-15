@@ -1,0 +1,34 @@
+{
+  "schemaVersion": "1",
+  "runId": "golden",
+  "createdAt": "2026-08-14T12:00:00+00:00",
+  "updatedAt": "2026-08-14T12:00:00+00:00",
+  "status": "imported",
+  "dryRun": true,
+  "resumeCount": 0,
+  "source": {
+    "fileName": "input.json",
+    "originalAbsolutePath": "C:/safe/input.json",
+    "storedRelativePath": "source/input.json",
+    "sha256": "aaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaaa",
+    "length": 42
+  },
+  "versions": {
+    "pipelineVersion": "factory-v1",
+    "taxonomyVersion": "taxonomy-v1",
+    "metadataPromptVersion": "metadata-v1",
+    "imagePromptVersion": "image-v1",
+    "styleVersion": "style-v1",
+    "targetProfileVersion": "target-v1"
+  },
+  "items": [],
+  "attempts": [],
+  "usage": {
+    "currency": "USD",
+    "estimatedCost": 0,
+    "observedCost": 0,
+    "attempts": 0
+  },
+  "stageHashes": {},
+  "outputs": []
+}

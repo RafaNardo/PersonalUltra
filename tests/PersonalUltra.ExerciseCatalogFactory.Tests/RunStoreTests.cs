@@ -16,13 +16,13 @@ public sealed class RunStoreTests : IDisposable
         var original = CreateRun("run-1", now);
 
         await store.SaveAsync(original);
-        var updated = original with { Status = "review_pending", UpdatedAt = now.AddMinutes(1) };
+        var updated = original with { Status = "needs_review", UpdatedAt = now.AddMinutes(1) };
         await store.SaveAsync(updated);
 
         var loaded = await store.LoadAsync("run-1");
 
         Assert.NotNull(loaded);
-        Assert.Equal("review_pending", loaded.Status);
+        Assert.Equal("needs_review", loaded.Status);
         Assert.Empty(Directory.EnumerateFiles(Path.Combine(store.RunsRoot, "run-1"), "*.tmp"));
     }
 
