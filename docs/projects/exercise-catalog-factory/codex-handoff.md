@@ -1,99 +1,103 @@
-# Codex handoff — Exercise Catalog Factory
+# Handoff autoritativo — Exercise Catalog Factory
 
-Use este documento numa nova thread e, preferencialmente, num repositório vazio dedicado ao robô.
+Atualizado em 2026-08-24. Este é o resumo operacional para retomar o trabalho
+sem reler o histórico da conversa. As especificações continuam nos demais
+arquivos deste diretório; não duplicá-las aqui.
 
-## Contexto que deve acompanhar o novo projeto
+## Fonte de verdade e limites
 
-Copiar todo o diretório `docs/projects/exercise-catalog-factory/`. Se o novo agente também puder ler o Personal Ultra, fornecer como referências somente leitura:
+- Repositório: `C:\git\PresonalUltra`, branch `main`.
+- A sequência executável atual é `PU-ECF-001`–`012` de
+  [personal-ultra-integration-milestone.md](personal-ultra-integration-milestone.md).
+  O [backlog.md](backlog.md) registra o desenho original e usa números diferentes
+  a partir de ECF-006; em caso de conflito, prevalece a milestone de integração.
+- A factory é uma CLI .NET 10 em
+  `tools/PersonalUltra.ExerciseCatalogFactory`; não é API, microserviço nem
+  acesso direto ao PostgreSQL.
+- Dry-run é o padrão. Não gerar conteúdo pago, publicar imagem, alterar seed ou
+  integrar ao app sem passar pelos gates de revisão correspondentes.
+- Nunca ler, imprimir, versionar ou pedir secrets na conversa. Eles entram
+  somente no User Secrets próprio da factory.
+- Preservar `docs/projects/exercise-catalog-factory.zip`: é artefato local do
+  usuário, não deve ser commitado.
 
-- `apps/backend/PersonalUltra.Domain/Domain/TrainingEntities.cs`;
-- `apps/backend/PersonalUltra.Infrastructure/Infrastructure/ExerciseCatalogSeed.cs`;
-- `apps/backend/PersonalUltra.Infrastructure/Infrastructure/DemoDataSeeder.cs`;
-- `apps/mobile/src/shared/training/exercise-media.ts`;
-- alguns assets representativos de `apps/mobile/assets/training/`.
+## Estado implementado
 
-Não copiar segredos, `.env`, banco ou dados de Student/Trainer.
+| Item | Estado | Commit |
+|---|---|---|
+| ECF-001 — CLI, configuração, logs, run/resume e dry-run | concluído | `551997e` |
+| ECF-002 — contratos v1, manifesto e checkpoint atômico | concluído | `e57aa2d` |
+| ECF-003 — intake determinístico e identidades | código concluído; gate humano aberto | `d4745e0` |
+| ECF-004 — enriquecimento OpenAI estruturado e retomável | concluído; nenhuma chamada paga executada | `72e98d3` |
+| ECF-006 — adapter e smoke privado S3 | concluído; smoke real aprovado | `d0f940c` |
 
-## Prompt inicial recomendado
+Estado validado no commit `72e98d3`: build da solution sem erros, 109 testes da
+factory e 68 testes de integração das APIs. O adapter OpenAI de metadados existe,
+mas nenhuma chamada paga foi executada. Imagem nova, upload de catálogo, seed
+gerado e consumo remoto no app ainda não existem.
 
-```text
-Read every document under docs/projects/exercise-catalog-factory before making changes.
+O intake contém 232 candidatos, preserva exatamente os 28 GUIDs/slugs legados,
+usa UUID v5 para itens novos e produz catálogo/relatório retomáveis. Resultado
+atual: 220 normalizados, 12 em `needs_review`, 13 relações de ambiguidade;
+17 identidades legadas têm vínculo exato e 11 continuam sem resolução. O
+equipamento dos 232 itens não foi inferido porque a fonte não o fornece por
+linha; isso pertence ao enriquecimento/review, não a um preenchimento fictício.
 
-Implement PU-ECF-001 only.
+## Bloqueios e gates abertos
 
-This is a standalone, run-on-demand exercise catalog factory. It will later
-accept roughly 200 exercise names, use OpenAI through isolated provider adapters
-to propose structured metadata and generate one reviewed illustration per
-exercise, then export deterministic seed/assets/static Expo media bindings for
-Personal Ultra.
+1. **Catálogo:** aprovar taxonomia e resolver as 11 identidades legadas ambíguas
+   listadas em [exercise-inventory-v1.md](exercise-inventory-v1.md), incluindo
+   stiff/RDL, afundo, passada, remada baixa, puxada dorsal, desenvolvimento,
+   rosca direta, abdução com elástico e agachamento sumô. Não mesclar nem trocar
+   IDs por heurística.
+2. **Conteúdo:** definir revisor biomecânico. Metadados gerados ficam pendentes
+   até aprovação explícita.
+3. **Imagem:** confirmar acesso da conta ao modelo configurado. O piloto possui
+   dez exercícios, executados em dois lotes de cinco; revisar o primeiro antes
+   do segundo e só então congelar `styleVersion`/tratamento de marca.
 
-Critical rules:
-- dry-run by default;
-- never write directly to PostgreSQL;
-- never publish or export unreviewed metadata/images;
-- preserve stable external keys, slugs and target IDs;
-- make runs resumable and idempotent;
-- keep OpenAI model IDs/config out of the domain;
-- never log or commit API keys;
-- do not implement later ECF milestones early.
+## Retomada imediata
 
-At the end report files changed, commands/tests run, decisions made and anything
-that must be resolved before PU-ECF-002. Do not continue automatically.
-```
+Em 2026-08-24, `bucket doctor` e o smoke real passaram no endpoint
+`t3.storageapi.dev`, em virtual-hosted style. Foram validados PUT, HEAD, GET
+autenticado, GET assinado, bytes, SHA-256, MIME, DELETE da chave exata e
+`NotFound` final; o cleanup foi confirmado e nenhum objeto permaneceu. O erro
+anterior `InvalidAccessKeyId` foi resolvido após a atualização da configuração.
 
-Depois da fundação, repetir o padrão trocando apenas o ID da milestone. Não pedir que um único agente implemente ECF-001–012 de uma vez.
+Seguir em sequência:
 
-## Sequência recomendada
+1. ECF-005: workflow de revisão e resolução do gate de metadados.
+2. ECF-007: piloto pago de imagem, cinco + revisão + cinco.
+3. ECF-008–012: processamento/review, publicação, exporter, consumo remoto nas
+   duas APIs/Expo e validação ponta a ponta.
 
-```text
-ECF-001 baseline CLI
-ECF-002 schemas/manifest
-ECF-003 normalization/dedupe
-ECF-004 OpenAI text enrichment
-ECF-005 metadata review
-ECF-006 image pilot
-ECF-007 batch/media QA
-ECF-008 visual/biomechanical review
-ECF-009 Personal Ultra exporter
-ECF-010 target verifier/apply
-ECF-011 incremental rerun
-ECF-012 end-to-end rehearsal/runbook
-```
+Antes de cada avanço: implementar, revisar, testar, fazer commit intencional e
+push. Parar em falha externa, gasto pago ou decisão humana. Os comandos de
+fechamento estão em [validation.md](validation.md).
 
-## Recomendações de orquestração
+## Decisões já fixadas
 
-- ECF-001–003 em sequência: identidade/manifesto são fundação.
-- ECF-004 e o desenho inicial de ECF-006 podem ser pesquisados em paralelo, mas geração paga só após ECF-005 e congelamento do style pilot.
-- ECF-007–008 dependem do piloto visual aceito.
-- ECF-009–010 dependem de manifesto estável e leitura atual do target.
-- ECF-011–012 são gates reais, não documentação opcional.
+- Novas imagens ficam remotas no bucket privado; os 28 assets legados continuam
+  no bundle para compatibilidade histórica.
+- Persistir `media://exercise-catalog/...`, nunca URL assinada. Infrastructure
+  compartilha apenas o resolver; TrainerApi e StudentApi mantêm contratos
+  próprios.
+- O Expo usa primitive compartilhada, cache em disco e fallback/placeholder
+  offline, mantendo separadas as features Trainer e Student.
+- Seed/export é determinístico e gera pacote revisável; não escreve no banco.
+- Nenhum mock deve preencher lacunas de dados ou chegar ao produto.
 
-## O que não assumir
+## Trabalho posterior enfileirado
 
-- não assumir que “GPT” significa um model ID fixo; confirmar documentação oficial ao implementar adapters;
-- não assumir que 200 nomes são 200 exercícios únicos;
-- não assumir que a taxonomia atual cobre todo o lote;
-- não assumir que uma imagem bonita é biomecanicamente correta;
-- não assumir que criar o PNG basta: o Expo atual exige `require` estático;
-- não assumir que um novo run representa o catálogo completo ou autoriza remoções;
-- não assumir permissão para usar material de terceiros como referência visual.
+Depois de concluir integralmente bucket + factory + integração do catálogo,
+revisar o módulo de nutrição nas visões Trainer e Student. A tarefa inclui:
 
-## Primeira execução real
+- auditar API, persistência e UI para localizar mocks, dados estáticos e fluxos
+  incompletos;
+- pesquisar padrões atuais de apps de prescrição alimentar;
+- documentar um plano alinhado à UX acolhedora, explicativa e demo-first do app;
+- implementar apenas dentro do módulo de nutrição e suas telas Trainer/Student.
 
-Antes do lote completo:
-
-1. importar a lista inteira apenas para relatório de qualidade/duplicidade;
-2. resolver taxonomia e conflitos;
-3. enriquecer e revisar um lote pequeno;
-4. gerar piloto visual de 5–10 itens variados;
-5. validar esses assets dentro do Personal Ultra;
-6. congelar `styleVersion`;
-7. estimar custo e confirmar orçamento;
-8. gerar o restante em lotes retomáveis;
-9. revisar antes de exportar;
-10. aplicar em clone/branch e executar o gate completo.
-
-## Resultado esperado do handoff
-
-Ao concluir ECF-012, o operador consegue adicionar exercícios futuramente repetindo um run incremental. O robô gera um pacote revisável e determinístico; uma PR no Personal Ultra continua sendo o ponto de publicação e validação.
-
+Se a revisão exigir mudanças amplas de domínio, infraestrutura compartilhada ou
+outros módulos, não executar automaticamente: documentar o impacto e aguardar o
+usuário. Essa revisão ainda não começou.
