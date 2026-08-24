@@ -38,7 +38,11 @@ export type TrainerStudentWorkoutExercise = { id: string; exerciseId?: string; n
 export type TrainerStudentWorkout = Omit<TrainerStudentWorkoutSummary, 'exerciseCount'> & { studentId: string; exercises: TrainerStudentWorkoutExercise[] };
 export type TrainerStudentWorkoutExerciseInput = { id?: string; exerciseId?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string; trackingMode: ExerciseTrackingMode; targetDurationSeconds?: number };
 export type TrainerExerciseCatalogItem = { id: string; name: string; slug: string; primaryMuscleGroup: string; equipment?: string; imageRef: string; imageUrl?: string; instructions?: string; isActive: boolean; defaultTrackingMode: ExerciseTrackingMode; defaultDurationSeconds?: number };
-export type TrainerNutrition = { id: string; name: string; notes: string; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ foodName: string; quantityGrams: number }> }> };
+export type NutritionQuantityUnit = 'g' | 'ml' | 'unidade' | 'fatia' | 'colher' | 'dose' | 'porção';
+export type TrainerNutritionFood = { id: string; foodName: string; quantity: number; unit: NutritionQuantityUnit; sequence: number };
+export type TrainerNutritionMeal = { id: string; name: string; sequence: number; notes: string; foods: TrainerNutritionFood[] };
+export type TrainerNutrition = { id: string; name: string; notes: string; updatedAt: string; responsibleTrainerName: string; meals: TrainerNutritionMeal[] };
+export type TrainerNutritionInput = { name: string; notes?: string; meals: Array<{ name: string; sequence: number; notes?: string; foods: Array<{ foodName: string; quantity: number; unit: NutritionQuantityUnit; sequence: number }> }> };
 export type TrainerPrescriptionSettings = { sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; isCustomized: boolean };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -99,7 +103,7 @@ export const trainerClient = {
   },
   trainingHistory: (studentId: string) => request<{ sessions: Array<{ sessionId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number; exercises: Array<{ name: string; sequence: number; trackingMode: ExerciseTrackingMode; confirmedWithoutDetails: boolean; sets: Array<{ setNumber: number; weightKg?: number; repetitions?: number; durationSeconds?: number; completedAt: string }> }> }> }>(`/students/${studentId}/training-history`),
   nutrition: async (studentId: string) => (await request<TrainerNutrition | null>(`/students/${studentId}/nutrition`)) ?? null,
-  saveNutrition: (studentId: string, input: { name: string; notes?: string; meals: Array<{ name: string; sequence: number; notes?: string; foods: Array<{ foodName: string; quantityGrams: number }> }> }) => request<TrainerNutrition>(`/students/${studentId}/nutrition`, { method: 'PUT', body: JSON.stringify(input) }),
+  saveNutrition: (studentId: string, input: TrainerNutritionInput) => request<TrainerNutrition>(`/students/${studentId}/nutrition`, { method: 'PUT', body: JSON.stringify(input) }),
   weight: (studentId: string) => request<Array<{ id: string; weightKg: number; recordedAt: string }>>(`/students/${studentId}/progress/weight`),
   prescriptionSettings: () => request<TrainerPrescriptionSettings>('/settings/prescription'),
   updatePrescriptionSettings: (input: Omit<TrainerPrescriptionSettings, 'isCustomized'>) => request<TrainerPrescriptionSettings>('/settings/prescription', { method: 'PUT', body: JSON.stringify(input) }),

@@ -1,11 +1,24 @@
 import { router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, Text } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Card, EmptyState, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
 import { inviteApi } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
+
+function formatUpdatedAt(value: string) {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return 'Atualização recente';
+  return `Atualizado em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(date)}`;
+}
+
+function formatQuantity(quantity: number, unit: string) {
+  const formatted = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(quantity);
+  if (quantity === 1 || unit === 'g' || unit === 'ml') return `${formatted} ${unit}`;
+  const plurals: Record<string, string> = { unidade: 'unidades', fatia: 'fatias', colher: 'colheres', dose: 'doses', porção: 'porções' };
+  return `${formatted} ${plurals[unit] ?? unit}`;
+}
 
 export function StudentNutritionScreen() {
   const session = useInviteSessionStore((state) => state.session);
@@ -14,7 +27,21 @@ export function StudentNutritionScreen() {
   if (query.isLoading) return <LoadingView message="Carregando sua alimentação…" />;
   if (query.isError) return <ErrorView message={query.error.message} onRetry={() => query.refetch()} />;
   if (!query.data) return <NutritionEmptyState />;
-  return <Screen style={styles.page}><TopBar eyebrow="ALIMENTAÇÃO" title={query.data.name} /><Text style={styles.copy}>{query.data.notes}</Text>{query.data.meals.map((meal) => <Card key={meal.id} style={styles.card}><Text style={styles.title}>{meal.sequence}. {meal.name}</Text>{meal.notes && <Text style={styles.copy}>{meal.notes}</Text>}{meal.foods.map((food) => <Text key={food.foodName} style={styles.food}>{food.foodName} · {food.quantityGrams} g</Text>)}</Card>)}</Screen>;
+  const meals = [...query.data.meals].sort((left, right) => left.sequence - right.sequence);
+  return <Screen style={styles.page}>
+    <TopBar eyebrow="ALIMENTAÇÃO" title={query.data.name} />
+    <View style={styles.planMeta}><Text style={styles.responsible}>Orientado por {query.data.responsibleTrainerName}</Text><Text style={styles.updatedAt}>{formatUpdatedAt(query.data.updatedAt)}</Text></View>
+    {query.data.notes ? <Text style={styles.copy}>{query.data.notes}</Text> : null}
+    {meals.length === 0 ? <EmptyState variant="section" status="PLANO EM PREPARAÇÃO" title="As refeições ainda serão organizadas." message="Seu personal já iniciou este plano. Quando as refeições forem salvas, elas aparecerão aqui." /> : meals.map((meal) => {
+      const foods = [...meal.foods].sort((left, right) => left.sequence - right.sequence);
+      return <Card key={meal.id} style={styles.card}>
+        <Text style={styles.sequence}>REFEIÇÃO {meal.sequence}</Text>
+        <Text style={styles.title}>{meal.name}</Text>
+        {meal.notes ? <Text style={styles.copy}>{meal.notes}</Text> : null}
+        {foods.length ? <View style={styles.foodList}>{foods.map((food) => <View key={food.id} style={styles.foodRow}><Text style={styles.food}>{food.foodName}</Text><Text style={styles.quantity}>{formatQuantity(food.quantity, food.unit)}</Text></View>)}</View> : <EmptyState variant="inline" status="ITENS EM PREPARAÇÃO" title="Esta refeição ainda não tem itens." message="Seu personal pode completar os alimentos e quantidades na próxima atualização." />}
+      </Card>;
+    })}
+  </Screen>;
 }
 
 function NutritionEmptyState() {
@@ -29,6 +56,13 @@ const styles = StyleSheet.create({
   card: { gap: spacing.sm },
   title: { ...typography.headingMD, color: colors.textPrimary },
   copy: { ...typography.bodyMD, color: colors.textSecondary },
-  food: { ...typography.bodyLG, color: colors.textPrimary },
+  planMeta: { gap: spacing.xxs },
+  responsible: { ...typography.bodyMD, color: colors.titaniumLight },
+  updatedAt: { ...typography.caption, color: colors.textMuted },
+  sequence: { ...typography.caption, color: colors.primary, letterSpacing: 1 },
+  foodList: { gap: spacing.xs, marginTop: spacing.xs },
+  foodRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
+  food: { ...typography.bodyLG, color: colors.textPrimary, flex: 1 },
+  quantity: { ...typography.bodyMD, color: colors.titaniumLight, textAlign: 'right' },
   emptyPage: { paddingVertical: spacing.xl, gap: spacing.xxl },
 });

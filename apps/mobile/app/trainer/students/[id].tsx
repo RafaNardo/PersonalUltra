@@ -9,6 +9,7 @@ import { useCreateTrainerMessage, useTrainerAnamnesis, useTrainerStudent } from 
 import { useReorderTrainerStudentWorkouts, useTrainerStudentWorkouts } from '@/src/features/trainer/training/hooks';
 import { feedback } from '@/src/platform/feedback';
 import { trainerClient } from '@/src/api/trainer-client';
+import { useTrainerNutrition } from '@/src/features/trainer/nutrition/hooks';
 
 type StudentSection = 'summary' | 'training' | 'progress';
 
@@ -22,7 +23,7 @@ export default function TrainerStudentDetailScreen() {
   const workouts = useTrainerStudentWorkouts(id);
   const reorderWorkouts = useReorderTrainerStudentWorkouts(id ?? '');
   const history = useQuery({ queryKey: ['trainer', 'students', id, 'training-history'], queryFn: () => trainerClient.trainingHistory(id!), enabled: Boolean(id) });
-  const nutrition = useQuery({ queryKey: ['trainer', 'students', id, 'nutrition'], queryFn: () => trainerClient.nutrition(id!), enabled: Boolean(id) });
+  const nutrition = useTrainerNutrition(id ?? '');
   const weight = useQuery({ queryKey: ['trainer', 'students', id, 'weight'], queryFn: () => trainerClient.weight(id!), enabled: Boolean(id) });
 
   useEffect(() => { if (initialSection) setSection(initialSection); }, [initialSection]);
