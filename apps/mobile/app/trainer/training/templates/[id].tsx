@@ -14,7 +14,7 @@ export default function TrainerTemplateDetailScreen() {
   const template = useTrainerTemplate(id);
   const remove = useDeleteTrainerTemplate();
 
-  if (template.isLoading) return <LoadingView message="Abrindo detalhes do modelo…" />;
+  if (template.isLoading) return <LoadingView message="Abrindo detalhes do preset…" />;
   if (template.isError) return <ErrorView message={template.error.message} onRetry={() => template.refetch()} />;
   const value = template.data!;
 
@@ -25,28 +25,28 @@ export default function TrainerTemplateDetailScreen() {
       router.push({ pathname: '/trainer/training/[id]', params: { id: 'new', draftId: draft.id } });
     } catch {
       feedback.warning();
-      Alert.alert('Não foi possível preparar a cópia', 'Tente novamente. O modelo original não foi alterado.');
+      Alert.alert('Não foi possível preparar a cópia', 'Tente novamente. O preset original não foi alterado.');
     }
   };
-  const deleteTemplate = () => Alert.alert('Excluir modelo?', `${value.name} será removido definitivamente da sua biblioteca. Os treinos já criados para alunos continuarão disponíveis.`, [
+  const deleteTemplate = () => Alert.alert('Excluir preset?', `${value.name} será removido definitivamente da sua biblioteca. Os treinos já criados para alunos continuarão disponíveis.`, [
     { text: 'Cancelar', style: 'cancel' },
-    { text: 'Excluir modelo', style: 'destructive', onPress: async () => {
+    { text: 'Excluir preset', style: 'destructive', onPress: async () => {
       try { await remove.mutateAsync(value.id); feedback.success(); router.replace('/trainer/training/templates'); }
       catch (error) { feedback.warning(); Alert.alert('Não foi possível excluir', error instanceof Error ? error.message : 'Tente novamente.'); }
     } },
   ]);
 
   return <Screen withinTabs style={styles.page}>
-    <TopBar eyebrow="DETALHES DO MODELO" title={value.name} onBack={() => router.back()} />
-    {value.notes ? <Text style={styles.intro}>{value.notes}</Text> : <Text style={styles.intro}>Modelo reutilizável da sua biblioteca.</Text>}
+    <TopBar eyebrow="DETALHES DO PRESET" title={value.name} onBack={() => router.back()} />
+    {value.notes ? <Text style={styles.intro}>{value.notes}</Text> : <Text style={styles.intro}>Preset reutilizável da sua biblioteca.</Text>}
     <Card style={styles.summary}><View><Text style={styles.summaryLabel}>ESTRUTURA</Text><Text style={styles.summaryValue}>{value.exercises?.length ?? 0} {(value.exercises?.length ?? 0) === 1 ? 'exercício configurado' : 'exercícios configurados'}</Text></View><Ionicons name="albums-outline" size={28} color={colors.primary} /></Card>
     <View style={styles.list}>{(value.exercises ?? []).map((exercise) => {
       return <Card key={`${exercise.exerciseId}-${exercise.sequence}`} style={styles.exercise}><View style={styles.exerciseHeader}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} /><View style={styles.identity}><Text style={styles.exerciseName}>{exercise.sequence}. {exercise.name}</Text><Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text><Text style={styles.prescription}>{exercise.sets} séries · {exercise.repetitionsMin}–{exercise.repetitionsMax} reps · {exercise.restSeconds}s</Text></View></View>{exercise.notes ? <Text style={styles.notes}>{exercise.notes}</Text> : null}</Card>;
     })}</View>
-    <Button onPress={() => router.push({ pathname: '/trainer/training/[id]', params: { id: value.id } })}>Editar modelo</Button>
+    <Button onPress={() => router.push({ pathname: '/trainer/training/[id]', params: { id: value.id } })}>Editar preset</Button>
     <Button variant="secondary" onPress={() => void copyAsDraft()}>Criar novo a partir deste</Button>
-    <Pressable disabled={remove.isPending} accessibilityRole="button" accessibilityLabel="Excluir modelo" onPress={deleteTemplate} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}><Ionicons name="trash-outline" size={19} color={colors.danger} /><Text style={styles.deleteText}>{remove.isPending ? 'Excluindo…' : 'Excluir modelo'}</Text></Pressable>
-    <Text style={styles.footer}>Excluir ou editar este modelo não altera os treinos já atribuídos aos alunos.</Text>
+    <Pressable disabled={remove.isPending} accessibilityRole="button" accessibilityLabel="Excluir preset" onPress={deleteTemplate} style={({ pressed }) => [styles.deleteButton, pressed && styles.pressed]}><Ionicons name="trash-outline" size={19} color={colors.danger} /><Text style={styles.deleteText}>{remove.isPending ? 'Excluindo…' : 'Excluir preset'}</Text></Pressable>
+    <Text style={styles.footer}>Excluir ou editar este preset não altera os treinos já atribuídos aos alunos.</Text>
   </Screen>;
 }
 

@@ -19,9 +19,9 @@ export default function AddStudentWorkoutScreen() {
     <Text style={styles.intro}>Escolha o ponto de partida. Nas duas opções, você poderá revisar a prescrição antes que ela fique disponível para {firstName}.</Text>
     <View style={styles.options}>
       <Option icon="create-outline" eyebrow="PRESCRIÇÃO EXCLUSIVA" title="Criar do zero" description="Dê um nome ao treino e monte cada exercício pelo catálogo, com séries, repetições e descanso." action="Começar treino novo" onPress={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/new', params: { studentId } })} />
-      <Option icon="copy-outline" eyebrow="PONTO DE PARTIDA RÁPIDO" title="Usar um modelo" description="Escolha uma estrutura da sua biblioteca, confira os exercícios e organize o dia para este aluno." action="Escolher um modelo" onPress={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/from-template', params: { studentId } })} />
+      <Option icon="copy-outline" eyebrow="PONTO DE PARTIDA RÁPIDO" title="Usar um preset" description="Escolha uma estrutura da sua biblioteca, confira os exercícios e organize o dia para este aluno." action="Escolher um preset" onPress={() => router.push({ pathname: '/trainer/students/[studentId]/workouts/from-template', params: { studentId } })} />
     </View>
-    <Text style={styles.note}>Modelos são apenas um ponto de partida: o treino aplicado ao aluno continua independente e editável.</Text>
+    <Text style={styles.note}>Presets são apenas um ponto de partida: o treino aplicado ao aluno continua independente e editável.</Text>
   </Screen>;
 }
 

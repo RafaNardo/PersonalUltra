@@ -1,7 +1,7 @@
 # Listagens — Personal Ultra
 
 Listagens devem permitir reconhecer, comparar e abrir itens rapidamente. Na
-experiência Trainer, onde dezenas de alunos, treinos ou modelos podem coexistir,
+experiência Trainer, onde dezenas de alunos, treinos ou presets podem coexistir,
 densidade útil é parte da usabilidade: uma linha não deve virar um card alto sem
 que seu conteúdo exija essa altura.
 
@@ -80,7 +80,7 @@ Toda listagem deve considerar:
 ## Auditoria Trainer
 
 O padrão compacto é aplicado a alunos, alunos recentes, alunos escolhidos para
-prescrição, biblioteca de modelos, escolha de modelo e treinos atuais do aluno.
+prescrição, biblioteca de presets, escolha de preset e treinos atuais do aluno.
 Atividade recente usa a variante informativa. Catálogos, exercícios editáveis,
-revisão do modelo e histórico permanecem como variantes funcionais conforme as
+revisão do preset e histórico permanecem como variantes funcionais conforme as
 exceções acima.

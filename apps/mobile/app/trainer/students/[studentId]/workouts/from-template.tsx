@@ -23,10 +23,10 @@ export default function ApplyTemplateToStudentScreen() {
   const filteredTemplates = useMemo(() => filterTemplates(templates.data ?? [], templateSearch, muscleGroup), [muscleGroup, templateSearch, templates.data]);
 
   if (!studentId) return <ErrorView message="Não foi possível identificar o aluno deste treino." />;
-  if (student.isLoading || templates.isLoading) return <LoadingView message="Preparando os modelos…" />;
+  if (student.isLoading || templates.isLoading) return <LoadingView message="Preparando os presets…" />;
   if (student.isError) return <ErrorView message={student.error.message} onRetry={() => student.refetch()} />;
   if (templates.isError) return <ErrorView message={templates.error.message} onRetry={() => templates.refetch()} />;
-  if (selectedTemplateId && selectedTemplate.isLoading) return <LoadingView message="Abrindo o modelo escolhido…" />;
+  if (selectedTemplateId && selectedTemplate.isLoading) return <LoadingView message="Abrindo o preset escolhido…" />;
   if (selectedTemplateId && selectedTemplate.isError) return <ErrorView message={selectedTemplate.error.message} onRetry={() => selectedTemplate.refetch()} />;
 
   const studentName = `${student.data!.firstName} ${student.data!.lastName}`;
@@ -47,7 +47,7 @@ export default function ApplyTemplateToStudentScreen() {
     const template = selectedTemplate.data;
     const exercises = template.exercises ?? [];
     return <Screen withinTabs style={styles.page}>
-      <TopBar eyebrow="ETAPA 2 DE 2 · REVISAR" title={template.name} onBack={() => setSelectedTemplateId(undefined)} action={<Tag tone="neutral">MODELO</Tag>} />
+      <TopBar eyebrow="ETAPA 2 DE 2 · REVISAR" title={template.name} onBack={() => setSelectedTemplateId(undefined)} action={<Tag tone="neutral">PRESET</Tag>} />
       <Text style={styles.intro}>Confira o conteúdo antes de adicionar este treino à rotina de {student.data!.firstName}.</Text>
 
       <Card style={styles.summaryCard}>
@@ -62,22 +62,22 @@ export default function ApplyTemplateToStudentScreen() {
       </Card>
 
       <Button loading={apply.isPending} disabled={apply.isPending || exercises.length === 0} onPress={() => void applyTemplate()}>Adicionar aos treinos de {student.data!.firstName}</Button>
-      <Button variant="ghost" disabled={apply.isPending} onPress={() => setSelectedTemplateId(undefined)}>Escolher outro modelo</Button>
+      <Button variant="ghost" disabled={apply.isPending} onPress={() => setSelectedTemplateId(undefined)}>Escolher outro preset</Button>
     </Screen>;
   }
 
   return <Screen withinTabs style={styles.page}>
-    <TopBar eyebrow="ETAPA 1 DE 2 · ESCOLHER" title="Adicionar por modelo" onBack={() => router.back()} />
+    <TopBar eyebrow="ETAPA 1 DE 2 · ESCOLHER" title="Adicionar por preset" onBack={() => router.back()} />
     <Card style={styles.studentCard}><Text style={styles.label}>NOVO TREINO PARA</Text><Text style={styles.studentName}>{studentName}</Text><Text style={styles.copy}>Escolha uma prescrição pronta. Antes de adicionar, você poderá revisar os exercícios.</Text></Card>
 
-    {templates.data!.length > 0 ? <SearchField value={templateSearch} onChangeText={setTemplateSearch} placeholder="Buscar modelo…" accessibilityLabel="Buscar modelo para o aluno" /> : null}
+    {templates.data!.length > 0 ? <SearchField value={templateSearch} onChangeText={setTemplateSearch} placeholder="Buscar preset…" accessibilityLabel="Buscar preset para o aluno" /> : null}
     <TemplateMuscleFilters groups={groups} selected={muscleGroup} onSelect={setMuscleGroup} />
-    {templates.data!.length === 0 ? <EmptyState status="SEM MODELOS DISPONÍVEIS" symbol="+" title="Crie um modelo antes de usar este atalho." message="A biblioteca permite montar prescrições reutilizáveis. Depois, volte ao aluno para aplicá-las." actionLabel="Abrir biblioteca de modelos" onAction={() => router.push('/trainer/training/templates')} /> : filteredTemplates.length === 0 ? <EmptyState variant="inline" status="NENHUM RESULTADO" symbol="⌕" title="Não encontramos esse modelo." message="Tente outro nome, escolha outro grupo muscular ou limpe os filtros." actionLabel="Limpar filtros" onAction={() => { setTemplateSearch(''); setMuscleGroup(undefined); }} /> : <View style={styles.list}>{filteredTemplates.map((template) => {
+    {templates.data!.length === 0 ? <EmptyState status="SEM PRESETS DISPONÍVEIS" symbol="+" title="Crie um preset antes de usar este atalho." message="A biblioteca permite montar prescrições reutilizáveis. Depois, volte ao aluno para aplicá-las." actionLabel="Abrir biblioteca de presets" onAction={() => router.push('/trainer/training/templates')} /> : filteredTemplates.length === 0 ? <EmptyState variant="inline" status="NENHUM RESULTADO" symbol="⌕" title="Não encontramos esse preset." message="Tente outro nome, escolha outro grupo muscular ou limpe os filtros." actionLabel="Limpar filtros" onAction={() => { setTemplateSearch(''); setMuscleGroup(undefined); }} /> : <View style={styles.list}>{filteredTemplates.map((template) => {
       const count = template.exerciseCount ?? template.exercises?.length ?? 0;
-      return <ListItem key={template.id} title={template.name} metadata={`${count} ${count === 1 ? 'exercício' : 'exercícios'}${template.updatedAt ? ` · atualizado em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(template.updatedAt))}` : ''}`} description={count === 0 ? 'Adicione exercícios na biblioteca antes de usar este modelo.' : template.muscleGroups?.join(' · ') || template.notes || undefined} actionLabel={count === 0 ? 'Modelo vazio' : 'Escolher'} disabled={count === 0} onPress={() => { setSelectedTemplateId(template.id); feedback.selection(); }} accessibilityLabel={`Escolher modelo ${template.name}`} accessibilityHint={count === 0 ? 'Modelo sem exercícios; edite-o na biblioteca antes de usar' : 'Abre a revisão antes de adicionar ao aluno'} />;
+      return <ListItem key={template.id} title={template.name} metadata={`${count} ${count === 1 ? 'exercício' : 'exercícios'}${template.updatedAt ? ` · atualizado em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short' }).format(new Date(template.updatedAt))}` : ''}`} description={count === 0 ? 'Adicione exercícios na biblioteca antes de usar este preset.' : template.muscleGroups?.join(' · ') || template.notes || undefined} actionLabel={count === 0 ? 'Preset vazio' : 'Escolher'} disabled={count === 0} onPress={() => { setSelectedTemplateId(template.id); feedback.selection(); }} accessibilityLabel={`Escolher preset ${template.name}`} accessibilityHint={count === 0 ? 'Preset sem exercícios; edite-o na biblioteca antes de usar' : 'Abre a revisão antes de adicionar ao aluno'} />;
     })}</View>}
 
-    <Button variant="ghost" onPress={() => router.push('/trainer/training/templates')}>Gerenciar biblioteca de modelos</Button>
+    <Button variant="ghost" onPress={() => router.push('/trainer/training/templates')}>Gerenciar biblioteca de presets</Button>
   </Screen>;
 }
 

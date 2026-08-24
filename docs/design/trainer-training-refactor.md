@@ -8,6 +8,8 @@ This document supersedes the simplified Trainer workout-template UI delivered in
 
 Training prescription is a core Personal Ultra experience. The Trainer must be able to assemble a complete workout quickly from a curated exercise catalog instead of typing arbitrary exercise names or creating a one-exercise template.
 
+Product terminology: the Trainer UI calls reusable workout templates **presets de treino**. Internal domain types, API routes and source identifiers may keep `WorkoutTemplate`/`template` to avoid a breaking technical rename; those names must not leak into user-facing copy.
+
 V1 optimizes for:
 - fast prescription;
 - reuse of curated exercises;
@@ -206,17 +208,17 @@ V1 templates should support:
 - duplication;
 - application to a Student by snapshot copy.
 
-The template library should remain usable with dozens of items: use a compact searchable list that opens a read-only detail surface. Editing, deleting and creating a new model from an existing one belong to that detail surface, not to every list row.
+The preset library should remain usable with dozens of items: use a compact searchable list that opens a read-only detail surface. Editing, deleting and creating a new preset from an existing one belong to that detail surface, not to every list row.
 
 The Student workout list exposes one primary `Adicionar treino` action. A short
-choice screen then explains `Criar do zero` and `Usar um modelo`; the management
+choice screen then explains `Criar do zero` and `Usar um preset`; the management
 screen should not force both paths to compete as equal buttons.
 
 Template discovery combines name search with muscle-group filters derived from
 the catalog exercises currently present in each template. A template may appear
 in several groups. V1 does not store or maintain a second manual category field.
 
-`Create new from this model` prepares a local-only draft before any API mutation. The local payload must carry an explicit schema version; an unreadable or unsupported version is discarded safely instead of being migrated implicitly. Saving the new model persists it through the normal Trainer API and removes the local draft. This is lightweight mobile draft resilience, not enterprise template versioning.
+`Criar novo a partir deste preset` prepares a local-only draft before any API mutation. The local payload must carry an explicit schema version; an unreadable or unsupported version is discarded safely instead of being migrated implicitly. Saving the new preset persists it through the normal Trainer API and removes the local draft. This is lightweight mobile draft resilience, not enterprise template versioning.
 
 A template references catalog exercises while being edited. Applying it to a Student creates a Student-owned editable workout snapshot. Later template changes do not mutate already-applied Student workouts.
 

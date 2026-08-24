@@ -26,11 +26,12 @@ de treino, peso e atividade entram quando seus respectivos fluxos estiverem
 associados ao `Student`; o endpoint não inventa esses dados durante a transição.
 
 `GET /training/templates` inclui os grupos musculares distintos derivados dos
-exercícios de cada modelo para busca/filtro no mobile; não existe categoria
-manual duplicada no modelo de domínio.
+exercícios de cada preset para busca/filtro no mobile; não existe categoria
+manual duplicada no modelo de domínio. As rotas mantêm `templates` como nome
+técnico compatível, enquanto a UI usa `preset de treino`.
 
 As respostas Trainer de treino do aluno expõem `suggestedOrder`. Criar do zero
-ou aplicar um modelo reserva no servidor a próxima posição persistida, sem
+ou aplicar um preset reserva no servidor a próxima posição persistida, sem
 receber dia da semana ou indicador de recomendação. A reordenação exige todos os
 treinos ativos do aluno exatamente uma vez e sempre valida o vínculo com o
 Trainer autenticado. Não existem campos de dia ou recomendação no domínio ou

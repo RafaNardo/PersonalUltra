@@ -33,7 +33,7 @@ O detalhe do aluno mostra `Treinos disponíveis`, ordenados pelo personal. Cada
 linha contém nome, quantidade de exercícios, notas úteis e ação explícita. Não
 mostrar `ATIVO`, `RECOMENDADO`, segunda-feira ou equivalentes.
 
-Criar do zero e aplicar modelo acrescentam o treino ao fim da ordem atual. A
+Criar do zero e aplicar preset acrescentam o treino ao fim da ordem atual. A
 interface oferece controles determinísticos para reorganizar a ordem sugerida.
 Não é necessário drag-and-drop se mover para cima/baixo for mais confiável.
 

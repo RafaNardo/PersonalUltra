@@ -66,7 +66,7 @@ export default function TrainerSettingsScreen() {
     <Card style={styles.summary}>
       <Text style={styles.summaryLabel}>NOVOS EXERCÍCIOS COMEÇARÃO COM</Text>
       <Text style={styles.summaryValue}>{draft.sets || '—'} séries · {draft.repetitionsMin || '—'}–{draft.repetitionsMax || '—'} reps · {draft.restSeconds || '—'}s</Text>
-      <Text style={styles.summaryCopy}>Modelos e exercícios já salvos mantêm suas configurações atuais.</Text>
+      <Text style={styles.summaryCopy}>Presets e exercícios já salvos mantêm suas configurações atuais.</Text>
     </Card>
 
     <Button disabled={hasPrescriptionErrors(errors)} loading={saveSettings.isPending} onPress={() => void save()}>Salvar padrões</Button>

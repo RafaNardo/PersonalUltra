@@ -14,16 +14,16 @@ export default function TrainerTemplateLibraryScreen() {
   const groups = useMemo(() => templateGroups(templates.data ?? []), [templates.data]);
   const filtered = useMemo(() => filterTemplates(templates.data ?? [], search, muscleGroup), [muscleGroup, search, templates.data]);
 
-  if (templates.isLoading) return <LoadingView message="Carregando modelos…" />;
+  if (templates.isLoading) return <LoadingView message="Carregando presets…" />;
   if (templates.isError) return <ErrorView message={templates.error.message} onRetry={() => templates.refetch()} />;
 
   return <Screen withinTabs style={styles.page}>
-    <TopBar eyebrow="BIBLIOTECA DO PERSONAL" title="Modelos de treino" onBack={() => router.back()} />
+    <TopBar eyebrow="BIBLIOTECA DO PERSONAL" title="Presets de treino" onBack={() => router.back()} />
     <Text style={styles.copy}>Encontre rapidamente uma estrutura pronta, consulte os detalhes e escolha como reutilizá-la.</Text>
-    <Button onPress={() => router.push({ pathname: '/trainer/training/[id]', params: { id: 'new' } })}>+ Novo modelo</Button>
-    {templates.data!.length > 0 ? <SearchField value={search} onChangeText={setSearch} placeholder="Buscar modelo…" accessibilityLabel="Buscar modelo por nome" /> : null}
+    <Button onPress={() => router.push({ pathname: '/trainer/training/[id]', params: { id: 'new' } })}>+ Novo preset</Button>
+    {templates.data!.length > 0 ? <SearchField value={search} onChangeText={setSearch} placeholder="Buscar preset…" accessibilityLabel="Buscar preset por nome" /> : null}
     <TemplateMuscleFilters groups={groups} selected={muscleGroup} onSelect={setMuscleGroup} />
-    {templates.data!.length === 0 ? <EmptyState status="BIBLIOTECA VAZIA" symbol="+" title="Crie seu primeiro modelo de treino." message="Use o catálogo para montar uma prescrição reutilizável e acelerar os próximos atendimentos." actionLabel="Criar modelo" onAction={() => router.push({ pathname: '/trainer/training/[id]', params: { id: 'new' } })} /> : filtered.length === 0 ? <EmptyState variant="inline" status="NENHUM RESULTADO" symbol="⌕" title="Não encontramos esse modelo." message="Tente outro nome, escolha outro grupo muscular ou limpe os filtros." actionLabel="Limpar filtros" onAction={() => { setSearch(''); setMuscleGroup(undefined); }} /> : <View style={styles.list}>{filtered.map((template) => <ListItem key={template.id} title={template.name} metadata={`${template.exerciseCount ?? 0} ${(template.exerciseCount ?? 0) === 1 ? 'exercício' : 'exercícios'}${template.updatedAt ? ` · ${formatDate(template.updatedAt)}` : ''}`} description={template.muscleGroups?.join(' · ') || undefined} onPress={() => router.push({ pathname: '/trainer/training/templates/[id]', params: { id: template.id } })} accessibilityLabel={`Abrir detalhes do modelo ${template.name}`} accessibilityHint="Mostra exercícios e ações do modelo" />)}</View>}
+    {templates.data!.length === 0 ? <EmptyState status="BIBLIOTECA VAZIA" symbol="+" title="Crie seu primeiro preset de treino." message="Use o catálogo para montar uma prescrição reutilizável e acelerar os próximos atendimentos." actionLabel="Criar preset" onAction={() => router.push({ pathname: '/trainer/training/[id]', params: { id: 'new' } })} /> : filtered.length === 0 ? <EmptyState variant="inline" status="NENHUM RESULTADO" symbol="⌕" title="Não encontramos esse preset." message="Tente outro nome, escolha outro grupo muscular ou limpe os filtros." actionLabel="Limpar filtros" onAction={() => { setSearch(''); setMuscleGroup(undefined); }} /> : <View style={styles.list}>{filtered.map((template) => <ListItem key={template.id} title={template.name} metadata={`${template.exerciseCount ?? 0} ${(template.exerciseCount ?? 0) === 1 ? 'exercício' : 'exercícios'}${template.updatedAt ? ` · ${formatDate(template.updatedAt)}` : ''}`} description={template.muscleGroups?.join(' · ') || undefined} onPress={() => router.push({ pathname: '/trainer/training/templates/[id]', params: { id: template.id } })} accessibilityLabel={`Abrir detalhes do preset ${template.name}`} accessibilityHint="Mostra exercícios e ações do preset" />)}</View>}
   </Screen>;
 }
 

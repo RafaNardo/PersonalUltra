@@ -10,21 +10,21 @@ O contrato de experiência está em `docs/design/design-system.md`: contexto, si
 
 ## Revisão das superfícies
 
-### Aplicar modelo a um aluno
+### Aplicar preset a um aluno
 
-Problema identificado: o fluxo student-centric enviava o personal ao CRUD de modelos. A aplicação dependia de descobrir que o card abria o editor e competia visualmente com `Duplicar modelo`.
+Problema identificado: o fluxo student-centric enviava o personal ao CRUD de presets. A aplicação dependia de descobrir que o card abria o editor e competia visualmente com `Duplicar preset`.
 
 Direção aplicada:
 
 - fluxo contextual separado em duas etapas;
-- etapa 1 identifica o aluno e oferece `Escolher este modelo` em cada card;
+- etapa 1 identifica o aluno e oferece `Escolher este preset` em cada card;
 - etapa 2 mostra exercícios, dia da semana e opção de destaque;
 - CTA final nomeia o aluno e confirma a criação;
-- biblioteca permanece dedicada a criar, editar e duplicar modelos.
+- biblioteca permanece dedicada a criar, editar e duplicar presets.
 
-### Biblioteca de modelos
+### Biblioteca de presets
 
-O CRUD está funcional e deve continuar separado da aplicação ao aluno. Cards devem usar ações explícitas `Editar modelo` e `Duplicar modelo`; não depender apenas de toque implícito. Linguagem de `modelo reutilizável` é preferível a jargão como `acelerador`.
+O CRUD está funcional e deve continuar separado da aplicação ao aluno. Cards devem usar ações explícitas `Editar preset` e `Duplicar preset`; não depender apenas de toque implícito. Linguagem de `preset reutilizável` é preferível a jargão como `acelerador`.
 
 ### Tab Treinos
 
