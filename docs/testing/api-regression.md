@@ -24,13 +24,14 @@ The command builds and runs the entire API integration project. The suite is
 small enough that a filtered “smoke” subset would save negligible time while
 increasing the chance of a missed regression.
 
-## Automatic execution
+## GitHub Actions
 
-`.github/workflows/api-regression.yml` runs on:
-
-- pushes to `main` that change API, backend or API-test files;
-- pull requests with those changes;
-- manual dispatch from GitHub Actions.
+`.github/workflows/api-regression.yml` contains the same gate for GitHub Actions.
+It is temporarily restricted to manual dispatch because the repository account
+reported an Actions billing lock on 2026-08-24, before the job could start.
+Automatic `push` and `pull_request` triggers should be restored when that
+external account issue is resolved; keeping them enabled meanwhile would mark
+every push as failed without executing a test.
 
 The workflow restores, builds with warnings treated as errors and runs every API
 integration test. It needs no application secrets and never mutates Railway.

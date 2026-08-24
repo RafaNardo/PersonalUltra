@@ -1,23 +1,6 @@
 name: API regression
 
 on:
-  push:
-    branches: [main]
-    paths:
-      - "apps/api/**"
-      - "apps/backend/**"
-      - "tests/PersonalUltra.Api.IntegrationTests/**"
-      - "PersonalUltra.sln"
-      - "global.json"
-      - ".github/workflows/api-regression.yml"
-  pull_request:
-    paths:
-      - "apps/api/**"
-      - "apps/backend/**"
-      - "tests/PersonalUltra.Api.IntegrationTests/**"
-      - "PersonalUltra.sln"
-      - "global.json"
-      - ".github/workflows/api-regression.yml"
   workflow_dispatch:
 
 permissions:
@@ -52,4 +35,3 @@ jobs:
 
       - name: Run complete API regression suite
         run: dotnet test tests/PersonalUltra.Api.IntegrationTests/PersonalUltra.Api.IntegrationTests.csproj --configuration Release --no-build --no-restore --logger "console;verbosity=normal"
-
