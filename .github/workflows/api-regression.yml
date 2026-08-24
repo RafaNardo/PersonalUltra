@@ -1,0 +1,55 @@
+name: API regression
+
+on:
+  push:
+    branches: [main]
+    paths:
+      - "apps/api/**"
+      - "apps/backend/**"
+      - "tests/PersonalUltra.Api.IntegrationTests/**"
+      - "PersonalUltra.sln"
+      - "global.json"
+      - ".github/workflows/api-regression.yml"
+  pull_request:
+    paths:
+      - "apps/api/**"
+      - "apps/backend/**"
+      - "tests/PersonalUltra.Api.IntegrationTests/**"
+      - "PersonalUltra.sln"
+      - "global.json"
+      - ".github/workflows/api-regression.yml"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: api-regression-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  api-regression:
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup .NET
+        uses: actions/setup-dotnet@v4
+        with:
+          global-json-file: global.json
+          cache: true
+          cache-dependency-path: |
+            apps/**/*.csproj
+            tests/PersonalUltra.Api.IntegrationTests/*.csproj
+
+      - name: Restore
+        run: dotnet restore tests/PersonalUltra.Api.IntegrationTests/PersonalUltra.Api.IntegrationTests.csproj
+
+      - name: Build API test graph
+        run: dotnet build tests/PersonalUltra.Api.IntegrationTests/PersonalUltra.Api.IntegrationTests.csproj --configuration Release --no-restore --warnaserror
+
+      - name: Run complete API regression suite
+        run: dotnet test tests/PersonalUltra.Api.IntegrationTests/PersonalUltra.Api.IntegrationTests.csproj --configuration Release --no-build --no-restore --logger "console;verbosity=normal"
+

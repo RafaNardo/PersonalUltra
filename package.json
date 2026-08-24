@@ -7,6 +7,7 @@
   ],
   "scripts": {
     "api:build": "dotnet build apps/api/PersonalUltra.Api.csproj",
+    "test:api:regression": "dotnet test tests/PersonalUltra.Api.IntegrationTests/PersonalUltra.Api.IntegrationTests.csproj --configuration Release",
     "mobile:start": "npm --workspace @personal-ultra/mobile run start",
     "mobile:typecheck": "npm --workspace @personal-ultra/mobile run typecheck"
   }
