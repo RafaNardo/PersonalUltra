@@ -128,6 +128,25 @@ dos campos transitórios de agenda. O fluxo foi validado no backend e no Expo.
 
 **DoD M3RF:** Trainer ordena treinos disponíveis sem amarrá-los a dias; Student inicia pela Home, escolhe livremente um treino, pode executar exercícios pendentes em outra ordem, conclui com suporte offline e vê no calendário somente o que realmente executou.
 
+### M3RX — Execução multimodal e fluida
+
+Refinamento pós-M3RF documentado em
+`docs/design/training-execution-refinement.md`:
+
+- `PU-M3RX-001`: adicionar acompanhamento por repetições ou duração nos snapshots de catálogo, preset, prescrição e sessão.
+- `PU-M3RX-002`: configurar exercícios temporizados no Trainer e preservar imagens completas com `contain` nas duas experiências.
+- `PU-M3RX-003`: unificar registro e descanso Student, mantendo imagem/contexto e alternando apenas o painel de ação.
+- `PU-M3RX-004`: permitir conclusão confirmada por exercício e por sessão sem performances fictícias.
+- `PU-M3RX-005`: preservar retomada/offline detalhada, atualizar histórico/resumo e validar o fluxo ponta a ponta.
+
+**Status M3RX (2026-08-24): concluído.** Cardio e isometrias seeded
+recebem modo temporal; prescrições podem escolher modo e duração; a execução
+Student alterna registro/descanso na mesma tela, oferece escolha livre do
+próximo exercício e registra conclusões rápidas de forma explícita e factual.
+
+**Non-goals M3RX:** cronômetro automático de cardio, sensores, GPS, calorias,
+prescrição automática, recomendação de carga ou dados sintéticos de execução.
+
 ## Critério transversal de UI — M4 em diante
 
 Toda task da M4 ou posterior que crie ou refatore uma tela deve identificar os estados válidos sem dados e tratá-los conforme o guia de `docs/design/design-system.md`. Esse é um critério de aceite da própria task, não um polish opcional para uma etapa posterior.

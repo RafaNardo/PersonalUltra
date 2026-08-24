@@ -53,10 +53,13 @@ entram nos contratos nem no app.
 - `PUT /anamnesis`
 - `POST /anamnesis/complete`
 - `GET /home/trainer-message`
-- `GET /workouts`
-- `POST /workout-sessions`
-- `POST /workout-sessions/{id}/sets`
-- `POST /workout-sessions/{id}/complete`
+- `GET /training`
+- `GET /training/{workoutId}`
+- `POST /training/{workoutId}/start`
+- `GET /training/sessions/{sessionId}`
+- `POST /training/sessions/{sessionId}/exercises/{exerciseId}/sets`
+- `POST /training/sessions/{sessionId}/exercises/{exerciseId}/confirm`
+- `POST /training/sessions/{sessionId}/complete`
 - `POST /sync`
 - `GET /nutrition`
 - `GET /progress/weight`
@@ -69,10 +72,13 @@ coleção neutra `workouts`. Não expõem dia recomendado, indicador de recomend
 nem separam treinos em `recommended`/`available`. A preparação e a prévia são
 read-only; somente uma confirmação explícita inicia ou retoma a sessão.
 
-O registro de séries é idempotente e contíguo dentro de cada exercício, sem
-obrigar a ordem entre exercícios. A conclusão retorna conflito enquanto faltar
-qualquer série persistida; o progresso das respostas é derivado das performances
-reais, e não apenas de um contador cliente.
+O registro é idempotente e contíguo dentro de cada exercício, sem obrigar a
+ordem entre exercícios. Exercícios `Repetitions` recebem carga/repetições;
+exercícios `Duration` recebem duração em segundos. A conclusão comum retorna
+conflito enquanto faltar qualquer registro persistido. A confirmação explícita
+de um exercício, ou `complete?confirmRemaining=true`, marca o que foi realizado
+sem criar performances fictícias. As respostas distinguem registros reais de
+`confirmedWithoutDetails`.
 
 ## Fronteiras
 Student API não expõe mutations de prescrição.

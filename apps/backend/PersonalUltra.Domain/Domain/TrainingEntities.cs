@@ -1,5 +1,13 @@
 namespace PersonalUltra.Domain;
 
+public static class ExerciseTrackingModes
+{
+    public const string Repetitions = "Repetitions";
+    public const string Duration = "Duration";
+
+    public static bool IsValid(string? value) => value is Repetitions or Duration;
+}
+
 public sealed class Exercise
 {
     public Guid Id { get; set; }
@@ -9,6 +17,8 @@ public sealed class Exercise
     public string? Equipment { get; set; }
     public string ImageRef { get; set; } = null!;
     public string? Instructions { get; set; }
+    public string DefaultTrackingMode { get; set; } = ExerciseTrackingModes.Repetitions;
+    public int? DefaultDurationSeconds { get; set; }
     public bool IsActive { get; set; } = true;
 }
 
@@ -33,6 +43,8 @@ public sealed class WorkoutTemplateExercise
     public int Sets { get; set; }
     public int RepetitionsMin { get; set; }
     public int RepetitionsMax { get; set; }
+    public string TrackingMode { get; set; } = ExerciseTrackingModes.Repetitions;
+    public int? TargetDurationSeconds { get; set; }
     public int RestSeconds { get; set; }
     public string Notes { get; set; } = "";
     public WorkoutTemplate WorkoutTemplate { get; set; } = null!;
@@ -69,15 +81,17 @@ public sealed class StudentWorkoutExercise
     public int Sets { get; set; }
     public int RepetitionsMin { get; set; }
     public int RepetitionsMax { get; set; }
+    public string TrackingMode { get; set; } = ExerciseTrackingModes.Repetitions;
+    public int? TargetDurationSeconds { get; set; }
     public int RestSeconds { get; set; }
     public string Notes { get; set; } = "";
     public StudentWorkout StudentWorkout { get; set; } = null!;
     public Exercise? Exercise { get; set; }
 
     public static StudentWorkoutExercise FromTemplate(Guid studentWorkoutId, WorkoutTemplateExercise prescription) =>
-        FromCatalog(studentWorkoutId, prescription.Exercise, prescription.Sequence, prescription.Sets, prescription.RepetitionsMin, prescription.RepetitionsMax, prescription.RestSeconds, prescription.Notes);
+        FromCatalog(studentWorkoutId, prescription.Exercise, prescription.Sequence, prescription.Sets, prescription.RepetitionsMin, prescription.RepetitionsMax, prescription.RestSeconds, prescription.Notes, prescription.TrackingMode, prescription.TargetDurationSeconds);
 
-    public static StudentWorkoutExercise FromCatalog(Guid studentWorkoutId, Exercise exercise, int sequence, int sets, int repetitionsMin, int repetitionsMax, int restSeconds, string notes = "") => new()
+    public static StudentWorkoutExercise FromCatalog(Guid studentWorkoutId, Exercise exercise, int sequence, int sets, int repetitionsMin, int repetitionsMax, int restSeconds, string notes = "", string? trackingMode = null, int? targetDurationSeconds = null) => new()
     {
         Id = Guid.NewGuid(),
         StudentWorkoutId = studentWorkoutId,
@@ -91,6 +105,10 @@ public sealed class StudentWorkoutExercise
         Sets = sets,
         RepetitionsMin = repetitionsMin,
         RepetitionsMax = repetitionsMax,
+        TrackingMode = trackingMode ?? exercise.DefaultTrackingMode,
+        TargetDurationSeconds = (trackingMode ?? exercise.DefaultTrackingMode) == ExerciseTrackingModes.Duration
+            ? targetDurationSeconds ?? exercise.DefaultDurationSeconds
+            : null,
         RestSeconds = restSeconds,
         Notes = notes,
     };
@@ -123,9 +141,12 @@ public sealed class WorkoutSessionExercise
     public int Sets { get; set; }
     public int RepetitionsMin { get; set; }
     public int RepetitionsMax { get; set; }
+    public string TrackingMode { get; set; } = ExerciseTrackingModes.Repetitions;
+    public int? TargetDurationSeconds { get; set; }
     public int RestSeconds { get; set; }
     public string Notes { get; set; } = "";
     public int CompletedSets { get; set; }
+    public DateTimeOffset? ConfirmedCompletedAt { get; set; }
     public WorkoutSession WorkoutSession { get; set; } = null!;
     public Exercise? Exercise { get; set; }
     public List<SetPerformance> Performances { get; } = [];
@@ -144,6 +165,8 @@ public sealed class WorkoutSessionExercise
         Sets = prescription.Sets,
         RepetitionsMin = prescription.RepetitionsMin,
         RepetitionsMax = prescription.RepetitionsMax,
+        TrackingMode = prescription.TrackingMode,
+        TargetDurationSeconds = prescription.TargetDurationSeconds,
         RestSeconds = prescription.RestSeconds,
         Notes = prescription.Notes,
     };
@@ -156,8 +179,9 @@ public sealed class SetPerformance
     // Nullable only for performances created before offline operation IDs existed.
     public string? ClientOperationId { get; set; }
     public int SetNumber { get; set; }
-    public decimal WeightKg { get; set; }
-    public int Repetitions { get; set; }
+    public decimal? WeightKg { get; set; }
+    public int? Repetitions { get; set; }
+    public int? DurationSeconds { get; set; }
     public DateTimeOffset CompletedAt { get; set; }
     public WorkoutSessionExercise WorkoutSessionExercise { get; set; } = null!;
 }

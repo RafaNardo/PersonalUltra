@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, StyleSheet, Text, View } from 'react-native';
+import { Alert, AppState, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/src/api/shared-http';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
@@ -9,7 +9,7 @@ import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSession } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
 import { cacheWorkout, cachedWorkout, clearCachedSession, pendingSetCount, pendingSetDetails, syncPendingSets } from '@/src/features/student/offline/training-db';
-import { currentExercise, exerciseProgressState, orderedExercises, sessionProgress, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
+import { currentExercise, exerciseProgressState, isExerciseCompleted, orderedExercises, sessionProgress, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
 import { ExerciseImage } from '@/src/shared/training/exercise-image';
 
 export function StudentTrainingSessionScreen() {
@@ -126,14 +126,14 @@ function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: S
   const clearSession = useStudentTrainingSessionStore((state) => state.clearSession);
   const studentId = useInviteSessionStore((state) => state.session?.studentId) ?? '';
   const complete = useMutation({
-    mutationFn: async () => {
+    mutationFn: async (confirmRemaining: boolean) => {
       const sync = await synchronizePendingSets(authToken, studentId);
-      if (sync.failed > 0) throw new Error('Conecte-se e aguarde a sincronização das séries pendentes antes de concluir.');
+      if (sync.failed > 0) throw new Error('Conecte-se e aguarde a sincronização dos registros pendentes antes de concluir.');
       const pending = await pendingSetCount(session.sessionId, studentId);
-      if (pending > 0) throw new Error(`${pending} ${pending === 1 ? 'série ainda está pendente' : 'séries ainda estão pendentes'}. Conecte-se e tente novamente antes de concluir.`);
+      if (pending > 0) throw new Error(`${pending} ${pending === 1 ? 'registro ainda está pendente' : 'registros ainda estão pendentes'}. Conecte-se e tente novamente antes de concluir.`);
       const authoritative = await inviteApi.session(authToken, session.sessionId);
-      if (authoritative.exercises.some((exercise) => exercise.completedSets < exercise.sets)) throw new Error('A sessão ainda não está completa no servidor.');
-      return inviteApi.completeWorkout(authToken, session.sessionId);
+      if (!confirmRemaining && authoritative.exercises.some((exercise) => !exercise.isCompleted)) throw new Error('A sessão ainda não está completa no servidor.');
+      return inviteApi.completeWorkout(authToken, session.sessionId, confirmRemaining);
     },
     onSuccess: async () => {
       await clearCachedSession(session.sessionId, studentId).catch(() => undefined);
@@ -146,30 +146,32 @@ function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: S
 
   return <Screen style={styles.page}>
     <TopBar eyebrow="TREINO EM ANDAMENTO" title={session.workoutName} onBack={() => router.back()} />
-    <View style={styles.progressHeader}><View style={styles.progressCopy}><Text style={styles.progressTitle}>Progresso da sessão</Text><Text style={styles.copy}>{progress.completedSets} de {progress.totalSets} séries registradas</Text></View><Text style={styles.progressValue}>{progress.percentage}%</Text></View>
+    <View style={styles.progressHeader}><View style={styles.progressCopy}><Text style={styles.progressTitle}>Progresso da sessão</Text><Text style={styles.copy}>{progress.completedSets} de {progress.totalSets} registros concluídos</Text></View><Text style={styles.progressValue}>{progress.percentage}%</Text></View>
     <View accessibilityRole="progressbar" accessibilityValue={{ min: 0, max: 100, now: progress.percentage }} style={styles.progressTrack}><View style={[styles.progressFill, { width: `${progress.percentage}%` }]} /></View>
-    {isOfflineSnapshot ? <Card style={styles.offlineCard}><Text accessibilityRole="alert" style={styles.offlineTitle}>Você está sem conexão</Text><Text style={styles.copy}>Exibindo a sessão salva neste dispositivo. Séries novas ficam pendentes para sincronização.</Text></Card> : null}
+    {isOfflineSnapshot ? <Card style={styles.offlineCard}><Text accessibilityRole="alert" style={styles.offlineTitle}>Você está sem conexão</Text><Text style={styles.copy}>Exibindo a sessão salva neste dispositivo. Novos registros ficam pendentes para sincronização.</Text></Card> : null}
     <Text style={styles.intro}>A ordem do seu personal é uma sugestão. Abra qualquer exercício pendente e adapte a sessão quando precisar.</Text>
     {exercises.length === 0 ? <EmptyState status="SESSÃO SEM EXERCÍCIOS" symbol="●" title="Não há uma sequência para executar." message="Volte aos treinos e escolha outra sessão enquanto seu personal revisa esta prescrição." actionLabel="Voltar aos treinos" onAction={() => router.replace('/student/training')} /> : exercises.map((exercise) => <OverviewExercise key={exercise.id} session={session} exercise={exercise} onOpen={() => router.push({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: exercise.id } })} />)}
     {current ? <Button onPress={() => router.push({ pathname: '/student/exercise/[sessionId]/[exerciseId]', params: { sessionId: session.sessionId, exerciseId: current.id } })}>{progress.completedSets > 0 ? 'Continuar próximo sugerido' : 'Começar próximo sugerido'}</Button> : null}
-    {allComplete ? <Button loading={complete.isPending} onPress={() => { setCompletionError(undefined); complete.mutate(); }}>Concluir treino</Button> : null}
+    {allComplete ? <Button loading={complete.isPending} onPress={() => { setCompletionError(undefined); complete.mutate(false); }}>Concluir treino</Button> : <Button variant="secondary" disabled={complete.isPending || isOfflineSnapshot} onPress={() => Alert.alert('Finalizar sem detalhar tudo?', 'Confirme somente se realizou todos os exercícios restantes. As séries sem registro serão marcadas como concluídas sem inventar carga, repetições ou duração.', [{ text: 'Cancelar', style: 'cancel' }, { text: 'Confirmar treino realizado', onPress: () => { setCompletionError(undefined); complete.mutate(true); } }])}>Finalizar treino sem detalhar tudo</Button>}
     {completionError ? <Text accessibilityRole="alert" style={styles.error}>{completionError}</Text> : null}
   </Screen>;
 }
 
 function OverviewExercise({ session, exercise, onOpen }: { session: StudentSession; exercise: StudentSession['exercises'][number]; onOpen: () => void }) {
   const state = exerciseProgressState(session, exercise);
+  const completed = isExerciseCompleted(exercise);
   const stateLabel = state === 'completed' ? 'Concluído' : state === 'current' ? 'Próximo sugerido' : 'Pendente';
   return <Card style={[styles.card, state === 'current' && styles.currentCard]}>
-    <View style={styles.exerciseRow}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} /><View style={styles.exerciseIdentity}><Text style={styles.sequence}>{exercise.sequence}. {exercise.name}</Text>{(exercise.primaryMuscleGroup || exercise.equipment) ? <Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text> : null}</View><Tag tone={state === 'completed' ? 'success' : state === 'current' ? 'primary' : 'neutral'}>{stateLabel}</Tag></View>
-    <View style={styles.prescription}><Prescription label="Séries" value={`${Math.min(exercise.completedSets, exercise.sets)}/${exercise.sets}`} /><Prescription label="Repetições" value={`${exercise.repetitionsMin}–${exercise.repetitionsMax}`} /><Prescription label="Descanso" value={`${exercise.restSeconds}s`} /></View>
+    <View style={styles.exerciseRow}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} contentFit="contain" accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} /><View style={styles.exerciseIdentity}><Text style={styles.sequence}>{exercise.sequence}. {exercise.name}</Text>{(exercise.primaryMuscleGroup || exercise.equipment) ? <Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text> : null}</View><Tag tone={state === 'completed' ? 'success' : state === 'current' ? 'primary' : 'neutral'}>{stateLabel}</Tag></View>
+    <View style={styles.prescription}><Prescription label={exercise.trackingMode === 'Duration' ? 'Blocos' : 'Séries'} value={`${completed ? exercise.sets : Math.min(exercise.completedSets, exercise.sets)}/${exercise.sets}`} /><Prescription label={exercise.trackingMode === 'Duration' ? 'Tempo' : 'Repetições'} value={exercise.trackingMode === 'Duration' ? formatDuration(exercise.targetDurationSeconds) : `${exercise.repetitionsMin}–${exercise.repetitionsMax}`} /><Prescription label="Descanso" value={`${exercise.restSeconds}s`} /></View>
     {exercise.instructions ? <Text numberOfLines={2} style={styles.copy}>{exercise.instructions}</Text> : null}
     {exercise.notes ? <Text numberOfLines={2} style={styles.note}>Personal: {exercise.notes}</Text> : null}
-    {state !== 'completed' ? <Button variant={state === 'current' ? 'primary' : 'secondary'} onPress={onOpen} accessibilityLabel={`Começar exercício ${exercise.name}`} accessibilityHint="Abre este exercício para registrar a próxima série">Começar exercício</Button> : <Text accessibilityLabel={`${exercise.name} concluído`} style={styles.completedHint}>Todas as séries deste exercício foram registradas.</Text>}
+    {state !== 'completed' ? <Button variant={state === 'current' ? 'primary' : 'secondary'} onPress={onOpen} accessibilityLabel={`Começar exercício ${exercise.name}`} accessibilityHint="Abre este exercício para registrar o próximo bloco">Começar exercício</Button> : <Text accessibilityLabel={`${exercise.name} concluído`} style={styles.completedHint}>{exercise.confirmedWithoutDetails ? 'Concluído sem detalhar todos os registros.' : 'Todos os registros deste exercício foram concluídos.'}</Text>}
   </Card>;
 }
 
 function Prescription({ label, value }: { label: string; value: string }) { return <View style={styles.prescriptionItem}><Text style={styles.prescriptionLabel}>{label}</Text><Text style={styles.prescriptionValue}>{value}</Text></View>; }
+function formatDuration(seconds?: number) { if (!seconds) return '—'; return seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds}s`; }
 async function synchronizePendingSets(token: string, studentId: string) { return syncPendingSets(studentId, async (item) => { await inviteApi.completeSet(token, item.sessionId, item.exerciseId, item.input); }); }
 async function hydratePendingProgress(workout: StudentSession, studentId: string): Promise<StudentSession> { const pending = await pendingSetDetails(workout.sessionId, studentId); return withPendingProgress(workout, pending); }
 

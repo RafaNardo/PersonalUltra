@@ -1,14 +1,14 @@
 import * as SQLite from 'expo-sqlite';
 import { stripLegacyToken, syncSequentially, type SyncResult } from './sync-queue';
 
-export type CompleteSetInput = { clientOperationId: string; setNumber: number; weightKg: number; repetitions: number };
+export type CompleteSetInput = { clientOperationId: string; setNumber: number; weightKg?: number; repetitions?: number; durationSeconds?: number };
 export type CachedWorkoutSnapshot = {
   studentId?: string;
   sessionId: string;
   workoutId: string;
   workoutName: string;
   status: string;
-  exercises: Array<{ id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string; completedSets: number; previousPerformance?: { setNumber: number; weightKg: number; repetitions: number; completedAt: string }; performances?: Array<{ setNumber: number; weightKg: number; repetitions: number; completedAt: string }> }>;
+  exercises: Array<{ id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string; completedSets: number; trackingMode: 'Repetitions' | 'Duration'; targetDurationSeconds?: number; isCompleted: boolean; confirmedWithoutDetails: boolean; previousPerformance?: { setNumber: number; weightKg?: number; repetitions?: number; durationSeconds?: number; completedAt: string }; performances?: Array<{ setNumber: number; weightKg?: number; repetitions?: number; durationSeconds?: number; completedAt: string }> }>;
 };
 
 let databasePromise: Promise<SQLite.SQLiteDatabase> | undefined;
@@ -82,7 +82,7 @@ export async function queueSet(pending: PendingSet) {
       let same = false;
       try {
         const current = normalizePendingSet(JSON.parse(existing.payload));
-        same = current.studentId === pending.studentId && current.sessionId === pending.sessionId && current.exerciseId === pending.exerciseId && current.input.setNumber === pending.input.setNumber && current.input.weightKg === pending.input.weightKg && current.input.repetitions === pending.input.repetitions;
+        same = current.studentId === pending.studentId && current.sessionId === pending.sessionId && current.exerciseId === pending.exerciseId && current.input.setNumber === pending.input.setNumber && current.input.weightKg === pending.input.weightKg && current.input.repetitions === pending.input.repetitions && current.input.durationSeconds === pending.input.durationSeconds;
       } catch { /* Treat unreadable legacy rows as an ownership collision. */ }
       if (!same) throw new Error('A pending operation already belongs to another session or payload.');
     }
@@ -120,9 +120,9 @@ export async function pendingSetDetails(sessionId: string, studentId: string): P
 export async function pendingSetCount(sessionId: string, studentId: string): Promise<number> {
   const db = await database(); const row = await db.getFirstAsync<{ count: number }>('SELECT COUNT(*) AS count FROM local_sets WHERE session_id = ? AND student_id = ?', sessionId, studentId); return row?.count ?? 0;
 }
-export async function updateCachedExerciseProgress(sessionId: string, studentId: string, exerciseId: string, completedSets: number, performance?: { setNumber: number; weightKg: number; repetitions: number; completedAt: string }) {
+export async function updateCachedExerciseProgress(sessionId: string, studentId: string, exerciseId: string, completedSets: number, performance?: { setNumber: number; weightKg?: number; repetitions?: number; durationSeconds?: number; completedAt: string }) {
   const db = await database(); const row = await db.getFirstAsync<{ payload: string }>('SELECT payload FROM cached_workout WHERE session_id = ? AND student_id = ?', sessionId, studentId); if (!row) return;
-  const snapshot = withoutSignedImageUrls(JSON.parse(row.payload) as CachedWorkoutSnapshot); const exercise = snapshot.exercises.find((item) => item.id === exerciseId); if (!exercise) return; exercise.completedSets = Math.max(exercise.completedSets, completedSets); if (performance) exercise.performances = [...(exercise.performances ?? []).filter((item) => item.setNumber !== performance.setNumber), performance].sort((left, right) => left.setNumber - right.setNumber); const updatedAt = new Date().toISOString();
+  const snapshot = withoutSignedImageUrls(JSON.parse(row.payload) as CachedWorkoutSnapshot); const exercise = snapshot.exercises.find((item) => item.id === exerciseId); if (!exercise) return; exercise.completedSets = Math.max(exercise.completedSets, completedSets); exercise.isCompleted = Boolean(exercise.isCompleted || exercise.confirmedWithoutDetails || exercise.completedSets >= exercise.sets); if (performance) exercise.performances = [...(exercise.performances ?? []).filter((item) => item.setNumber !== performance.setNumber), performance].sort((left, right) => left.setNumber - right.setNumber); const updatedAt = new Date().toISOString();
   await db.withTransactionAsync(async () => { await db.runAsync('UPDATE cached_workout SET payload = ?, updated_at = ? WHERE session_id = ? AND student_id = ?', JSON.stringify(snapshot), updatedAt, sessionId, studentId); await db.runAsync('UPDATE cached_exercises SET payload = ?, updated_at = ? WHERE exercise_id = ? AND session_id = ? AND student_id = ?', JSON.stringify(exercise), updatedAt, exerciseId, sessionId, studentId); });
 }
 export async function clearCachedSession(sessionId: string, studentId: string) {

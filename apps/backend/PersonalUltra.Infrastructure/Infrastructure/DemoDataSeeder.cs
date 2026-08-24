@@ -74,6 +74,12 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
                 continue;
             }
 
+            if (existing.Id == expected.Id)
+            {
+                existing.DefaultTrackingMode = expected.DefaultTrackingMode;
+                existing.DefaultDurationSeconds = expected.DefaultDurationSeconds;
+            }
+
             // One-time migration to the lightweight delivery derivative. Only
             // stable system-owned identities are migrated; user rows stay intact.
             if (existing.Id == expected.Id && existing.ImageRef != expected.ImageRef &&

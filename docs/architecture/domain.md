@@ -89,9 +89,21 @@ Video is V2. A nullable `VideoUrl` may exist only if it is cheap and creates no 
 - `RestSeconds`
 - `Notes`
 
+`Exercise.DefaultTrackingMode` define se o catálogo sugere acompanhamento por
+`Repetitions` ou `Duration`. `TrackingMode` e `TargetDurationSeconds` são
+copiados nos snapshots de preset, prescrição e sessão para que mudanças futuras
+no catálogo não reinterpretem um treino existente. `SetPerformance` guarda
+carga/repetições ou duração real conforme o modo; os dois formatos não são
+misturados no mesmo exercício.
+
 When a template is applied or a catalog exercise is prescribed directly to a Student, `StudentWorkoutExercise` becomes the Student-owned prescription snapshot. It should preserve enough catalog context for stable historical/display behavior even if the catalog later changes. At minimum preserve `ExerciseId` plus the display/media fields required by the Student UX as snapshot values where appropriate.
 
 `WorkoutSessionExercise` is another execution/history snapshot and must not depend on current template content to reconstruct a past session.
+
+`WorkoutSessionExercise.ConfirmedCompletedAt` representa a confirmação explícita
+de que o exercício foi realizado sem todos os registros detalhados. Ela nunca
+gera performances sintéticas. Assim, histórico e resumo podem distinguir fatos
+medidos de uma confirmação manual honesta.
 
 The core remains relational. Do not denormalize the entire training domain. Snapshot only where immutability/history or Student-owned editing requires it.
 

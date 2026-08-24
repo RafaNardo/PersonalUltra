@@ -24,18 +24,20 @@ export default function TrainerExerciseConfigurationScreen() {
   const editingExercise = editor?.exercises.find((item) => item.clientId === workoutExerciseId);
   const catalog = useTrainerExerciseCatalog('', undefined, !workoutExerciseId);
   const settings = useTrainerPrescriptionSettings(!workoutExerciseId);
+  const catalogExercise = catalog.data?.find((item) => item.id === exerciseId);
   const [draft, setDraft] = useState<ExercisePrescriptionDraft>({ ...initialExercisePrescription });
   const errors = useMemo(() => validateExercisePrescription(draft), [draft]);
 
   useEffect(() => { if (workout.data) initialize(key, workout.data); }, [initialize, key, workout.data]);
   useEffect(() => {
     if (!editingExercise) return;
-    setDraft({ sets: String(editingExercise.sets), repetitionsMin: String(editingExercise.repetitionsMin), repetitionsMax: String(editingExercise.repetitionsMax), restSeconds: String(editingExercise.restSeconds), notes: editingExercise.notes });
+    setDraft({ trackingMode: editingExercise.trackingMode, targetDurationSeconds: String(editingExercise.targetDurationSeconds ?? 600), sets: String(editingExercise.sets), repetitionsMin: String(editingExercise.repetitionsMin), repetitionsMax: String(editingExercise.repetitionsMax), restSeconds: String(editingExercise.restSeconds), notes: editingExercise.notes });
   }, [editingExercise?.clientId]);
   useEffect(() => {
-    if (editingExercise || !settings.data) return;
-    setDraft(prescriptionDraftFromDefaults(settings.data));
-  }, [editingExercise, settings.data]);
+    if (editingExercise || !settings.data || !catalogExercise) return;
+    const defaults = prescriptionDraftFromDefaults(settings.data);
+    setDraft({ ...defaults, trackingMode: catalogExercise.defaultTrackingMode, targetDurationSeconds: String(catalogExercise.defaultDurationSeconds ?? 600), sets: catalogExercise.defaultTrackingMode === 'Duration' ? '1' : defaults.sets });
+  }, [editingExercise, settings.data, catalogExercise]);
 
   if (student.isLoading || workout.isLoading || (!workoutExerciseId && (catalog.isLoading || settings.isLoading)) || (workout.data && !editor)) return <LoadingView message="Carregando o exercício…" />;
   if (student.isError) return <ErrorView message={student.error.message} onRetry={() => student.refetch()} />;
@@ -43,7 +45,6 @@ export default function TrainerExerciseConfigurationScreen() {
   if (!workoutExerciseId && catalog.isError) return <ErrorView message={catalog.error.message} onRetry={() => catalog.refetch()} />;
   if (!workoutExerciseId && settings.isError) return <ErrorView message={settings.error.message} onRetry={() => settings.refetch()} />;
 
-  const catalogExercise = catalog.data?.find((item) => item.id === exerciseId);
   const exercise = editingExercise ?? catalogExercise;
   if (!exercise) return <ErrorView message={workoutExerciseId ? 'Este item não está mais no rascunho do treino.' : 'Este exercício não está disponível no catálogo ativo.'} onRetry={workoutExerciseId ? undefined : () => catalog.refetch()} />;
 
@@ -65,17 +66,18 @@ export default function TrainerExerciseConfigurationScreen() {
   return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow={`${student.data!.firstName} ${student.data!.lastName} · ${workout.data!.name}`} title={exercise.name} onBack={leaveConfiguration} />
     <Text style={styles.meta}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text>
-    <View style={styles.heroFrame}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Demonstração do exercício ${exercise.name}`} style={styles.heroImage} /></View>
+    <View style={styles.heroFrame}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} contentFit="contain" accessibilityLabel={`Demonstração do exercício ${exercise.name}`} style={styles.heroImage} /></View>
     {exercise.instructions ? <Card style={styles.instructions}><Text style={styles.sectionEyebrow}>INSTRUÇÕES</Text><Text style={styles.instructionsCopy}>{exercise.instructions}</Text></Card> : null}
 
     <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Configuração</Text><Text style={styles.sectionHint}>Prescrição do Trainer</Text></View>
     <Card style={styles.form}>
-      <NumberField label="Séries" value={draft.sets} min={1} max={20} onChange={(value) => update('sets', value)} error={errors.sets} />
-      <View style={styles.repetitionRow}>
+      <View style={styles.modeRow}><ModeButton selected={draft.trackingMode === 'Repetitions'} label="Repetições" onPress={() => update('trackingMode', 'Repetitions')} /><ModeButton selected={draft.trackingMode === 'Duration'} label="Por tempo" onPress={() => update('trackingMode', 'Duration')} /></View>
+      <NumberField label={draft.trackingMode === 'Duration' ? 'Blocos' : 'Séries'} value={draft.sets} min={1} max={20} onChange={(value) => update('sets', value)} error={errors.sets} />
+      {draft.trackingMode === 'Duration' ? <NumberField label="Duração de cada bloco (segundos)" value={draft.targetDurationSeconds} min={5} max={86400} step={15} onChange={(value) => update('targetDurationSeconds', value)} error={errors.targetDurationSeconds} /> : <View style={styles.repetitionRow}>
         <View style={styles.repetitionField}><RangeNumberField label="Repetições mín." value={draft.repetitionsMin} onChange={(value) => update('repetitionsMin', value)} error={errors.repetitionsMin} /></View>
         <Text accessibilityElementsHidden style={styles.rangeSeparator}>—</Text>
         <View style={styles.repetitionField}><RangeNumberField label="Repetições máx." value={draft.repetitionsMax} onChange={(value) => update('repetitionsMax', value)} error={errors.repetitionsMax} /></View>
-      </View>
+      </View>}
       <NumberField label="Descanso (segundos)" value={draft.restSeconds} min={0} max={900} step={15} onChange={(value) => update('restSeconds', value)} error={errors.restSeconds} />
       <View style={styles.field}>
         <View style={styles.labelRow}><Text style={styles.label}>Observações do Trainer</Text><Text style={styles.counter}>{draft.notes.length}/1000</Text></View>
@@ -92,6 +94,8 @@ export default function TrainerExerciseConfigurationScreen() {
     <Button variant="ghost" onPress={leaveConfiguration}>{editingExercise ? 'Voltar ao treino' : 'Voltar ao catálogo'}</Button>
   </Screen>;
 }
+
+function ModeButton({ selected, label, onPress }: { selected: boolean; label: string; onPress: () => void }) { return <Pressable accessibilityRole="radio" accessibilityState={{ checked: selected }} onPress={onPress} style={[styles.modeButton, selected && styles.modeButtonSelected]}><Text style={[styles.modeText, selected && styles.modeTextSelected]}>{label}</Text></Pressable>; }
 
 function NumberField({ label, value, min, max, step = 1, onChange, error }: { label: string; value: string; min: number; max: number; step?: number; onChange: (value: string) => void; error?: string }) {
   const adjust = (direction: -1 | 1) => {
@@ -126,5 +130,5 @@ function RangeNumberField({ label, value, onChange, error }: { label: string; va
 }
 
 const styles = StyleSheet.create({
-  page: { paddingVertical: spacing.xl, gap: spacing.md }, meta: { ...typography.caption, color: colors.primary, marginTop: -spacing.sm }, heroFrame: { width: '100%', maxWidth: 420, height: 210, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.lg, backgroundColor: colors.surfaceElevated }, heroImage: { width: '100%', height: '100%' }, heroFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }, heroFallbackText: { ...typography.bodyMD, color: colors.textMuted }, instructions: { gap: spacing.xs }, sectionEyebrow: { ...typography.caption, color: colors.primary, letterSpacing: .8 }, instructionsCopy: { ...typography.bodyMD, color: colors.titaniumLight, lineHeight: 22 }, sectionHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, sectionHint: { ...typography.caption, color: colors.textMuted }, form: { gap: spacing.lg }, field: { gap: spacing.xs }, labelRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm }, label: { ...typography.caption, color: colors.titanium }, counter: { ...typography.caption, color: colors.textMuted }, stepper: { minHeight: 52, flexDirection: 'row', alignItems: 'stretch', overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, stepButton: { width: 52, alignItems: 'center', justifyContent: 'center' }, stepPressed: { backgroundColor: '#3A1D0C' }, stepText: { ...typography.headingLG, color: colors.primary }, numberInput: { ...typography.headingMD, color: colors.textPrimary, flex: 1, minWidth: 54, textAlign: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border }, repetitionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs }, repetitionField: { flex: 1 }, rangeSeparator: { ...typography.headingMD, color: colors.textMuted, paddingTop: spacing.lg }, rangeStepper: { minHeight: 52, flexDirection: 'row', alignItems: 'stretch', overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, rangeStepButton: { width: 34, alignItems: 'center', justifyContent: 'center' }, rangeStepText: { ...typography.headingMD, color: colors.primary }, rangeInput: { ...typography.headingMD, color: colors.textPrimary, flex: 1, minWidth: 34, textAlign: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border }, notes: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 112, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, inputError: { borderColor: colors.danger }, error: { ...typography.caption, color: colors.danger }, transition: { gap: spacing.xs, borderColor: colors.primary, backgroundColor: '#24170F' }, transitionInvalid: { borderColor: colors.danger, backgroundColor: '#251216' }, transitionTitle: { ...typography.caption, color: colors.textPrimary }, transitionCopy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 },
+  page: { paddingVertical: spacing.xl, gap: spacing.md }, meta: { ...typography.caption, color: colors.primary, marginTop: -spacing.sm }, heroFrame: { width: '100%', maxWidth: 420, height: 220, alignSelf: 'center', overflow: 'hidden', borderRadius: radius.lg, backgroundColor: colors.surfaceElevated }, heroImage: { width: '100%', height: '100%' }, heroFallback: { width: '100%', height: '100%', alignItems: 'center', justifyContent: 'center' }, heroFallbackText: { ...typography.bodyMD, color: colors.textMuted }, instructions: { gap: spacing.xs }, sectionEyebrow: { ...typography.caption, color: colors.primary, letterSpacing: .8 }, instructionsCopy: { ...typography.bodyMD, color: colors.titaniumLight, lineHeight: 22 }, sectionHeader: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.sm }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, sectionHint: { ...typography.caption, color: colors.textMuted }, form: { gap: spacing.lg }, modeRow: { flexDirection: 'row', gap: spacing.xs }, modeButton: { flex: 1, minHeight: 46, alignItems: 'center', justifyContent: 'center', borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, modeButtonSelected: { borderColor: colors.primary, backgroundColor: '#3A1D0C' }, modeText: { ...typography.caption, color: colors.textSecondary }, modeTextSelected: { color: colors.primary }, field: { gap: spacing.xs }, labelRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.sm }, label: { ...typography.caption, color: colors.titanium }, counter: { ...typography.caption, color: colors.textMuted }, stepper: { minHeight: 52, flexDirection: 'row', alignItems: 'stretch', overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, stepButton: { width: 52, alignItems: 'center', justifyContent: 'center' }, stepPressed: { backgroundColor: '#3A1D0C' }, stepText: { ...typography.headingLG, color: colors.primary }, numberInput: { ...typography.headingMD, color: colors.textPrimary, flex: 1, minWidth: 54, textAlign: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border }, repetitionRow: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs }, repetitionField: { flex: 1 }, rangeSeparator: { ...typography.headingMD, color: colors.textMuted, paddingTop: spacing.lg }, rangeStepper: { minHeight: 52, flexDirection: 'row', alignItems: 'stretch', overflow: 'hidden', borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, rangeStepButton: { width: 34, alignItems: 'center', justifyContent: 'center' }, rangeStepText: { ...typography.headingMD, color: colors.primary }, rangeInput: { ...typography.headingMD, color: colors.textPrimary, flex: 1, minWidth: 34, textAlign: 'center', borderLeftWidth: 1, borderRightWidth: 1, borderColor: colors.border }, notes: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 112, padding: spacing.md, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, inputError: { borderColor: colors.danger }, error: { ...typography.caption, color: colors.danger }, transition: { gap: spacing.xs, borderColor: colors.primary, backgroundColor: '#24170F' }, transitionInvalid: { borderColor: colors.danger, backgroundColor: '#251216' }, transitionTitle: { ...typography.caption, color: colors.textPrimary }, transitionCopy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 },
 });

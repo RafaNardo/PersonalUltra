@@ -40,7 +40,7 @@ public static class TrainingEndpointExtensions
                 .OrderBy(x => x.Name)
                 .ThenBy(x => x.Slug)
                 .ThenBy(x => x.Id)
-                .Select(x => new TrainerExerciseCatalogItem(x.Id, x.Name, x.Slug, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, null, x.Instructions, x.IsActive))
+                .Select(x => new TrainerExerciseCatalogItem(x.Id, x.Name, x.Slug, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, null, x.Instructions, x.IsActive, x.DefaultTrackingMode, x.DefaultDurationSeconds))
                 .ToListAsync(ct);
 
             return Results.Ok(result.Select(item => item with { ImageUrl = mediaResolver.ResolveUrl(item.ImageRef) }).ToArray());
@@ -174,6 +174,8 @@ public static class TrainingEndpointExtensions
                 Sets = x.Sets,
                 RepetitionsMin = x.RepetitionsMin,
                 RepetitionsMax = x.RepetitionsMax,
+                TrackingMode = x.TrackingMode,
+                TargetDurationSeconds = x.TargetDurationSeconds,
                 RestSeconds = x.RestSeconds,
                 Notes = x.Notes,
             }));
@@ -277,7 +279,7 @@ public static class TrainingEndpointExtensions
                     x.CreatedAt,
                     x.Exercises
                         .OrderBy(exercise => exercise.Sequence)
-                        .Select(exercise => new TrainerStudentWorkoutExercise(exercise.Id, exercise.ExerciseId, exercise.Name, exercise.PrimaryMuscleGroup, exercise.Equipment, exercise.ImageRef, null, exercise.Instructions, exercise.Sequence, exercise.Sets, exercise.RepetitionsMin, exercise.RepetitionsMax, exercise.RestSeconds, exercise.Notes))
+                        .Select(exercise => new TrainerStudentWorkoutExercise(exercise.Id, exercise.ExerciseId, exercise.Name, exercise.PrimaryMuscleGroup, exercise.Equipment, exercise.ImageRef, null, exercise.Instructions, exercise.Sequence, exercise.Sets, exercise.RepetitionsMin, exercise.RepetitionsMax, exercise.RestSeconds, exercise.Notes, exercise.TrackingMode, exercise.TargetDurationSeconds))
                         .ToArray()))
                 .SingleOrDefaultAsync(ct);
             return workout is null
@@ -395,6 +397,8 @@ public static class TrainingEndpointExtensions
                         existing.Sets = input.Sets;
                         existing.RepetitionsMin = input.RepetitionsMin;
                         existing.RepetitionsMax = input.RepetitionsMax;
+                        existing.TrackingMode = input.TrackingMode ?? existing.TrackingMode;
+                        existing.TargetDurationSeconds = existing.TrackingMode == ExerciseTrackingModes.Duration ? input.TargetDurationSeconds ?? existing.TargetDurationSeconds : null;
                         existing.RestSeconds = input.RestSeconds;
                         existing.Notes = input.Notes?.Trim() ?? "";
                         continue;
@@ -408,7 +412,9 @@ public static class TrainingEndpointExtensions
                         input.RepetitionsMin,
                         input.RepetitionsMax,
                         input.RestSeconds,
-                        input.Notes?.Trim() ?? "");
+                        input.Notes?.Trim() ?? "",
+                        input.TrackingMode,
+                        input.TargetDurationSeconds);
                     db.StudentWorkoutExercises.Add(added);
                     workout.Exercises.Add(added);
                 }
@@ -455,7 +461,9 @@ public static class TrainingEndpointExtensions
                 x.Exercises.OrderBy(e => e.Sequence).Select(e => new TrainingHistoryExerciseItem(
                     e.Name,
                     e.Sequence,
-                    e.Performances.OrderBy(p => p.SetNumber).Select(p => new TrainingHistorySetItem(p.SetNumber, p.WeightKg, p.Repetitions, p.CompletedAt)).ToArray())).ToArray())).ToArray()));
+                    e.TrackingMode,
+                    e.ConfirmedCompletedAt.HasValue,
+                    e.Performances.OrderBy(p => p.SetNumber).Select(p => new TrainingHistorySetItem(p.SetNumber, p.WeightKg, p.Repetitions, p.DurationSeconds, p.CompletedAt)).ToArray())).ToArray())).ToArray()));
         });
     }
 
@@ -474,6 +482,8 @@ public static class TrainingEndpointExtensions
         Sets = input.Sets,
         RepetitionsMin = input.RepetitionsMin,
         RepetitionsMax = input.RepetitionsMax,
+        TrackingMode = input.TrackingMode ?? exercise.DefaultTrackingMode,
+        TargetDurationSeconds = (input.TrackingMode ?? exercise.DefaultTrackingMode) == ExerciseTrackingModes.Duration ? input.TargetDurationSeconds ?? exercise.DefaultDurationSeconds : null,
         RestSeconds = input.RestSeconds,
         Notes = input.Notes?.Trim() ?? "",
     };
@@ -484,7 +494,7 @@ public static class TrainingEndpointExtensions
         item.Notes,
         item.Exercises
             .OrderBy(x => x.Sequence)
-            .Select(x => new WorkoutTemplateExerciseResponse(x.ExerciseId, x.Exercise.Name, x.Exercise.PrimaryMuscleGroup, x.Exercise.Equipment, x.Exercise.ImageRef, mediaResolver.ResolveUrl(x.Exercise.ImageRef), x.Exercise.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
+            .Select(x => new WorkoutTemplateExerciseResponse(x.ExerciseId, x.Exercise.Name, x.Exercise.PrimaryMuscleGroup, x.Exercise.Equipment, x.Exercise.ImageRef, mediaResolver.ResolveUrl(x.Exercise.ImageRef), x.Exercise.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes, x.TrackingMode, x.TargetDurationSeconds))
             .ToArray());
 
     private static TrainerStudentWorkoutDetail ToStudentWorkoutDetail(StudentWorkout workout, IExerciseMediaResolver mediaResolver) => new(
@@ -496,7 +506,7 @@ public static class TrainingEndpointExtensions
         workout.CreatedAt,
         workout.Exercises
             .OrderBy(x => x.Sequence)
-            .Select(x => new TrainerStudentWorkoutExercise(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, mediaResolver.ResolveUrl(x.ImageRef), x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
+            .Select(x => new TrainerStudentWorkoutExercise(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, mediaResolver.ResolveUrl(x.ImageRef), x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes, x.TrackingMode, x.TargetDurationSeconds))
             .ToArray());
 
     private static async Task<int> NextSuggestedOrder(PersonalUltraDbContext db, Guid studentId, CancellationToken cancellationToken)
@@ -537,9 +547,11 @@ public static class TrainingEndpointExtensions
                 x.RepetitionsMin is < 1 or > 100 ||
                 x.RepetitionsMax is < 1 or > 100 ||
                 x.RepetitionsMin > x.RepetitionsMax ||
+                (x.TrackingMode is not null && !ExerciseTrackingModes.IsValid(x.TrackingMode)) ||
+                (x.TrackingMode == ExerciseTrackingModes.Duration && x.TargetDurationSeconds is null or < 5 or > 86400) ||
                 x.RestSeconds is < 0 or > 900 ||
                 x.Notes?.Length > 1000))
-            return "Revise exercício, ordem, séries, faixa de repetições, descanso e observações.";
+            return "Revise exercício, ordem, modo de acompanhamento, quantidade, alvo, descanso e observações.";
         return null;
     }
 
@@ -561,9 +573,11 @@ public static class TrainingEndpointExtensions
                 x.RepetitionsMin is < 1 or > 100 ||
                 x.RepetitionsMax is < 1 or > 100 ||
                 x.RepetitionsMin > x.RepetitionsMax ||
+                (x.TrackingMode is not null && !ExerciseTrackingModes.IsValid(x.TrackingMode)) ||
+                (x.TrackingMode == ExerciseTrackingModes.Duration && x.TargetDurationSeconds is null or < 5 or > 86400) ||
                 x.RestSeconds is < 0 or > 900 ||
                 x.Notes?.Length > 1000))
-            return "Revise exercício, ordem, séries, faixa de repetições, descanso e observações.";
+            return "Revise exercício, ordem, modo de acompanhamento, quantidade, alvo, descanso e observações.";
         return null;
     }
 }

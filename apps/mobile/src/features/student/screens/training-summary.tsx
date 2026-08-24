@@ -31,7 +31,7 @@ export function StudentTrainingSummaryScreen() {
 
 function SummaryContent({ summary }: { summary: StudentSessionDetail }) {
   const orderedExercises = [...summary.exercises].sort((left, right) => left.sequence - right.sequence);
-  const completedExercises = orderedExercises.filter((exercise) => exercise.completedSets >= exercise.sets).length;
+  const completedExercises = orderedExercises.filter((exercise) => exercise.isCompleted).length;
   const completedSets = orderedExercises.reduce((total, exercise) => total + exercise.performances.length, 0);
   const totalSets = orderedExercises.reduce((total, exercise) => total + exercise.sets, 0);
   const duration = summary.completedAt ? durationLabel(summary.startedAt, summary.completedAt) : undefined;
@@ -47,7 +47,7 @@ function SummaryContent({ summary }: { summary: StudentSessionDetail }) {
     </View>
     <Card style={styles.stats}>
       <Stat label="Exercícios" value={`${completedExercises}/${orderedExercises.length}`} />
-      <Stat label="Séries" value={`${completedSets}/${totalSets}`} />
+      <Stat label="Registros" value={`${completedSets}/${totalSets}`} />
       {duration ? <Stat label="Duração" value={duration} /> : null}
     </Card>
     {orderedExercises.length === 0 ? <EmptyState status="SEM REGISTROS" symbol="●" title="Esta sessão não possui exercícios registrados." message="O resumo permanece disponível, mas não há séries ou desempenhos para exibir." /> : orderedExercises.map((exercise) => <SummaryExercise key={exercise.id} exercise={exercise} />)}
@@ -58,11 +58,11 @@ function SummaryContent({ summary }: { summary: StudentSessionDetail }) {
 function SummaryExercise({ exercise }: { exercise: StudentSessionDetail['exercises'][number] }) {
   return <Card style={styles.exerciseCard}>
     <View style={styles.exerciseHeader}>
-      <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} />
-      <View style={styles.exerciseIdentity}><Text style={styles.exerciseName}>{exercise.sequence}. {exercise.name}</Text><Text style={styles.copy}>{exercise.completedSets} de {exercise.sets} séries concluídas</Text></View>
-      <Tag tone={exercise.completedSets >= exercise.sets ? 'success' : 'neutral'}>{exercise.completedSets >= exercise.sets ? 'Concluído' : 'Parcial'}</Tag>
+      <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} contentFit="contain" accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} />
+      <View style={styles.exerciseIdentity}><Text style={styles.exerciseName}>{exercise.sequence}. {exercise.name}</Text><Text style={styles.copy}>{exercise.confirmedWithoutDetails ? 'Concluído sem detalhar todos os registros' : `${exercise.completedSets} de ${exercise.sets} ${exercise.trackingMode === 'Duration' ? 'blocos' : 'séries'} concluídos`}</Text></View>
+      <Tag tone={exercise.isCompleted ? 'success' : 'neutral'}>{exercise.isCompleted ? 'Concluído' : 'Parcial'}</Tag>
     </View>
-    {exercise.performances.length ? <View style={styles.sets}>{exercise.performances.map((performance) => <View key={performance.setNumber} style={styles.setRow}><Text style={styles.setLabel}>Série {performance.setNumber}</Text><Text style={styles.setValue}>{performance.weightKg} kg × {performance.repetitions} reps</Text></View>)}</View> : <Text style={styles.copy}>Nenhuma série registrada.</Text>}
+    {exercise.performances.length ? <View style={styles.sets}>{exercise.performances.map((performance) => <View key={performance.setNumber} style={styles.setRow}><Text style={styles.setLabel}>{exercise.trackingMode === 'Duration' ? 'Bloco' : 'Série'} {performance.setNumber}</Text><Text style={styles.setValue}>{exercise.trackingMode === 'Duration' ? formatPerformedDuration(performance.durationSeconds) : formatRepetitionPerformance(performance.weightKg, performance.repetitions)}</Text></View>)}</View> : <Text style={styles.copy}>{exercise.confirmedWithoutDetails ? 'Nenhum detalhe foi informado para este exercício.' : 'Nenhuma série registrada.'}</Text>}
   </Card>;
 }
 
@@ -80,6 +80,8 @@ function durationLabel(startedAt: string, completedAt: string) {
   const minutes = Math.floor((completed - started) / 60_000);
   return minutes > 0 ? `${minutes} min` : 'menos de 1 min';
 }
+function formatPerformedDuration(seconds?: number) { if (!seconds) return 'Duração não informada'; const minutes = Math.floor(seconds / 60); const remainder = seconds % 60; return minutes ? `${minutes}min${remainder ? ` ${remainder}s` : ''}` : `${remainder}s`; }
+function formatRepetitionPerformance(weightKg?: number, repetitions?: number) { return weightKg === undefined || repetitions === undefined ? 'Detalhes não informados' : `${weightKg} kg × ${repetitions} reps`; }
 
 const styles = StyleSheet.create({
   page: { paddingVertical: spacing.xl, gap: spacing.lg },

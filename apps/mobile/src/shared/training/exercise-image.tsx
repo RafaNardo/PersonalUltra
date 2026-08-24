@@ -17,7 +17,7 @@ export function ExerciseImage({
   imageRef,
   imageUrl,
   style,
-  contentFit = 'cover',
+  contentFit = 'contain',
   accessibilityLabel,
   accessible,
 }: ExerciseImageProps) {

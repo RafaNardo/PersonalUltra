@@ -31,6 +31,7 @@ export const useStudentTrainingSessionStore = create<StudentTrainingSessionState
           ? {
               ...exercise,
               completedSets: Math.max(exercise.completedSets, completedSets),
+              isCompleted: Math.max(exercise.completedSets, completedSets) >= exercise.sets,
               performances: performance
                 ? [...(exercise.performances ?? []).filter((item) => item.setNumber !== performance.setNumber), performance].sort((left, right) => left.setNumber - right.setNumber)
                 : exercise.performances,
@@ -48,7 +49,11 @@ export function orderedExercises(session: StudentSession): SessionExercise[] {
 }
 
 export function currentExercise(session: StudentSession): SessionExercise | undefined {
-  return orderedExercises(session).find((exercise) => exercise.completedSets < exercise.sets);
+  return orderedExercises(session).find((exercise) => !isExerciseCompleted(exercise));
+}
+
+export function isExerciseCompleted(exercise: SessionExercise): boolean {
+  return Boolean(exercise.isCompleted || exercise.confirmedWithoutDetails || exercise.completedSets >= exercise.sets);
 }
 
 /** Merge only locally queued facts. Server progress remains the base and can
@@ -66,8 +71,8 @@ export function withPendingProgress(session: StudentSession, pending: Record<str
       // Only merge a contiguous local tail. A stale/future row must never
       // make the UI skip a server-authoritative set after a restart.
       while (completedSets < exercise.sets && pendingSetNumbers.has(completedSets + 1)) completedSets += 1;
-      const performances = pendingPerformances.filter((item) => item.exerciseId === exercise.id).reduce((result, item) => result.some((current) => current.setNumber === item.setNumber) ? result : [...result, { setNumber: item.setNumber, weightKg: item.weightKg, repetitions: item.repetitions, completedAt: item.completedAt }], [...(exercise.performances ?? [])]).sort((left, right) => left.setNumber - right.setNumber);
-      return { ...exercise, completedSets, performances };
+      const performances = pendingPerformances.filter((item) => item.exerciseId === exercise.id).reduce((result, item) => result.some((current) => current.setNumber === item.setNumber) ? result : [...result, { setNumber: item.setNumber, weightKg: item.weightKg, repetitions: item.repetitions, durationSeconds: item.durationSeconds, completedAt: item.completedAt }], [...(exercise.performances ?? [])]).sort((left, right) => left.setNumber - right.setNumber);
+      return { ...exercise, completedSets, performances, isCompleted: exercise.isCompleted || completedSets >= exercise.sets };
     }),
   };
 }
@@ -78,12 +83,12 @@ export function nextSetNumber(session: StudentSession): { exerciseId?: string; s
 }
 
 export function exerciseProgressState(session: StudentSession, exercise: SessionExercise): ExerciseProgressState {
-  if (exercise.completedSets >= exercise.sets) return 'completed';
+  if (isExerciseCompleted(exercise)) return 'completed';
   return currentExercise(session)?.id === exercise.id ? 'current' : 'pending';
 }
 
 export function sessionProgress(session: StudentSession) {
   const totalSets = session.exercises.reduce((total, exercise) => total + exercise.sets, 0);
-  const completedSets = session.exercises.reduce((total, exercise) => total + Math.min(exercise.completedSets, exercise.sets), 0);
+  const completedSets = session.exercises.reduce((total, exercise) => total + (isExerciseCompleted(exercise) ? exercise.sets : Math.min(exercise.completedSets, exercise.sets)), 0);
   return { completedSets, totalSets, percentage: totalSets === 0 ? 0 : Math.round((completedSets / totalSets) * 100) };
 }

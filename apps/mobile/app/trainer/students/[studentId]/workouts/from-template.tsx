@@ -55,8 +55,8 @@ export default function ApplyTemplateToStudentScreen() {
         {template.notes ? <Text style={styles.copy}>{template.notes}</Text> : null}
         <View style={styles.exerciseList}>{exercises.map((exercise) => {
           return <View key={`${exercise.exerciseId}-${exercise.sequence}`} style={styles.exercise}>
-            <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} />
-            <View style={styles.identity}><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.meta}>{exercise.sets} séries · {exercise.repetitionsMin}–{exercise.repetitionsMax} reps · {exercise.restSeconds}s</Text></View>
+            <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} contentFit="contain" accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} />
+            <View style={styles.identity}><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.meta}>{exercise.sets} {exercise.trackingMode === 'Duration' ? 'blocos' : 'séries'} · {exercise.trackingMode === 'Duration' ? formatDuration(exercise.targetDurationSeconds) : `${exercise.repetitionsMin}–${exercise.repetitionsMax} reps`} · {exercise.restSeconds}s</Text></View>
           </View>;
         })}</View>
       </Card>
@@ -80,6 +80,8 @@ export default function ApplyTemplateToStudentScreen() {
     <Button variant="ghost" onPress={() => router.push('/trainer/training/templates')}>Gerenciar biblioteca de presets</Button>
   </Screen>;
 }
+
+function formatDuration(seconds?: number) { if (!seconds) return '—'; return seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds}s`; }
 
 const styles = StyleSheet.create({
   page: { paddingVertical: spacing.xl, gap: spacing.md },

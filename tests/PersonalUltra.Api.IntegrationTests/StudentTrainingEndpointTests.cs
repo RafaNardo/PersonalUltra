@@ -481,6 +481,99 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
         await cleanupDb.SaveChangesAsync();
     }
 
+    [Fact]
+    public async Task Duration_exercise_accepts_time_and_manual_confirmation_does_not_invent_performances()
+    {
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
+        var workoutId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var exercise = await db.Exercises.AsNoTracking().FirstAsync(x => x.DefaultTrackingMode == ExerciseTrackingModes.Duration);
+            var suggestedOrder = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId).Select(x => (int?)x.SuggestedOrder).MaxAsync() ?? 0;
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Cardio por tempo", SuggestedOrder = suggestedOrder + 1, CreatedAt = DateTimeOffset.UtcNow };
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, exercise, 1, 2, 1, 1, 30));
+            db.StudentWorkouts.Add(workout);
+            await db.SaveChangesAsync();
+        }
+
+        var started = await (await client.PostAsync($"/api/v1/training/{workoutId}/start", null)).Content.ReadFromJsonAsync<SessionResponse>();
+        var exerciseSnapshot = Assert.Single(started!.Exercises);
+        var invalidRepetitions = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{exerciseSnapshot.Id}/sets", new { clientOperationId = $"duration-invalid-{Guid.NewGuid():N}", setNumber = 1, weightKg = 0, repetitions = 10 });
+        Assert.Equal(HttpStatusCode.BadRequest, invalidRepetitions.StatusCode);
+
+        var durationResponse = await client.PostAsJsonAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{exerciseSnapshot.Id}/sets", new { clientOperationId = $"duration-{Guid.NewGuid():N}", setNumber = 1, durationSeconds = 615 });
+        Assert.Equal(HttpStatusCode.OK, durationResponse.StatusCode);
+
+        var confirm = await client.PostAsync($"/api/v1/training/sessions/{started.SessionId}/exercises/{exerciseSnapshot.Id}/confirm", null);
+        Assert.Equal(HttpStatusCode.OK, confirm.StatusCode);
+        var complete = await client.PostAsync($"/api/v1/training/sessions/{started.SessionId}/complete", null);
+        Assert.Equal(HttpStatusCode.OK, complete.StatusCode);
+
+        using (var verificationScope = factory.Services.CreateScope())
+        {
+            var db = verificationScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var persistedExercise = await db.WorkoutSessionExercises.Include(x => x.Performances).SingleAsync(x => x.Id == exerciseSnapshot.Id);
+            Assert.NotNull(persistedExercise.ConfirmedCompletedAt);
+            var performance = Assert.Single(persistedExercise.Performances);
+            Assert.Equal(615, performance.DurationSeconds);
+            Assert.Null(performance.WeightKg);
+            Assert.Null(performance.Repetitions);
+        }
+
+        await CleanupWorkout(workoutId, started.SessionId);
+    }
+
+    [Fact]
+    public async Task Confirming_remaining_workout_completes_without_creating_fake_set_data()
+    {
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
+        var workoutId = Guid.NewGuid();
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var catalog = await db.Exercises.AsNoTracking().Where(x => x.DefaultTrackingMode == ExerciseTrackingModes.Repetitions).Take(2).ToArrayAsync();
+            var suggestedOrder = await db.StudentWorkouts.Where(x => x.StudentId == DemoIds.StudentId).Select(x => (int?)x.SuggestedOrder).MaxAsync() ?? 0;
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Conclusão confirmada", SuggestedOrder = suggestedOrder + 1, CreatedAt = DateTimeOffset.UtcNow };
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, catalog[0], 1, 3, 8, 12, 60));
+            workout.Exercises.Add(StudentWorkoutExercise.FromCatalog(workoutId, catalog[1], 2, 2, 8, 12, 60));
+            db.StudentWorkouts.Add(workout);
+            await db.SaveChangesAsync();
+        }
+
+        var started = await (await client.PostAsync($"/api/v1/training/{workoutId}/start", null)).Content.ReadFromJsonAsync<SessionResponse>();
+        var response = await client.PostAsync($"/api/v1/training/sessions/{started!.SessionId}/complete?confirmRemaining=true", null);
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+
+        using (var verificationScope = factory.Services.CreateScope())
+        {
+            var db = verificationScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var exercises = await db.WorkoutSessionExercises.Where(x => x.WorkoutSessionId == started.SessionId).ToArrayAsync();
+            Assert.All(exercises, exercise => Assert.NotNull(exercise.ConfirmedCompletedAt));
+            Assert.Empty(await db.SetPerformances.Where(x => x.WorkoutSessionExercise.WorkoutSessionId == started.SessionId).ToArrayAsync());
+        }
+
+        await CleanupWorkout(workoutId, started.SessionId);
+    }
+
+    private async Task CleanupWorkout(Guid workoutId, Guid sessionId)
+    {
+        using var scope = factory.Services.CreateScope();
+        var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+        db.SetPerformances.RemoveRange(db.SetPerformances.Where(x => x.WorkoutSessionExercise.WorkoutSessionId == sessionId));
+        db.WorkoutSessionExercises.RemoveRange(db.WorkoutSessionExercises.Where(x => x.WorkoutSessionId == sessionId));
+        db.WorkoutSessions.RemoveRange(db.WorkoutSessions.Where(x => x.Id == sessionId));
+        db.StudentWorkoutExercises.RemoveRange(db.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == workoutId));
+        db.StudentWorkouts.RemoveRange(db.StudentWorkouts.Where(x => x.Id == workoutId));
+        await db.SaveChangesAsync();
+    }
+
     private async Task<int> CountSessions(Guid workoutId)
     {
         using var scope = factory.Services.CreateScope();

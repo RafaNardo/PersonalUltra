@@ -63,6 +63,8 @@ export default function TrainerStudentWorkoutScreen() {
         repetitionsMax: exercise.repetitionsMax,
         restSeconds: exercise.restSeconds,
         notes: exercise.notes,
+        trackingMode: exercise.trackingMode,
+        targetDurationSeconds: exercise.targetDurationSeconds,
       })) });
       resetFromServer(key, saved);
       feedback.success();
@@ -94,8 +96,8 @@ export default function TrainerStudentWorkoutScreen() {
 function ExerciseCard({ exercise, index, count, onMove, onEdit, onRemove }: { exercise: WorkoutEditorExercise; index: number; count: number; onMove: (to: number) => void; onEdit: () => void; onRemove: () => void }) {
   return <Card style={styles.exercise}>
     <View style={styles.exerciseHeader}>
-      <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessible={false} style={styles.thumbnail} />
-      <View style={styles.exerciseIdentity}><Text style={styles.exerciseName}>{exercise.name}</Text>{exercise.primaryMuscleGroup || exercise.equipment ? <Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text> : null}<Text style={styles.prescription}>{exercise.sets} séries · {exercise.repetitionsMin}–{exercise.repetitionsMax} reps · {exercise.restSeconds}s</Text></View>
+      <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} contentFit="contain" accessible={false} style={styles.thumbnail} />
+      <View style={styles.exerciseIdentity}><Text style={styles.exerciseName}>{exercise.name}</Text>{exercise.primaryMuscleGroup || exercise.equipment ? <Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text> : null}<Text style={styles.prescription}>{exercise.sets} {exercise.trackingMode === 'Duration' ? 'blocos' : 'séries'} · {exercise.trackingMode === 'Duration' ? `${formatDuration(exercise.targetDurationSeconds ?? 0)} por bloco` : `${exercise.repetitionsMin}–${exercise.repetitionsMax} reps`} · {exercise.restSeconds}s</Text></View>
     </View>
     {exercise.notes ? <Text style={styles.copy}>{exercise.notes}</Text> : null}
     <View style={styles.actions}>
@@ -106,6 +108,8 @@ function ExerciseCard({ exercise, index, count, onMove, onEdit, onRemove }: { ex
     </View>
   </Card>;
 }
+
+function formatDuration(seconds: number) { return seconds >= 60 && seconds % 60 === 0 ? `${seconds / 60} min` : `${seconds}s`; }
 
 const styles = StyleSheet.create({
   page: { paddingVertical: spacing.xl, gap: spacing.md }, metaRow: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.sm }, schedule: { ...typography.caption, color: colors.titanium, flex: 1 }, nameField: { gap: spacing.xs }, fieldLabel: { ...typography.caption, color: colors.textPrimary }, input: { ...typography.bodyMD, minHeight: 50, borderWidth: 1, borderColor: colors.border, borderRadius: radius.md, backgroundColor: colors.surface, color: colors.textPrimary, paddingHorizontal: spacing.md, paddingVertical: spacing.sm }, inputError: { borderColor: colors.danger }, validation: { ...typography.caption, color: colors.danger }, fieldHelp: { ...typography.caption, color: colors.textMuted }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, sectionHeader: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: spacing.md, marginTop: spacing.sm }, sectionCopy: { flex: 1 }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, count: { ...typography.caption, color: colors.primary, backgroundColor: colors.surfaceElevated, paddingHorizontal: spacing.sm, paddingVertical: spacing.xs, borderRadius: radius.pill }, limit: { ...typography.caption, color: colors.warning }, list: { gap: spacing.sm }, exercise: { gap: spacing.md }, exerciseHeader: { flexDirection: 'row', alignItems: 'center', gap: spacing.sm }, thumbnail: { width: 82, height: 82, borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallback: { width: 82, height: 82, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, thumbnailFallbackText: { ...typography.headingMD, color: colors.primary }, exerciseIdentity: { flex: 1, gap: spacing.xxs }, exerciseName: { ...typography.headingMD, color: colors.textPrimary }, context: { ...typography.caption, color: colors.textMuted }, prescription: { ...typography.bodyMD, color: colors.primary }, actions: { flexDirection: 'row', alignItems: 'center', gap: spacing.xs, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }, orderButton: { width: 44, height: 44, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, disabled: { opacity: .3 }, textButton: { minHeight: 44, justifyContent: 'center', paddingHorizontal: spacing.xs }, editText: { ...typography.caption, color: colors.primary }, removeText: { ...typography.caption, color: colors.danger }, errorCard: { gap: spacing.xs, borderColor: colors.danger, backgroundColor: '#251216' }, errorTitle: { ...typography.caption, color: colors.danger }, concurrencyNote: { ...typography.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 18 }, deleteButton: { minHeight: 48, flexDirection: 'row', alignItems: 'center', justifyContent: 'center', gap: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border, marginTop: spacing.sm, paddingTop: spacing.lg }, deletePressed: { opacity: .7 }, deleteText: { ...typography.bodyMD, color: colors.danger, fontFamily: 'MontserratSemiBold' },

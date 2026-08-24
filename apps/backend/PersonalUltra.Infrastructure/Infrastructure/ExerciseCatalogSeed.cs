@@ -63,7 +63,23 @@ internal static class ExerciseCatalogSeed
             Equipment = Equipment,
             ImageRef = $"media://exercise-catalog/delivery/v1/{Slug}.webp",
             Instructions = Instructions,
+            DefaultTrackingMode = TrackingModeFor(PrimaryMuscleGroup, Slug),
+            DefaultDurationSeconds = DurationFor(PrimaryMuscleGroup, Slug),
             IsActive = true,
         };
+
+        private static string TrackingModeFor(string muscleGroup, string slug) =>
+            muscleGroup == "Cardio" || TimedSlugs.Contains(slug)
+                ? ExerciseTrackingModes.Duration
+                : ExerciseTrackingModes.Repetitions;
+
+        private static int? DurationFor(string muscleGroup, string slug) => TrackingModeFor(muscleGroup, slug) == ExerciseTrackingModes.Duration
+            ? muscleGroup == "Cardio" ? 600 : 30
+            : null;
+
+        private static readonly HashSet<string> TimedSlugs =
+        [
+            "prancha-frontal", "prancha-lateral", "hollow-body-hold", "isometria-na-parede"
+        ];
     }
 }
