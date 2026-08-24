@@ -47,7 +47,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             Assert.Equal(HttpStatusCode.OK, response.StatusCode);
             var items = await response.Content.ReadFromJsonAsync<TrainerExerciseCatalogItem[]>();
             Assert.NotNull(items);
-            Assert.Equal(28, items!.Length);
+            Assert.Equal(231, items!.Length);
             Assert.All(items, item =>
             {
                 Assert.True(item.IsActive);
@@ -71,7 +71,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     [Fact]
     public async Task Trainer_catalog_search_is_trimmed_case_insensitive_and_combinable_with_muscle_group()
     {
-        var query = $"/api/v1/training/exercises/?search={Uri.EscapeDataString("  SUPINO  ")}&muscleGroup={Uri.EscapeDataString(" peito ")}";
+        var query = $"/api/v1/training/exercises/?search={Uri.EscapeDataString("  SUPINO RETO COM BARRA  ")}&muscleGroup={Uri.EscapeDataString(" peito ")}";
 
         var response = await client.GetAsync(query);
 

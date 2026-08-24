@@ -10,7 +10,7 @@ namespace PersonalUltra.Infrastructure;
 /// </summary>
 internal static class ExerciseCatalogSeed
 {
-    internal static readonly IReadOnlyList<ExerciseSeed> Exercises =
+    private static readonly IReadOnlyList<ExerciseSeed> LegacyExercises =
     [
         new("10000000-0000-0000-0000-000000000001", "Supino reto com barra", "supino-reto-com-barra", "Peito", "Barra", "supino-reto-com-barra", "Mantenha as escápulas retraídas e os pés apoiados no chão."),
         new("10000000-0000-0000-0000-000000000002", "Afundo com halteres", "afundo-com-halteres", "Pernas", "Halteres", "afundo_com_halteres", "Dê um passo firme e mantenha o joelho acompanhando o pé."),
@@ -42,14 +42,17 @@ internal static class ExerciseCatalogSeed
         new("10000000-0000-0000-0000-000000000028", "Frog pump", "frog-pump", "Glúteos", "Peso corporal", "frog_pump", "Mantenha as solas dos pés unidas e faça contrações controladas."),
     ];
 
+    internal static readonly IReadOnlyList<ExerciseSeed> Exercises =
+        [.. LegacyExercises, .. ExerciseCatalogSeedGenerated.Exercises];
+
     internal sealed record ExerciseSeed(
         string Id,
         string Name,
         string Slug,
         string PrimaryMuscleGroup,
-        string Equipment,
-        string AssetName,
-        string Instructions)
+        string? Equipment,
+        string ImageRef,
+        string? Instructions)
     {
         internal Exercise ToEntity() => new()
         {
@@ -58,7 +61,9 @@ internal static class ExerciseCatalogSeed
             Slug = Slug,
             PrimaryMuscleGroup = PrimaryMuscleGroup,
             Equipment = Equipment,
-            ImageRef = $"assets/training/{AssetName}.png",
+            ImageRef = ImageRef.StartsWith("media://", StringComparison.Ordinal)
+                ? ImageRef
+                : $"assets/training/{ImageRef}.png",
             Instructions = Instructions,
             IsActive = true,
         };

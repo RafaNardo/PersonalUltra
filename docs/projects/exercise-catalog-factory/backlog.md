@@ -79,6 +79,16 @@ Aceite:
 
 ## ECF-M2 — Artes de exercícios
 
+> Decisão de simplificação (2026-08-24): o piloto usa somente `images plan`,
+> `images generate`, um arquivo texto de aprovações e `images upload`. Manifesto
+> e PNGs locais permitem retomada; o CLI limita a dez, exige teto de custo e
+> `--execute`, não regenera arquivo existente e publica apenas slugs aprovados.
+> Painel, CRUD, contact sheet, derivados, seed e integração API/app ficam fora
+> deste piloto e serão reconsiderados somente após a revisão das dez artes.
+> O style v1 rejeitado permanece arquivado localmente. A nova geração usa
+> `personal-ultra-exercise-image-v2` em diretório próprio e somente o v2 pode ser
+> aprovado ou publicado.
+
 ### `PU-ECF-006` — Prompt visual e geração unitária
 
 Implementar adapter de geração de imagem usando [image-style-guide.md](image-style-guide.md), primeiro para um lote piloto de 5–10 exercícios variados.
@@ -90,6 +100,10 @@ Aceite:
 - nenhuma arte é gerada para metadado não aprovado;
 - `--max-items`, `--max-cost` e confirmação explícita protegem a execução paga;
 - retry não cria cobrança duplicada quando já existe resultado válido.
+
+Implementação enxuta adotada: o catálogo canônico é a fonte direta e prompt,
+model, size, quality, filename e SHA ficam no manifesto local. O piloto visual
+não depende de um CRUD de revisão de metadados.
 
 ### `PU-ECF-007` — Processamento, QA e lote retomável
 

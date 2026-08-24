@@ -6,6 +6,7 @@ using PersonalUltra.ExerciseCatalogFactory.Intake;
 using PersonalUltra.ExerciseCatalogFactory.Persistence;
 using PersonalUltra.ExerciseCatalogFactory.Publishing.S3;
 using PersonalUltra.ExerciseCatalogFactory.Providers.Text;
+using PersonalUltra.ExerciseCatalogFactory.Images;
 using System.Globalization;
 
 namespace PersonalUltra.ExerciseCatalogFactory.Cli;
@@ -14,7 +15,8 @@ public sealed class FactoryApplication(
     FactorySettings settings,
     TextWriter output,
     TextWriter error,
-    IMetadataProvider? metadataProvider = null)
+    IMetadataProvider? metadataProvider = null,
+    IImageProvider? imageProvider = null)
 {
     public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
     {
@@ -35,6 +37,12 @@ public sealed class FactoryApplication(
             if (args[0].Equals("metadata", StringComparison.OrdinalIgnoreCase))
             {
                 return await MetadataAsync(args[1..], cancellationToken);
+            }
+
+            if (args[0].Equals("images", StringComparison.OrdinalIgnoreCase))
+            {
+                return await new ImageCommands(settings, output, imageProvider)
+                    .RunAsync(args[1..], cancellationToken);
             }
 
             var command = CommandLine.Parse(args);
@@ -404,6 +412,11 @@ public sealed class FactoryApplication(
         output.WriteLine("  bucket doctor");
         output.WriteLine("  bucket smoke [--execute]");
         output.WriteLine("  metadata enrich --run <id> --max-items <n> --max-cost <usd> [--execute] [--retry-uncertain]");
+        output.WriteLine("  images plan (--all | --max-items <n>) --max-cost <usd>");
+        output.WriteLine("  images generate (--all | --max-items <n>) --max-cost <usd> [--execute]");
+        output.WriteLine("  images approve --file <approvals.txt>");
+        output.WriteLine("  images upload [--execute]");
+        output.WriteLine("  images seed [--execute]");
         output.WriteLine();
         output.WriteLine("Comandos mutáveis operam em dry-run, salvo confirmação explícita com --execute.");
     }

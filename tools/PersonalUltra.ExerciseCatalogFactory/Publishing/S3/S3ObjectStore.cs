@@ -59,23 +59,40 @@ internal sealed class S3ObjectStore : IObjectStore
         try
         {
             await using var stream = new MemoryStream(content.ToArray(), writable: false);
-            var request = new PutObjectRequest
-            {
-                BucketName = _bucketName,
-                Key = key.Value,
-                InputStream = stream,
-                ContentType = contentType,
-                AutoCloseStream = false
-            };
-            request.Metadata["sha256"] = sha256;
+            var request = CreatePutRequest(_bucketName, key, stream, contentType, sha256);
             var response = await _client.PutObjectAsync(request, cancellationToken);
             return new ObjectStoreResult(response.ResponseMetadata?.RequestId);
         }
         catch (AmazonS3Exception exception)
         {
-            throw Wrap("PUT object", exception);
+            throw TranslatePutFailure(exception);
         }
     }
+
+    internal static PutObjectRequest CreatePutRequest(
+        string bucketName,
+        ObjectKey key,
+        Stream stream,
+        string contentType,
+        string sha256)
+    {
+        var request = new PutObjectRequest
+        {
+            BucketName = bucketName,
+            Key = key.Value,
+            InputStream = stream,
+            ContentType = contentType,
+            AutoCloseStream = false,
+            IfNoneMatch = "*"
+        };
+        request.Metadata["sha256"] = sha256;
+        return request;
+    }
+
+    internal static Exception TranslatePutFailure(AmazonS3Exception exception) =>
+        exception.StatusCode == HttpStatusCode.PreconditionFailed
+            ? new BucketObjectCollisionException(exception)
+            : Wrap("PUT object", exception);
 
     public async Task<ObjectMetadata?> HeadAsync(ObjectKey key, CancellationToken cancellationToken)
     {
@@ -190,9 +207,9 @@ internal sealed class S3ObjectStore : IObjectStore
 
     private static void RequireContentType(string contentType)
     {
-        if (!string.Equals(contentType, "text/plain; charset=utf-8", StringComparison.Ordinal))
+        if (contentType is not ("text/plain; charset=utf-8" or "image/png"))
         {
-            throw new ArgumentException("MIME não permitido para o smoke.", nameof(contentType));
+            throw new ArgumentException("MIME não permitido.", nameof(contentType));
         }
     }
 

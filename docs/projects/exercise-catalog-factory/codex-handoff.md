@@ -30,11 +30,13 @@ arquivos deste diretório; não duplicá-las aqui.
 | ECF-003 — intake determinístico e identidades | código concluído; gate humano aberto | `d4745e0` |
 | ECF-004 — enriquecimento OpenAI estruturado e retomável | concluído; nenhuma chamada paga executada | `72e98d3` |
 | ECF-006 — adapter e smoke privado S3 | concluído; smoke real aprovado | `d0f940c` |
+| ECF-007/009 — geração e publicação visual v2 | 220 imagens aprovadas e publicadas | neste commit |
+| ECF-010 — exporter Personal Ultra | 203 entradas novas geradas; legado preservado | neste commit |
 
-Estado validado no commit `72e98d3`: build da solution sem erros, 109 testes da
-factory e 68 testes de integração das APIs. O adapter OpenAI de metadados existe,
-mas nenhuma chamada paga foi executada. Imagem nova, upload de catálogo, seed
-gerado e consumo remoto no app ainda não existem.
+O lote visual v2 contém 220 imagens aprovadas e publicadas sob
+`exercise-catalog/v2/<slug>.png`. O exporter gerou 203 exercícios novos e o
+catálogo resultante contém 231 itens: 28 legados locais mais 203 novos com
+referência `media://`. O consumo remoto no app ainda não existe.
 
 O intake contém 232 candidatos, preserva exatamente os 28 GUIDs/slugs legados,
 usa UUID v5 para itens novos e produz catálogo/relatório retomáveis. Resultado
@@ -66,9 +68,11 @@ anterior `InvalidAccessKeyId` foi resolvido após a atualização da configuraç
 
 Seguir em sequência:
 
-1. ECF-005: workflow de revisão e resolução do gate de metadados.
-2. ECF-007: piloto pago de imagem, cinco + revisão + cinco.
-3. ECF-008–012: processamento/review, publicação, exporter, consumo remoto nas
+1. Piloto visual enxuto: planejar dez, gerar com confirmação paga, revisar os
+   PNGs locais, registrar os slugs aprovados e subir somente eles.
+2. Após a revisão: decidir se workflows mais pesados de metadados/QA entregam
+   valor antes de implementá-los.
+3. Depois: publicação, exporter, consumo remoto nas
    duas APIs/Expo e validação ponta a ponta.
 
 Antes de cada avanço: implementar, revisar, testar, fazer commit intencional e

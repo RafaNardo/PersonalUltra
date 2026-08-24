@@ -101,6 +101,20 @@ public sealed class BucketSmokeRunnerTests
     }
 
     [Fact]
+    public async Task Smoke_never_deletes_when_conditional_put_did_not_create_the_object()
+    {
+        await using var store = new RecordingObjectStore { FailPutCollision = true };
+        using var http = new HttpClient(new PresignedHandler(store));
+        var runner = new BucketSmokeRunner(store, http, Options());
+
+        await Assert.ThrowsAsync<BucketObjectCollisionException>(() =>
+            runner.RunAsync("20260815010101-abcdef12", CancellationToken.None));
+
+        Assert.Empty(store.DeletedKeys);
+        Assert.Null(store.Content);
+    }
+
+    [Fact]
     public async Task Cli_smoke_is_dry_run_without_execute_and_never_creates_a_store()
     {
         var output = new StringWriter();
@@ -141,6 +155,7 @@ public sealed class BucketSmokeRunnerTests
         internal bool CorruptAuthenticatedGet { get; init; }
         internal bool FailDelete { get; init; }
         internal bool CancelConfirmation { get; init; }
+        internal bool FailPutCollision { get; init; }
 
         public Task<ObjectStoreResult> ProbeAsync(CancellationToken cancellationToken) =>
             Task.FromResult(new ObjectStoreResult("probe-request"));
@@ -152,6 +167,8 @@ public sealed class BucketSmokeRunnerTests
             string sha256,
             CancellationToken cancellationToken)
         {
+            if (FailPutCollision)
+                throw new BucketObjectCollisionException(new InvalidOperationException("precondition failed"));
             PutKey = key.Value;
             Content = content.ToArray();
             ContentType = contentType;

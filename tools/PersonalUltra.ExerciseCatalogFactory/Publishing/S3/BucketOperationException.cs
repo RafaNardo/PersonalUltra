@@ -52,3 +52,11 @@ internal sealed class BucketSmokeException : Exception
     internal Exception PrimaryFailure { get; }
     internal BucketCleanupException CleanupFailure { get; }
 }
+
+internal sealed class BucketObjectCollisionException : InvalidOperationException
+{
+    internal BucketObjectCollisionException(Exception innerException)
+        : base("O objeto de destino já existe no bucket; nenhuma sobrescrita foi realizada.", innerException)
+    {
+    }
+}

@@ -78,7 +78,8 @@ public sealed class FactorySettingsTests
         string? bucketName = null,
         string? bucketAccessKeyId = null,
         string? bucketSecretAccessKey = null,
-        int metadataMaxAttempts = 3) =>
+        int metadataMaxAttempts = 3,
+        string imagePromptVersion = "personal-ultra-exercise-image-v2") =>
         new(
             workspace ?? Path.Combine(Path.GetTempPath(), $"personal-ultra-settings-{Guid.NewGuid():N}"),
             "1",
@@ -95,7 +96,8 @@ public sealed class FactorySettingsTests
             360,
             bucketName,
             bucketAccessKeyId,
-            bucketSecretAccessKey);
+            bucketSecretAccessKey,
+            imagePromptVersion: imagePromptVersion);
 
     private static string FindRepositoryRoot()
     {

@@ -18,10 +18,12 @@ internal sealed class BucketSmokeRunner(IObjectStore store, HttpClient httpClien
         var steps = new List<BucketSmokeStep>();
         Exception? primaryFailure = null;
         BucketCleanupException? cleanupFailure = null;
+        var createdBySmoke = false;
 
         try
         {
             var put = await store.PutAsync(key, bytes, ContentType, expectedHash, cancellationToken);
+            createdBySmoke = true;
             steps.Add(new BucketSmokeStep("PUT", put.RequestId));
 
             var head = await store.HeadAsync(key, cancellationToken)
@@ -59,33 +61,36 @@ internal sealed class BucketSmokeRunner(IObjectStore store, HttpClient httpClien
         }
         finally
         {
-            using var cleanupTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-            ObjectStoreResult? deleted = null;
-            try
+            if (createdBySmoke)
             {
-                deleted = await store.DeleteAsync(key, cleanupTimeout.Token);
-                steps.Add(new BucketSmokeStep("DELETE", deleted.RequestId));
-            }
-            catch (Exception exception)
-            {
-                cleanupFailure = new BucketCleanupException("DELETE", exception);
-            }
-
-            if (deleted is not null)
-            {
+                using var cleanupTimeout = new CancellationTokenSource(TimeSpan.FromSeconds(30));
+                ObjectStoreResult? deleted = null;
                 try
                 {
-                var remaining = await store.HeadAsync(key, cleanupTimeout.Token);
-                if (remaining is not null)
-                {
-                    throw new InvalidDataException("O objeto delimitado ainda existe após DELETE.");
-                }
-
-                steps.Add(new BucketSmokeStep("CONFIRM NOT FOUND", null));
+                    deleted = await store.DeleteAsync(key, cleanupTimeout.Token);
+                    steps.Add(new BucketSmokeStep("DELETE", deleted.RequestId));
                 }
                 catch (Exception exception)
                 {
-                    cleanupFailure = new BucketCleanupException("CONFIRM NOT FOUND", exception);
+                    cleanupFailure = new BucketCleanupException("DELETE", exception);
+                }
+
+                if (deleted is not null)
+                {
+                    try
+                    {
+                        var remaining = await store.HeadAsync(key, cleanupTimeout.Token);
+                        if (remaining is not null)
+                        {
+                            throw new InvalidDataException("O objeto delimitado ainda existe após DELETE.");
+                        }
+
+                        steps.Add(new BucketSmokeStep("CONFIRM NOT FOUND", null));
+                    }
+                    catch (Exception exception)
+                    {
+                        cleanupFailure = new BucketCleanupException("CONFIRM NOT FOUND", exception);
+                    }
                 }
             }
         }

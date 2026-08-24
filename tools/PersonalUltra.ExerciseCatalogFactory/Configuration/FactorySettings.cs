@@ -25,7 +25,12 @@ public sealed class FactorySettings
         int signedUrlLifetimeMinutes,
         string? bucketName,
         string? bucketAccessKeyId,
-        string? bucketSecretAccessKey)
+        string? bucketSecretAccessKey,
+        string? imageCatalogPath = null,
+        string imageSize = "1024x1024",
+        string imageQuality = "low",
+        decimal imageEstimatedCostUsd = 0.02m,
+        string imagePromptVersion = "personal-ultra-exercise-image-v2")
     {
         WorkspaceRoot = workspaceRoot;
         SchemaVersion = schemaVersion;
@@ -35,6 +40,11 @@ public sealed class FactorySettings
         MetadataEstimatedCostUsd = metadataEstimatedCostUsd;
         MetadataMaxAttempts = metadataMaxAttempts;
         ImageModel = imageModel;
+        ImageCatalogPath = ResolveRepositoryPath(imageCatalogPath ?? "tools/PersonalUltra.ExerciseCatalogFactory/Inputs/v1/exercise-inventory-v1.csv");
+        ImageSize = imageSize;
+        ImageQuality = imageQuality;
+        ImageEstimatedCostUsd = imageEstimatedCostUsd;
+        ImagePromptVersion = imagePromptVersion;
         BucketEndpointUrl = bucketEndpointUrl;
         BucketRegion = bucketRegion;
         BucketForcePathStyle = bucketForcePathStyle;
@@ -53,6 +63,11 @@ public sealed class FactorySettings
     public decimal MetadataEstimatedCostUsd { get; }
     public int MetadataMaxAttempts { get; }
     public string ImageModel { get; }
+    public string ImageCatalogPath { get; }
+    public string ImageSize { get; }
+    public string ImageQuality { get; }
+    public decimal ImageEstimatedCostUsd { get; }
+    public string ImagePromptVersion { get; }
     public string BucketEndpointUrl { get; }
     public string BucketRegion { get; }
     public bool BucketForcePathStyle { get; }
@@ -110,7 +125,12 @@ public sealed class FactorySettings
             signedUrlLifetimeMinutes: configuration.GetValue("RailwayBucket:SignedUrlLifetimeMinutes", 360),
             bucketName: configuration["RailwayBucket:BucketName"],
             bucketAccessKeyId: configuration["RailwayBucket:AccessKeyId"],
-            bucketSecretAccessKey: configuration["RailwayBucket:SecretAccessKey"]);
+            bucketSecretAccessKey: configuration["RailwayBucket:SecretAccessKey"],
+            imageCatalogPath: configuration["Images:CatalogPath"],
+            imageSize: configuration["OpenAI:ImageSize"] ?? "1024x1024",
+            imageQuality: configuration["OpenAI:ImageQuality"] ?? "low",
+            imageEstimatedCostUsd: configuration.GetValue("OpenAI:ImageEstimatedCostUsd", 0.02m),
+            imagePromptVersion: configuration["OpenAI:ImagePromptVersion"] ?? "personal-ultra-exercise-image-v2");
     }
 
     public static string ResolveWorkspaceRoot(
@@ -161,6 +181,11 @@ public sealed class FactorySettings
         if (SchemaVersion != "1") errors.Add($"Factory:SchemaVersion não suportado: {SchemaVersion}");
         if (MetadataModel is null) errors.Add("OpenAI:MetadataModel precisa ser configurado explicitamente.");
         if (string.IsNullOrWhiteSpace(ImageModel)) errors.Add("OpenAI:ImageModel não pode ficar vazio.");
+        if (!File.Exists(ImageCatalogPath)) errors.Add($"Catálogo de imagens não encontrado: {ImageCatalogPath}");
+        if (ImageSize != "1024x1024") errors.Add("OpenAI:ImageSize deve ser 1024x1024 neste piloto.");
+        if (ImageQuality is not ("low" or "medium" or "high")) errors.Add("OpenAI:ImageQuality deve ser low, medium ou high.");
+        if (ImageEstimatedCostUsd <= 0) errors.Add("OpenAI:ImageEstimatedCostUsd deve ser maior que zero.");
+        if (string.IsNullOrWhiteSpace(ImagePromptVersion)) errors.Add("OpenAI:ImagePromptVersion não pode ficar vazio.");
         if (string.IsNullOrWhiteSpace(MetadataPromptVersion)) errors.Add("OpenAI:MetadataPromptVersion não pode ficar vazio.");
         if (MetadataTemperature is < 0 or > 2) errors.Add("OpenAI:MetadataTemperature deve ficar entre 0 e 2.");
         if (MetadataEstimatedCostUsd <= 0) errors.Add("OpenAI:MetadataEstimatedCostUsd deve ser maior que zero.");
@@ -187,6 +212,13 @@ public sealed class FactorySettings
         }
 
         return null;
+    }
+
+    private static string ResolveRepositoryPath(string configuredPath)
+    {
+        if (Path.IsPathFullyQualified(configuredPath)) return Path.GetFullPath(configuredPath);
+        var root = FindRepositoryRoot(Directory.GetCurrentDirectory()) ?? FindRepositoryRoot(AppContext.BaseDirectory);
+        return root is null ? Path.GetFullPath(configuredPath) : Path.GetFullPath(Path.Combine(root, configuredPath));
     }
 
     private static string? NullIfWhiteSpace(string? value) =>

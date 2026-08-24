@@ -8,7 +8,7 @@ namespace PersonalUltra.Api.IntegrationTests;
 public sealed class ExerciseCatalogDomainTests
 {
     [Fact]
-    public async Task Demo_seed_creates_a_demonstrable_catalog_with_local_media_references()
+    public async Task Demo_seed_combines_the_legacy_catalog_with_generated_remote_references()
     {
         await using var db = CreateDatabase();
 
@@ -16,15 +16,16 @@ public sealed class ExerciseCatalogDomainTests
 
         var exercises = await db.Exercises.AsNoTracking().ToListAsync();
 
-        Assert.Equal(28, exercises.Count);
+        Assert.Equal(231, exercises.Count);
         Assert.All(exercises, exercise =>
         {
             Assert.False(string.IsNullOrWhiteSpace(exercise.Name));
             Assert.False(string.IsNullOrWhiteSpace(exercise.PrimaryMuscleGroup));
-            Assert.StartsWith("assets/training/", exercise.ImageRef);
             Assert.EndsWith(".png", exercise.ImageRef);
             Assert.True(exercise.IsActive);
         });
+        Assert.Equal(28, exercises.Count(exercise => exercise.ImageRef.StartsWith("assets/training/", StringComparison.Ordinal)));
+        Assert.Equal(203, exercises.Count(exercise => exercise.ImageRef.StartsWith("media://exercise-catalog/v2/", StringComparison.Ordinal)));
         Assert.Contains(exercises, exercise => exercise.Name == "Supino reto com barra" && exercise.PrimaryMuscleGroup == "Peito");
         Assert.Contains(exercises, exercise => exercise.Name == "Remada baixa" && exercise.PrimaryMuscleGroup == "Costas");
         Assert.Contains(exercises, exercise => exercise.Name == "Desenvolvimento com halteres" && exercise.PrimaryMuscleGroup == "Ombros");
@@ -165,7 +166,9 @@ public sealed class ExerciseCatalogDomainTests
             "assets/training/triceps-na-polia-com-corda.png",
         };
 
-        var actual = await db.Exercises.AsNoTracking().Select(x => x.ImageRef).OrderBy(x => x).ToArrayAsync();
+        var actual = await db.Exercises.AsNoTracking()
+            .Where(x => x.ImageRef.StartsWith("assets/training/"))
+            .Select(x => x.ImageRef).OrderBy(x => x).ToArrayAsync();
 
         Assert.Equal(expected.OrderBy(x => x), actual);
     }

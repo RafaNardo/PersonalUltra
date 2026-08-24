@@ -92,6 +92,62 @@ dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- bucket smoke 
 Railway usa virtual-hosted style nos buckets atuais; somente buckets antigos
 indicados dessa forma na aba Credentials exigem `ForcePathStyle: true`.
 
+## Geração enxuta de imagens
+
+Este fluxo lê diretamente o catálogo canônico versionado. Ele não cria painel,
+CRUD de metadados, contact sheet, seed ou integração com API/mobile.
+
+```powershell
+# Piloto de dez imagens
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images plan --max-items 10 --max-cost 1.00
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images generate --max-items 10 --max-cost 1.00 --execute
+
+# Catálogo completo normalizado (preserva o piloto e exclui needs_review)
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images plan --all --max-cost 5.00
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images generate --all --max-cost 5.00 --execute
+
+# Após revisar os PNGs, informe um slug aprovado por linha
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images approve --file approved-images.txt
+
+# Dry-run e confirmação do upload somente das aprovadas
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images upload
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images upload --execute
+
+# Validar o lote publicado e gerar o seed C# (dry-run primeiro)
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images seed
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images seed --execute
+```
+
+O style atual é `personal-ultra-exercise-image-v2`. Seu manifesto fica em
+`workspace/images/v2/manifest.v1.json` e os arquivos em
+`workspace/images/v2/files/<slug>.png`. Cada sucesso recebe checkpoint imediato.
+Reexecutar preserva PNGs íntegros; arquivo ausente, alterado ou sem checkpoint
+bloqueia em vez de disparar uma nova cobrança. A estimativa considera apenas
+imagens pendentes. Respostas HTTP 429/5xx têm até três tentativas com pausa;
+falhas de transporte incertas nunca são repetidas automaticamente. O upload v2
+usa `exercise-catalog/v2/<slug>.png` e verifica tamanho e SHA-256 no bucket;
+chaves já registradas como enviadas nunca são alteradas.
+O exporter exige que todos os 220 itens normalizados estejam aprovados,
+publicados, com object key v2 e arquivo local de hash idêntico. Ele gera
+`ExerciseCatalogSeed.Generated.cs` de forma determinística, exclui qualquer
+slug dos 28 itens legados e nunca escreve diretamente no banco. O seeder do
+demo apenas inclui slugs ausentes e não sobrescreve registros existentes.
+
+As referências novas são `media://exercise-catalog/v2/<slug>.png`. Elas já
+ficam persistidas no catálogo, mas as imagens remotas somente aparecerão nas
+APIs e no Expo depois da implementação do resolver de mídia em `PU-ECF-011`.
+Uma interrupção durante a chamada deixa `<slug>.png.pending`; confirme a
+cobrança antes de remover conscientemente esse marcador e tentar novamente.
+
+As dez imagens geradas anteriormente com o style v1 permanecem intactas em
+`workspace/images/manifest.v1.json` e `workspace/images/files/` apenas como
+arquivo/referência local. Os comandos v2 não leem, aprovam, publicam, movem ou
+sobrescrevem esse material.
+
+Modelo, qualidade, tamanho, custo estimado por imagem e versão do prompt ficam
+em `appsettings.json`. O custo é um teto operacional configurável, não uma
+leitura da cobrança real. Referência oficial: [OpenAI Image generation](https://developers.openai.com/api/docs/guides/image-generation).
+
 ## User Secrets
 
 ```powershell

@@ -1,5 +1,11 @@
 # Milestone proposta — catálogo remoto e Exercise Catalog Factory
 
+> Atualização de escopo em 2026-08-24: a primeira validação de imagens foi
+> deliberadamente reduzida ao fluxo `images plan → generate → approve → upload`,
+> limitado a dez PNGs 1024×1024. Processamento avançado, integração no app e
+> publicação em lote abaixo continuam como possibilidades futuras, não como
+> dependências do piloto. O README da Factory contém os comandos atuais.
+
 Status: **plano aprovado; `PU-ECF-001` a `PU-ECF-004` e o adapter privado de
 bucket implementados sem chamadas OpenAI pagas; o smoke real do bucket passou
 em 2026-08-24**. Revisão humana, geração paga e alterações no produto continuam
@@ -353,6 +359,13 @@ Gate: confirmar orçamento restante antes de gerar além do piloto.
 - IDs/slugs existentes preservados;
 - `ImageRef = media://...` para itens novos;
 - exporter gera pacote, não escreve no banco.
+
+Situação: concluído para o lote v2. `images seed` valida em dry-run os 220
+itens normalizados aprovados/publicados e seus hashes locais; `--execute` gera
+203 entradas novas ordenadas em `ExerciseCatalogSeed.Generated.cs`. O wrapper
+preserva os 28 IDs/slugs/assets locais e o seeder inclui somente slugs ausentes,
+sem sobrescrever linhas ou snapshots. As referências `media://` ainda não são
+resolvidas pelas APIs/mobile; isso permanece exclusivamente em `PU-ECF-011`.
 
 ### `PU-ECF-011` — Consumo remoto nas APIs e Expo
 

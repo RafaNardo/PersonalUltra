@@ -10,7 +10,8 @@ Gerar uma biblioteca coesa, legível em cards pequenos e útil para reconhecer o
 - fundo escuro cinza/preto, discreto e sem ambiente poluído;
 - personagem e equipamento com alto contraste;
 - paleta majoritariamente preta/cinza com acentos quentes;
-- uma pose principal, sem texto, moldura, watermark ou logo;
+- uma pose principal, sem texto editorial, moldura ou watermark; somente o
+  pequeno wordmark `ULTRA` é permitido na roupa;
 - maioria dos assets atuais em 1024 × 1536 (vertical);
 - o app usa `resizeMode="cover"` em cards largos, portanto o elemento essencial precisa sobreviver ao crop central.
 
@@ -23,18 +24,22 @@ Elementos fixos sugeridos:
 ```text
 Ilustração digital fitness premium, anatomia humana natural e proporcional,
 contornos nítidos, iluminação cinematográfica suave, fundo de academia escuro
-e desfocado, roupa esportiva preta/cinza com pequeno acento laranja ou vermelho,
+e desfocado, roupa esportiva usando somente preto #080808, grafite/titânio
+#151515/#222220 e laranja #FF6A13, com pequeno wordmark ULTRA,
 equipamento correto e totalmente reconhecível, um único atleta, composição
-central, sem texto, sem logo, sem watermark, sem interface, sem colagem.
+central, sem outras marcas, sem watermark, sem interface, sem colagem.
 ```
 
-Elementos variáveis vêm somente dos metadados aprovados:
+O fundo permanece premium e escuro, porém levemente mais claro e legível, com
+equipamentos visíveis e preenchimento neutro suave. O style vigente é
+`personal-ultra-exercise-image-v2`.
+
+No piloto enxuto, os elementos variáveis vêm somente do catálogo canônico:
 
 - exercício e variação exata;
-- equipamento;
-- posição corporal e fase representada;
-- ângulo de câmera necessário para legibilidade;
-- partes do corpo/equipamento que precisam permanecer visíveis.
+- grupo muscular quando disponível;
+- alternância determinística entre atleta mulher e homem;
+- equipamento e variação expressos no próprio nome canônico.
 
 ## Template de prompt
 
@@ -68,7 +73,8 @@ Não deixar o provider decidir aleatoriamente a cada item. Variar corpos pode se
 
 ## Formato e área segura
 
-Target inicial recomendado para compatibilidade: PNG 1024 × 1536. Se o provider não entregar esse tamanho, manter o original e criar derivado com processamento determinístico, sem esticar a anatomia.
+O piloto usa PNG 1024 × 1024, formato adequado aos cards e econômico para a
+primeira validação. Outros formatos e derivados só serão avaliados depois.
 
 Área segura:
 
@@ -77,27 +83,25 @@ Target inicial recomendado para compatibilidade: PNG 1024 × 1536. Se o provider
 - conferir thumbnail de card e crop horizontal 2:1;
 - o master vertical deve continuar disponível para futuras superfícies.
 
-O pipeline deve gerar uma folha de revisão com, lado a lado:
+Uma folha de revisão pode ser adicionada futuramente. No piloto, o operador olha
+diretamente os PNGs locais considerando:
 
 1. imagem completa;
 2. crop 2:1 semelhante ao hero do app;
 3. thumbnail semelhante ao card em grade;
 4. nome, slug, equipamento e versão.
 
-## QA automático
+## QA automático mínimo do piloto
 
 Bloquear ou sinalizar:
 
-- formato diferente do permitido;
-- dimensões incorretas;
+- assinatura/formato diferente de PNG;
 - arquivo vazio/corrompido;
 - alpha inesperado quando o profile exige fundo opaco;
 - arquivo acima do limite configurado;
 - hash igual em exercícios diferentes;
 - nome/path não correspondente ao manifesto;
-- ausência de entrada no media registry;
-- baixa entropia/imagem quase vazia;
-- imagem já aprovada sendo sobrescrita sem nova versão.
+- imagem existente sendo sobrescrita ou regenerada silenciosamente.
 
 QA automático não confirma biomecânica.
 
@@ -142,4 +146,3 @@ O piloto deve cobrir pelo menos:
 - membros superiores e inferiores.
 
 Só congelar `styleVersion` depois que o piloto for visto nos cards e heroes reais do app. Alterar estilo após gerar 200 itens deve ser uma decisão consciente, com plano de invalidação e custo.
-

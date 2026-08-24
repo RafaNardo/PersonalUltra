@@ -1,5 +1,6 @@
 using PersonalUltra.ExerciseCatalogFactory.Cli;
 using PersonalUltra.ExerciseCatalogFactory.Persistence;
+using PersonalUltra.ExerciseCatalogFactory.Images;
 
 namespace PersonalUltra.ExerciseCatalogFactory.Tests;
 
@@ -116,6 +117,40 @@ public sealed class FactoryApplicationTests : IDisposable
         Assert.Equal(0, run.Usage!.ObservedCost);
     }
 
+    [Fact]
+    public async Task Images_plan_lists_pilot_without_paid_call()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var provider = new CountingImageProvider();
+        var application = new FactoryApplication(
+            FactorySettingsTests.CreateSettings(Path.Combine(_root, "workspace")), output, error,
+            imageProvider: provider);
+
+        var exitCode = await application.RunAsync(["images", "plan", "--max-items", "10", "--max-cost", "1.00"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Equal(0, provider.Calls);
+        Assert.Contains("total=10", output.ToString());
+        Assert.Contains("nenhuma chamada OpenAI", output.ToString());
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
+    [Fact]
+    public async Task Images_plan_accepts_all_normalized_catalog_items()
+    {
+        var output = new StringWriter();
+        var error = new StringWriter();
+        var application = new FactoryApplication(
+            FactorySettingsTests.CreateSettings(Path.Combine(_root, "workspace-all")), output, error);
+
+        var exitCode = await application.RunAsync(["images", "plan", "--all", "--max-cost", "5.00"]);
+
+        Assert.Equal(0, exitCode);
+        Assert.Contains("total=220", output.ToString());
+        Assert.Equal(string.Empty, error.ToString());
+    }
+
     [Theory]
     [InlineData("import", "--file")]
     [InlineData("status", "unexpected")]
@@ -147,4 +182,14 @@ public sealed class FactoryApplicationTests : IDisposable
     private const string ValidInputJson = """
         { "schemaVersion": 1, "source": "test", "items": [{ "externalKey": "bench", "name": "Supino" }] }
         """;
+
+    private sealed class CountingImageProvider : IImageProvider
+    {
+        internal int Calls { get; private set; }
+        public Task<GeneratedImage> GenerateAsync(string model, string prompt, string size, string quality, CancellationToken cancellationToken)
+        {
+            Calls++;
+            throw new InvalidOperationException("Não deveria ser chamado.");
+        }
+    }
 }
