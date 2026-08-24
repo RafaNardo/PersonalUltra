@@ -188,6 +188,14 @@ O refactor das superfícies Trainer da M4 deve seguir `docs/design/trainer-exper
 
 Implementação concluída na demo: alimentação Trainer/Student, registro e consulta de peso, Coach explicativo read-only, seed ampliado, reset demo, branding validado por Trainer e aplicado ao contexto Student, além da consolidação no detalhe do aluno.
 
+**Revisão de nutrição (2026-08-24): concluída.** O modelo agora preserva ordem
+de refeições e itens, quantidade/unidade, autoria e atualização; Trainer edita
+o documento completo sem perda silenciosa e Student consulta a mesma versão
+persistida em modo read-only. A API valida o payload integral antes de substituir
+o plano e o gate cobre o roundtrip Trainer → Student, ownership, ausência válida
+e rejeições atômicas. A direção e os non-goals estão em
+`docs/design/nutrition-experience-review.md`.
+
 Antes de considerar a demo comercialmente fechada, o refactor `M3R` acima tem prioridade sobre novos refinamentos de M4, pois montagem/prescrição de treino é uma superfície central do produto.
 
 **DoD M4:** demo comercial completa, incluindo branding dinâmico por Trainer.

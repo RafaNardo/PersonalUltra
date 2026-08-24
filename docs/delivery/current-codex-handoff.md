@@ -8,7 +8,8 @@ concluídas a partir da conversa antiga.
 ## Estado do repositório
 
 - Repositório: `C:\git\PresonalUltra`; branch publicada: `main`.
-- Último commit funcional anterior a este documento: `c41ae7b`.
+- Últimos commits funcionais: `2a1ef83` (domínio/API/testes de nutrição) e
+  `23e5b4c` (fluxo mobile Trainer/Student).
 - Stack: .NET 10, EF Core/PostgreSQL, Expo/React Native/Expo Router, TypeScript,
   TanStack Query, Zustand e SQLite offline.
 - APIs públicas:
@@ -55,9 +56,14 @@ concluídas a partir da conversa antiga.
 - Execução multimodal/fluida M3RX, migration, histórico factual e conclusão sem
   dados sintéticos. Commit `c7b949b`; design em
   `docs/design/training-execution-refinement.md`.
-- Gate de regressão API: comando `npm run test:api:regression`, atualmente 96
-  testes. Commits `ab4c3d4` e `c41ae7b`; detalhes em
+- Gate de regressão API: comando `npm run test:api:regression`, atualmente 100
+  testes. Commits-base `ab4c3d4` e `c41ae7b`; cobertura de nutrição em
+  `2a1ef83`; detalhes em
   `docs/testing/api-regression.md`.
+- Revisão de nutrição: documento multi-refeição/multi-item com quantidade e
+  unidade, ordem persistida, autoria/atualização, validação atômica, editor
+  Trainer completo e leitura Student read-only. Commits `2a1ef83` e `23e5b4c`;
+  direção em `docs/design/nutrition-experience-review.md`.
 
 ## Validação padrão
 
@@ -75,7 +81,7 @@ cd apps/mobile
 npx expo export --platform ios --output-dir .expo-export-validation
 ```
 
-O último gate conhecido passou com 96/96 testes de API, 136/136 testes da
+O último gate conhecido passou com 100/100 testes de API, 136/136 testes da
 Factory, build .NET sem warnings, typecheck e export iOS. As duas APIs públicas
 responderam health 200 e os contratos públicos retornaram `trackingMode`.
 
@@ -96,27 +102,18 @@ legadas ambíguas. Não resolver, mesclar IDs nem gastar em nova geração sem t
 e aprovação explícitas. Secrets permanecem somente em User Secrets/Railway e
 nunca devem ser lidos ou impressos.
 
-## Próxima tarefa acordada: revisão de nutrição
+## Revisão de nutrição concluída
 
-Esta é a próxima frente, ainda não iniciada:
-
-1. Ler `AGENTS.md`, este handoff, `docs/architecture/domain.md`,
-   `docs/architecture/api.md`, `docs/delivery/backlog.md`, o guia de design e os
-   arquivos atuais de nutrição Trainer/Student.
-2. Auditar domínio, persistência, endpoints e UI para identificar dados
-   estáticos, mocks, regras frágeis e fluxo incompleto.
-3. Pesquisar como apps atuais tratam prescrição alimentar, usando fontes atuais
-   e distinguindo referências de UX de requisitos clínicos/regulatórios.
-4. Planejar uma experiência demo-first, acolhedora, explicativa e consistente
-   com os padrões do Personal Ultra.
-5. Implementar somente dentro do módulo de nutrição e das visões Trainer/Student.
-6. Adicionar testes de integração de nutrição ao gate da API; hoje nutrição e
-   peso são lacunas explicitamente documentadas.
-
-Se a solução exigir alteração ampla de infraestrutura compartilhada, outros
-módulos ou fronteiras de arquitetura, documentar o impacto e parar para decisão
-do usuário. Mudanças normais em entidades/contratos de nutrição compartilhados
-entre as duas APIs estão dentro do módulo; não usar mocks para evitar a mudança.
+- O fluxo não contém mocks: Trainer e Student usam o mesmo plano persistido no
+  `DbContext` compartilhado.
+- Salvar é uma substituição integral e atômica que disponibiliza a versão ao
+  Student; rascunho/versionamento não foram introduzidos.
+- `MealFood` é um item textual ordenado, sem catálogo global, macros ou geração.
+- Atribuição identifica o Trainer responsável sem alegar credencial clínica.
+- A revisão jurídica/produto continua obrigatória antes de produção, conforme
+  `docs/product/nutrition-note.md`.
+- Não há outra tarefa de produto acordada neste handoff. A lacuna explícita
+  restante no gate é Weight API.
 
 ## Arquivos locais do usuário
 
@@ -146,11 +143,6 @@ commits sem pedido explícito:
 ```text
 Read AGENTS.md and docs/delivery/current-codex-handoff.md completely. Treat the
 handoff as the authoritative current state and do not reconstruct completed work
-from older milestone histories. Continue with the queued nutrition review:
-audit the current Trainer/Student nutrition module for mocks and incomplete
-flows, research current diet-prescription UX, propose a scoped demo-first plan,
-then implement only within nutrition and its Trainer/Student views. Add nutrition
-API integration tests to the existing regression gate. If the solution requires
-broad changes outside nutrition, stop and report the impact first. Preserve the
-listed untracked user files.
+from older milestone histories. The nutrition review is complete; wait for the
+next scoped product task. Preserve the listed untracked user files.
 ```

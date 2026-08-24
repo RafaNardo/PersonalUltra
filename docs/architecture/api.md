@@ -84,6 +84,12 @@ sem criar performances fictícias. As respostas distinguem registros reais de
 Student API não expõe mutations de prescrição.
 Trainer API sempre valida ownership do Student.
 
+Os contratos de nutrição preservam a ordem de refeições e itens, quantidades
+com unidade, data da última atualização e o nome do Trainer responsável. O
+`PUT` Trainer valida o documento inteiro e o disponibiliza ao Student somente
+depois da persistência bem-sucedida; não existe mutation Student, rascunho ou
+versionamento na demo.
+
 As APIs compartilham Domain/Application/Infrastructure e banco, mas não devem compartilhar controllers/endpoints específicos dos atores.
 
 ## Error contract

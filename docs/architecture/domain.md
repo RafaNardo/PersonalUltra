@@ -114,8 +114,14 @@ See `docs/design/trainer-training-refactor.md` for the approved Trainer flow and
 ## Nutrition
 - `NutritionPlan`
 - `Meal`
-- `Food`
 - `MealFood`
+
+Na demo, `MealFood` é um item textual ordenado da prescrição, com quantidade e
+unidade. Não existe catálogo global de alimentos, macros ou geração automática.
+`NutritionPlan` pertence a um Student, guarda o Trainer responsável atual e a
+rastreabilidade mínima de criação/última alteração. Salvar substitui o documento
+completo de forma atômica e o Student permanece read-only. A direção de UX e os
+non-goals estão em `docs/design/nutrition-experience-review.md`.
 
 ## Progress
 - `WeightEntry` apenas na V1.

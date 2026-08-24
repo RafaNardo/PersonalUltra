@@ -12,3 +12,7 @@ Antes de produção, o fluxo deve ser validado do ponto de vista jurídico/regul
 - Coach pode explicar e responder dúvidas sobre um plano já cadastrado.
 
 Revisão legal/produto é obrigatória antes do lançamento de produção.
+
+A decisão demo-first atual, seus limites e as referências pesquisadas estão em
+`docs/design/nutrition-experience-review.md`. A ação de salvar disponibiliza o
+documento persistido ao Student; a demo não modela rascunhos ou versões.

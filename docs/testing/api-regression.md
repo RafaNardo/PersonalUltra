@@ -49,11 +49,14 @@ The gate covers:
 - repetition and duration tracking;
 - explicit exercise/workout completion without synthetic performances;
 - Trainer-visible workout history;
-- prescription settings and catalog/demo seed idempotency.
+- prescription settings and catalog/demo seed idempotency;
+- nutrition ownership/authentication, empty state, Trainer-to-Student roundtrip,
+  ordered meals/items with units, attribution, full replacement and validation
+  failures that preserve the previous plan.
 
-Nutrition and weight endpoints currently have no dedicated integration tests.
-They remain an explicit gap for the planned nutrition review; this gate must not
-be described as covering those flows until those tests exist.
+Weight endpoints currently have no dedicated integration tests and remain an
+explicit gap. The nutrition review added four dedicated scenarios, bringing the
+gate to 100 tests.
 
 ## What this gate does not prove
 
