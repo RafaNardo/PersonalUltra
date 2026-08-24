@@ -34,7 +34,7 @@ arquivos deste diretório; não duplicá-las aqui.
 | ECF-010 — exporter Personal Ultra | 203 entradas novas geradas; legado preservado | `acd0b5e` |
 | ECF-011 — URLs assinadas e cache Expo | concluído e publicado | `7db686f` |
 | ECF-012 — apply e validação | PostgreSQL/seed idempotente e APIs públicas validados | `7db686f` |
-| ECF-013 — substituição legada e entrega leve | 28 masters v3 + 231 WebP publicados | working tree |
+| ECF-013 — substituição legada e entrega leve | 28 masters v3 + 231 WebP publicados; bundle legado removido | `5b19580` |
 
 O lote visual v2 contém 220 imagens aprovadas e publicadas sob
 `exercise-catalog/v2/<slug>.png`. O exporter gerou 203 exercícios novos e o
@@ -74,10 +74,9 @@ anterior `InvalidAccessKeyId` foi resolvido após a atualização da configuraç
 
 Retomada imediata:
 
-1. Fazer commit/push do lote v3 + entrega WebP e validar uma URL pública WebP.
-2. Revisar visualmente os 28 masters v3 e usar `images regenerate --batch
+1. Revisar visualmente os 28 masters v3 e usar `images regenerate --batch
    legacy-v3` apenas para imagens rejeitadas em uma futura versão imutável.
-3. Iniciar a auditoria de nutrição já enfileirada abaixo.
+2. Iniciar a auditoria de nutrição já enfileirada abaixo.
 
 Antes de cada avanço: implementar, revisar, testar, fazer commit intencional e
 push. Parar em falha externa, gasto pago ou decisão humana. Os comandos de
@@ -85,8 +84,8 @@ fechamento estão em [validation.md](validation.md).
 
 ## Decisões já fixadas
 
-- Novas imagens ficam remotas no bucket privado; os 28 assets legados continuam
-  no bundle para compatibilidade histórica.
+- Todas as imagens atuais ficam remotas no bucket privado; os 28 desenhos legados
+  foram removidos do bundle depois de sua substituição por masters v3.
 - Persistir `media://exercise-catalog/...`, nunca URL assinada. Infrastructure
   compartilha apenas o resolver; TrainerApi e StudentApi mantêm contratos
   próprios.
