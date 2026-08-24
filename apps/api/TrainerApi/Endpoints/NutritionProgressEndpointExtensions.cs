@@ -3,15 +3,122 @@ using Microsoft.EntityFrameworkCore;
 using PersonalUltra.Domain;
 using PersonalUltra.Infrastructure;
 using PersonalUltra.TrainerApi.Contracts;
+
 namespace PersonalUltra.TrainerApi.Endpoints;
+
 public static class NutritionProgressEndpointExtensions
 {
- public static void MapNutritionProgressApi(this WebApplication app)
- {
-  var api=app.MapGroup("/api/v1/students").RequireAuthorization();
-  api.MapGet("/{studentId:guid}/nutrition", async(Guid studentId,PersonalUltraDbContext db,ClaimsPrincipal user,HttpContext c,CancellationToken ct)=>{var tid=Id(user);if(!await Own(db,tid,studentId,ct))return c.ApiError("STUDENT_NOT_FOUND","Aluno não encontrado.",404);var p=await db.NutritionPlans.AsNoTracking().Include(x=>x.Meals).ThenInclude(x=>x.Foods).SingleOrDefaultAsync(x=>x.StudentId==studentId,ct);return p is null?Results.Ok<NutritionPlanResponse?>(null):Results.Ok(To(p));});
-  api.MapPut("/{studentId:guid}/nutrition", async(Guid studentId,NutritionPlanRequest request,PersonalUltraDbContext db,ClaimsPrincipal user,TimeProvider clock,HttpContext c,CancellationToken ct)=>{var tid=Id(user);if(!await Own(db,tid,studentId,ct))return c.ApiError("STUDENT_NOT_FOUND","Aluno não encontrado.",404);if(string.IsNullOrWhiteSpace(request.Name)||request.Meals.Count<1)return c.ApiError("VALIDATION_ERROR","Informe o nome e ao menos uma refeição.",400);var p=await db.NutritionPlans.Include(x=>x.Meals).ThenInclude(x=>x.Foods).SingleOrDefaultAsync(x=>x.StudentId==studentId,ct);if(p is null){p=new NutritionPlan{Id=Guid.NewGuid(),TrainerId=tid,StudentId=studentId};db.NutritionPlans.Add(p);}p.Name=request.Name.Trim();p.Notes=request.Notes?.Trim()??"";p.UpdatedAt=clock.GetUtcNow();db.MealFoods.RemoveRange(p.Meals.SelectMany(x=>x.Foods));db.Meals.RemoveRange(p.Meals);p.Meals.Clear();foreach(var (m,i) in request.Meals.OrderBy(x=>x.Sequence).Select((x,i)=>(x,i))){var meal=new Meal{Id=Guid.NewGuid(),NutritionPlanId=p.Id,Name=m.Name.Trim(),Sequence=i+1,Notes=m.Notes?.Trim()??""};meal.Foods.AddRange(m.Foods.Select(f=>new MealFood{Id=Guid.NewGuid(),MealId=meal.Id,FoodName=f.FoodName.Trim(),QuantityGrams=f.QuantityGrams}));p.Meals.Add(meal);}await db.SaveChangesAsync(ct);return Results.Ok(To(p));});
-  api.MapGet("/{studentId:guid}/progress/weight", async(Guid studentId,PersonalUltraDbContext db,ClaimsPrincipal user,HttpContext c,CancellationToken ct)=>{if(!await Own(db,Id(user),studentId,ct))return c.ApiError("STUDENT_NOT_FOUND","Aluno não encontrado.",404);return Results.Ok(await db.WeightEntries.AsNoTracking().Where(x=>x.StudentId==studentId).OrderBy(x=>x.RecordedAt).Select(x=>new WeightResponse(x.Id,x.WeightKg,x.RecordedAt)).ToListAsync(ct));});
- }
- static Guid Id(ClaimsPrincipal u)=>Guid.Parse(u.FindFirstValue(ClaimTypes.NameIdentifier)!);static Task<bool> Own(PersonalUltraDbContext db,Guid t,Guid s,CancellationToken ct)=>db.TrainerStudents.AnyAsync(x=>x.TrainerId==t&&x.StudentId==s&&x.EndedAt==null,ct);static NutritionPlanResponse To(NutritionPlan p)=>new(p.Id,p.Name,p.Notes,p.Meals.OrderBy(x=>x.Sequence).Select(m=>new MealResponse(m.Id,m.Name,m.Sequence,m.Notes,m.Foods.Select(f=>new MealFoodInput(f.FoodName,f.QuantityGrams)).ToArray())).ToArray());
+    public static void MapNutritionProgressApi(this WebApplication app)
+    {
+        var api = app.MapGroup("/api/v1/students").RequireAuthorization();
+
+        api.MapGet("/{studentId:guid}/nutrition", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        {
+            var trainerId = Id(user);
+            if (!await Own(db, trainerId, studentId, ct))
+                return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+
+            var plan = await db.NutritionPlans.AsNoTracking()
+                .Include(x => x.Trainer).Include(x => x.Meals).ThenInclude(x => x.Foods)
+                .SingleOrDefaultAsync(x => x.StudentId == studentId, ct);
+            return plan is null ? Results.Text("null", "application/json") : Results.Ok(ToResponse(plan));
+        });
+
+        api.MapPut("/{studentId:guid}/nutrition", async (Guid studentId, NutritionPlanRequest? request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
+        {
+            var trainerId = Id(user);
+            if (!await Own(db, trainerId, studentId, ct))
+                return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+            if (ValidationError(request) is { } validationError)
+                return context.ApiError("VALIDATION_ERROR", validationError, 400);
+
+            var plan = await db.NutritionPlans.Include(x => x.Meals).ThenInclude(x => x.Foods)
+                .SingleOrDefaultAsync(x => x.StudentId == studentId, ct);
+            var now = clock.GetUtcNow();
+            if (plan is null)
+            {
+                plan = new NutritionPlan
+                {
+                    Id = Guid.NewGuid(), TrainerId = trainerId, CreatedByTrainerId = trainerId,
+                    UpdatedByTrainerId = trainerId, StudentId = studentId, CreatedAt = now,
+                };
+                db.NutritionPlans.Add(plan);
+            }
+
+            plan.TrainerId = trainerId;
+            plan.UpdatedByTrainerId = trainerId;
+            plan.Name = request!.Name!.Trim();
+            plan.Notes = request.Notes?.Trim() ?? "";
+            plan.UpdatedAt = now;
+
+            db.MealFoods.RemoveRange(plan.Meals.SelectMany(x => x.Foods));
+            db.Meals.RemoveRange(plan.Meals);
+            plan.Meals.Clear();
+
+            foreach (var (inputMeal, mealIndex) in request.Meals!.Select(x => x!).OrderBy(x => x.Sequence).Select((x, index) => (x, index)))
+            {
+                var meal = new Meal
+                {
+                    Id = Guid.NewGuid(), NutritionPlanId = plan.Id, Name = inputMeal.Name!.Trim(),
+                    Sequence = mealIndex + 1, Notes = inputMeal.Notes?.Trim() ?? "",
+                };
+                meal.Foods.AddRange(inputMeal.Foods!.Select(x => x!).OrderBy(x => x.Sequence).Select((food, foodIndex) => new MealFood
+                {
+                    Id = Guid.NewGuid(), MealId = meal.Id, FoodName = food.FoodName!.Trim(),
+                    Quantity = food.Quantity, Unit = food.Unit!.Trim(), Sequence = foodIndex + 1,
+                }));
+                plan.Meals.Add(meal);
+                db.Meals.Add(meal);
+            }
+
+            await db.SaveChangesAsync(ct);
+            plan.Trainer = await db.Trainers.SingleAsync(x => x.Id == trainerId, ct);
+            return Results.Ok(ToResponse(plan));
+        });
+
+        api.MapGet("/{studentId:guid}/progress/weight", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        {
+            if (!await Own(db, Id(user), studentId, ct))
+                return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
+            return Results.Ok(await db.WeightEntries.AsNoTracking().Where(x => x.StudentId == studentId)
+                .OrderBy(x => x.RecordedAt).Select(x => new WeightResponse(x.Id, x.WeightKg, x.RecordedAt)).ToListAsync(ct));
+        });
+    }
+
+    private static string? ValidationError(NutritionPlanRequest? request)
+    {
+        if (request is null) return "Informe o plano alimentar.";
+        if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 200) return "Informe um nome de plano com até 200 caracteres.";
+        if (request.Notes?.Length > 2000) return "As observações do plano devem ter até 2000 caracteres.";
+        if (request.Meals is null || request.Meals.Count is < 1 or > 20) return "Informe de 1 a 20 refeições.";
+        if (request.Meals.Any(x => x is null)) return "Informe refeições válidas.";
+
+        var meals = request.Meals.Select(x => x!).ToArray();
+        if (meals.Any(x => string.IsNullOrWhiteSpace(x.Name) || x.Name.Length > 200)) return "Cada refeição deve ter nome com até 200 caracteres.";
+        if (meals.Any(x => x.Notes?.Length > 1000)) return "As observações de cada refeição devem ter até 1000 caracteres.";
+        if (meals.Any(x => x.Sequence <= 0) || meals.Select(x => x.Sequence).Distinct().Count() != meals.Length) return "As sequências das refeições devem ser positivas e distintas.";
+        if (meals.Any(x => x.Foods is null || x.Foods.Count is < 1 or > 30)) return "Cada refeição deve ter de 1 a 30 itens.";
+        if (meals.SelectMany(x => x.Foods!).Any(x => x is null)) return "Informe itens válidos para cada refeição.";
+
+        foreach (var meal in meals)
+        {
+            var foods = meal.Foods!.Select(x => x!).ToArray();
+            if (foods.Any(x => string.IsNullOrWhiteSpace(x.FoodName) || x.FoodName.Length > 200)) return "Cada item deve ter nome com até 200 caracteres.";
+            if (foods.Any(x => x.Quantity <= 0 || x.Quantity > 10000)) return "A quantidade de cada item deve ser maior que zero e menor ou igual a 10000.";
+            if (foods.Any(x => string.IsNullOrWhiteSpace(x.Unit) || x.Unit.Length > 40)) return "Cada item deve ter uma unidade com até 40 caracteres.";
+            if (foods.Any(x => x.Sequence <= 0) || foods.Select(x => x.Sequence).Distinct().Count() != foods.Length) return "As sequências dos itens devem ser positivas e distintas em cada refeição.";
+        }
+        return null;
+    }
+
+    private static Guid Id(ClaimsPrincipal user) => Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
+    private static Task<bool> Own(PersonalUltraDbContext db, Guid trainerId, Guid studentId, CancellationToken ct) =>
+        db.TrainerStudents.AnyAsync(x => x.TrainerId == trainerId && x.StudentId == studentId && x.EndedAt == null, ct);
+
+    private static NutritionPlanResponse ToResponse(NutritionPlan plan) => new(
+        plan.Id, plan.Name, plan.Notes, plan.UpdatedAt, plan.Trainer.Name,
+        plan.Meals.OrderBy(x => x.Sequence).Select(meal => new MealResponse(
+            meal.Id, meal.Name, meal.Sequence, meal.Notes,
+            meal.Foods.OrderBy(x => x.Sequence).Select(food => new MealFoodResponse(
+                food.Id, food.FoodName, food.Quantity, food.Unit, food.Sequence)).ToArray())).ToArray());
 }

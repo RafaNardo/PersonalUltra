@@ -37,11 +37,11 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
 
         if (!await dbContext.NutritionPlans.AnyAsync(x => x.StudentId == DemoIds.StudentId, cancellationToken))
         {
-            var plan = new NutritionPlan { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Base de performance", Notes = "Plano demonstrativo cadastrado pelo personal.", UpdatedAt = now };
+            var plan = new NutritionPlan { Id = Guid.NewGuid(), TrainerId = DemoIds.TrainerId, CreatedByTrainerId = DemoIds.TrainerId, UpdatedByTrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Base de performance", Notes = "Plano demonstrativo cadastrado pelo personal.", CreatedAt = now, UpdatedAt = now };
             foreach (var (name, foods) in new[] { ("Café da manhã", new[] { ("Ovos", 150m), ("Fruta", 120m) }), ("Almoço", new[] { ("Arroz", 150m), ("Frango", 180m), ("Salada", 100m) }), ("Jantar", new[] { ("Batata", 180m), ("Carne magra", 160m) }) }.Select((x, i) => (x.Item1, x.Item2)))
             {
                 var meal = new Meal { Id = Guid.NewGuid(), NutritionPlanId = plan.Id, Name = name, Sequence = plan.Meals.Count + 1 };
-                meal.Foods.AddRange(foods.Select(f => new MealFood { Id = Guid.NewGuid(), MealId = meal.Id, FoodName = f.Item1, QuantityGrams = f.Item2 })); plan.Meals.Add(meal);
+                meal.Foods.AddRange(foods.Select((f, index) => new MealFood { Id = Guid.NewGuid(), MealId = meal.Id, FoodName = f.Item1, Quantity = f.Item2, Unit = "g", Sequence = index + 1 })); plan.Meals.Add(meal);
             }
             dbContext.Add(plan);
         }
