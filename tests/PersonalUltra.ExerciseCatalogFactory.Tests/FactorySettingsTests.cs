@@ -45,12 +45,13 @@ public sealed class FactorySettingsTests
     public void ValidateLocalConfiguration_reports_invalid_non_secret_values()
     {
         var settings = new FactorySettings(
-            "workspace", "future", null, null, "", "http://insecure.invalid", "", false, 0,
+            "workspace", "future", null, null, "", 3, 0, 0, "", "http://insecure.invalid", "", false, 0,
             null, null, null);
 
         var errors = settings.ValidateLocalConfiguration();
 
         Assert.Contains(errors, error => error.Contains("SchemaVersion", StringComparison.Ordinal));
+        Assert.Contains(errors, error => error.Contains("MetadataModel", StringComparison.Ordinal));
         Assert.Contains(errors, error => error.Contains("ImageModel", StringComparison.Ordinal));
         Assert.Contains(errors, error => error.Contains("EndpointUrl", StringComparison.Ordinal));
     }
@@ -76,12 +77,17 @@ public sealed class FactorySettingsTests
         string? openAiApiKey = null,
         string? bucketName = null,
         string? bucketAccessKeyId = null,
-        string? bucketSecretAccessKey = null) =>
+        string? bucketSecretAccessKey = null,
+        int metadataMaxAttempts = 3) =>
         new(
             workspace ?? Path.Combine(Path.GetTempPath(), $"personal-ultra-settings-{Guid.NewGuid():N}"),
             "1",
             openAiApiKey,
             "gpt-5.6-luna",
+            "exercise-metadata-v1",
+            0m,
+            0.01m,
+            metadataMaxAttempts,
             "gpt-image-2",
             "https://example.invalid",
             "auto",

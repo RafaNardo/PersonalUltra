@@ -1,0 +1,26 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://personal-ultra.local/schemas/v1/metadata-proposal.schema.json",
+  "title": "Exercise metadata proposal v1",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["canonicalName", "aliases", "primaryMuscleGroup", "equipment", "instructions", "visualDescription", "ambiguities", "confidence"],
+  "properties": {
+    "canonicalName": { "type": "string", "minLength": 1, "maxLength": 200 },
+    "aliases": { "type": "array", "maxItems": 20, "items": { "type": "string", "minLength": 1, "maxLength": 200 } },
+    "primaryMuscleGroup": { "type": "string", "enum": ["Quadríceps", "Posteriores da coxa", "Glúteos", "Panturrilhas", "Peito", "Costas", "Ombros", "Bíceps", "Tríceps", "Core", "Corpo inteiro", "Cardio"] },
+    "equipment": { "type": "string", "enum": ["Barra", "Halteres", "Cabo", "Máquina", "Peso corporal", "Elástico", "Caneleira", "Kettlebell", "Trap bar", "Landmine", "Suspensão", "Bola suíça", "Sliders", "Rolo abdominal", "Trenó", "Corda naval", "Medicine ball", "Cardio"] },
+    "instructions": { "type": "string", "minLength": 1, "maxLength": 4000 },
+    "visualDescription": { "type": "string", "minLength": 1, "maxLength": 2000 },
+    "ambiguities": { "type": "array", "maxItems": 10, "items": { "type": "string", "minLength": 1, "maxLength": 500 } },
+    "confidence": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["primaryMuscleGroup", "equipment"],
+      "properties": {
+        "primaryMuscleGroup": { "type": "string", "enum": ["low", "medium", "high"] },
+        "equipment": { "type": "string", "enum": ["low", "medium", "high"] }
+      }
+    }
+  }
+}

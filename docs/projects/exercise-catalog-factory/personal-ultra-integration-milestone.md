@@ -1,7 +1,9 @@
 # Milestone proposta — catálogo remoto e Exercise Catalog Factory
 
-Status: **plano aprovado; casca de `PU-ECF-001` implementada sem chamadas
-externas**. Geração paga, bucket e alterações no produto continuam pendentes.
+Status: **plano aprovado; `PU-ECF-001` a `PU-ECF-004` e o adapter privado de
+bucket implementados sem chamadas OpenAI pagas; o smoke real do bucket passou
+em 2026-08-24**. Revisão humana, geração paga e alterações no produto continuam
+pendentes.
 
 Esta milestone substitui somente a decisão anterior de construir a factory em
 outro repositório TypeScript. Os contratos de revisão, idempotência, retomada e
@@ -271,6 +273,20 @@ humano continua aberto.
 - lotes retomáveis e orçamento;
 - propostas permanecem pendentes.
 
+Situação: adapter real da OpenAI Responses API implementado atrás de
+`IMetadataProvider`, usando Structured Outputs com JSON Schema estrito v1,
+taxonomia allowlist e prompt/model/temperatura versionados. `metadata enrich` é
+dry-run por padrão e exige `--max-items`, `--max-cost` e `--execute` para chamar
+o provider. O orçamento reserva o pior caso de retries por estágio/item/input
+hash e falhas não descartam sucessos anteriores. Cada tentativa recebe
+checkpoint `started` antes da chamada e uma idempotency key determinística
+persistida; retomadas recuperam primeiro um artefato órfão válido. Uma tentativa
+incerta sem artefato nunca é redisparada automaticamente: bloqueia por padrão e só pode ser encerrada e substituída
+por nova tentativa/custo com `--execute --retry-uncertain`. Campos travados são
+reaplicados e validados; ambiguidades já bloqueadas no intake não são enviadas e
+toda proposta termina em `metadata_review`, nunca aprovada automaticamente.
+Nenhuma chamada paga foi executada nesta implementação.
+
 ### `PU-ECF-005` — Revisão de metadados
 
 - listar, editar, aprovar, rejeitar e mesclar;
@@ -297,11 +313,10 @@ credenciais opacas, validação estrita de endpoint/região/addressing e object 
 exclusiva para smoke. `bucket doctor` é somente leitura; `bucket smoke` é
 dry-run sem `--execute` e o modo real valida PUT/HEAD/GET, bytes, SHA-256, MIME,
 GET assinado e cleanup exato em `finally`, sem listar/remover prefixos nem
-exibir secrets ou URLs assinadas. A validação externa atual alcançou o endpoint:
-`HEAD bucket` retornou `Forbidden` e o `PUT` delimitado retornou
-`InvalidAccessKeyId` em virtual-hosted style; path-style também retornou 403.
-O gate real permanece bloqueado até o access key configurado ser aceito pelo
-bucket/endpoint correspondente.
+exibir secrets ou URLs assinadas. Em 2026-08-24, após atualização das
+credenciais/configuração, o smoke real passou em virtual-hosted style: PUT,
+HEAD, GET autenticado, GET assinado, bytes, SHA-256, MIME, DELETE da chave exata
+e `NotFound` final foram confirmados. O cleanup terminou sem objeto residual.
 
 ### `PU-ECF-007` — Prompt visual e piloto pago
 

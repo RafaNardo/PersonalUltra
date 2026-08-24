@@ -123,18 +123,20 @@
     "attempt": {
       "type": "object",
       "additionalProperties": false,
-      "required": ["stage", "provider", "model", "attempt", "startedAt", "inputHash", "status", "cost"],
+      "required": ["stage", "itemKey", "provider", "model", "idempotencyKey", "attempt", "startedAt", "inputHash", "status", "cost"],
       "properties": {
         "stage": { "enum": ["metadata", "image"] },
+        "itemKey": { "type": "string", "minLength": 1 },
         "provider": { "type": "string", "minLength": 1 },
         "model": { "type": "string", "minLength": 1 },
+        "idempotencyKey": { "type": "string", "pattern": "^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$" },
         "requestId": { "type": ["string", "null"] },
         "attempt": { "type": "integer", "minimum": 1 },
         "startedAt": { "type": "string", "format": "date-time" },
         "finishedAt": { "type": ["string", "null"], "format": "date-time" },
         "inputHash": { "$ref": "#/$defs/sha256" },
         "promptVersion": { "type": ["string", "null"] },
-        "status": { "enum": ["started", "succeeded", "failed_retryable", "failed_terminal"] },
+        "status": { "enum": ["started", "succeeded", "failed_retryable", "failed_uncertain", "failed_terminal"] },
         "cost": {
           "type": "object",
           "additionalProperties": false,

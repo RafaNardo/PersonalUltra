@@ -70,7 +70,7 @@ public sealed class FactoryApplicationTests : IDisposable
         var output = new StringWriter();
         var error = new StringWriter();
         var invalidSettings = new PersonalUltra.ExerciseCatalogFactory.Configuration.FactorySettings(
-            Path.Combine(_root, "workspace"), "invalid", null, null, "", "http://invalid", "", false, 0,
+            Path.Combine(_root, "workspace"), "invalid", null, null, "", 0, 0, 0, "", "http://invalid", "", false, 0,
             null, null, null);
         var application = new FactoryApplication(invalidSettings, output, error);
 

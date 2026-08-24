@@ -127,8 +127,10 @@ Regras:
 ```json
 {
   "stage": "image",
+  "itemKey": "bench-press-barbell",
   "provider": "openai",
   "model": "configured-at-run-time",
+  "idempotencyKey": "ecf-image-<hash-deterministico>",
   "requestId": "provider-response-id",
   "attempt": 1,
   "startedAt": "2026-08-14T12:00:00Z",
@@ -141,6 +143,10 @@ Regras:
 ```
 
 Não registrar token, Authorization header ou bytes/base64 no JSON de log.
+Uma tentativa persistida como `started` sem artefato não pode ser redisparada
+automaticamente. Se o operador confirmar uma nova tentativa, a anterior passa a
+`failed_uncertain`, continua contabilizada e a nova recebe outro número,
+idempotency key e reserva de custo.
 
 ## Decisão de revisão
 
@@ -208,4 +214,3 @@ O relatório precisa listar:
 - arquivos a adicionar/alterar;
 - comandos de validação do target;
 - avisos que bloqueiam aplicação.
-

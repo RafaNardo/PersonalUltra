@@ -1,8 +1,8 @@
 # Personal Ultra Exercise Catalog Factory
 
-Ferramenta sob demanda. O intake continua local e não chama OpenAI, PostgreSQL,
-APIs ou app. O adapter S3 privado pode ser acionado apenas pelos comandos
-explícitos descritos abaixo.
+Ferramenta sob demanda. Intake e dry-runs continuam locais e não chamam OpenAI,
+PostgreSQL, APIs ou app. Os adapters OpenAI e S3 só podem ser acionados por
+comandos explícitos protegidos pelos limites descritos abaixo.
 
 ## Uso local
 
@@ -31,6 +31,40 @@ O intake v1 materializa os 232 candidatos em
 identidades legadas permanecem congeladas; duplicatas, colisões, aliases
 prováveis e impactos de taxonomia são reportados para gate humano, sem IA,
 rede, custo ou resolução silenciosa.
+
+## Enriquecimento estruturado
+
+Defina explicitamente `OpenAI:MetadataModel` em `appsettings.json` ou pela
+variável `PERSONAL_ULTRA_FACTORY_OpenAI__MetadataModel`. Não existe model default:
+`doctor` fica `BLOCKED` enquanto essa decisão não estiver configurada. Até o
+dry-run exige o model para que o hash e a estimativa representem o run real.
+
+O plano é local, não exige chave e não altera o manifesto:
+
+```powershell
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- metadata enrich --run <runId> --max-items 10 --max-cost 1.00
+```
+
+Somente `--execute` permite chamadas à Responses API. O teto reserva o pior
+caso de retries antes da primeira chamada; cada item recebe checkpoint próprio.
+A tentativa `started` e sua idempotency key determinística são persistidas antes
+da chamada. Em uma interrupção, a retomada recupera o artefato atômico já salvo.
+Uma tentativa `started` sem artefato nunca é repetida
+automaticamente: o comando bloqueia sem chamada. Somente a confirmação conjunta
+`--execute --retry-uncertain` encerra essa tentativa como `failed_uncertain` e
+autoriza uma tentativa nova, com nova idempotency key e nova reserva de custo;
+isso pode representar uma segunda cobrança. O model ID, temperatura, versão do
+prompt, estimativa por tentativa e máximo de tentativas ficam em
+`appsettings.json`. Respostas passam pelo JSON Schema estrito e pela taxonomia
+local. Campos `lockedFields` são reaplicados e verificados. Todas as propostas
+terminam em `metadata_review`; confiança alta nunca significa aprovação.
+
+```powershell
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- metadata enrich --run <runId> --max-items 10 --max-cost 1.00 --execute
+```
+
+Itens bloqueados pelo intake não são enviados à OpenAI. O comando não registra
+chaves, headers, payload bruto nem mensagens potencialmente sensíveis do provider.
 
 `doctor` separa readiness local de integrações pendentes e não acessa serviços
 externos. O diagnóstico específico do bucket é somente leitura:

@@ -62,8 +62,10 @@ public sealed record ReviewDecision(
 
 public sealed record ProviderAttempt(
     string Stage,
+    string ItemKey,
     string Provider,
     string Model,
+    string IdempotencyKey,
     string? RequestId,
     int Attempt,
     DateTimeOffset StartedAt,

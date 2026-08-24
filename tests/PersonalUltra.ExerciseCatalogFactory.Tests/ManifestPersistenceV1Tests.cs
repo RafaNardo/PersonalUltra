@@ -15,7 +15,8 @@ public sealed class ManifestPersistenceV1Tests : IDisposable
         var store = new RunStore(_root);
         var run = CreateRun("reopen") with
         {
-            Attempts = [new ProviderAttempt("metadata", "openai", "configured-model", "response_123", 2,
+            Items = [ValidItem()],
+            Attempts = [new ProviderAttempt("metadata", "bench", "openai", "configured-model", "idem-reopen", "response_123", 2,
                 DateTimeOffset.Parse("2026-08-14T12:00:00Z"), DateTimeOffset.Parse("2026-08-14T12:00:01Z"),
                 Hash, "metadata-v1", "succeeded", new ProviderCost("USD", 0.01m, 0.009m),
                 new ProviderUsage(100, 20, null))],
@@ -29,7 +30,7 @@ public sealed class ManifestPersistenceV1Tests : IDisposable
         Assert.Equal(run.SchemaVersion, reopened.SchemaVersion);
         Assert.Equal(run.RunId, reopened.RunId);
         Assert.Equal(run.Versions, reopened.Versions);
-        Assert.Empty(reopened.Items!);
+        Assert.Single(reopened.Items!);
         Assert.Empty(reopened.Outputs!);
         Assert.Equal(0.009m, reopened!.Usage!.ObservedCost);
         Assert.Equal("response_123", Assert.Single(reopened.Attempts!).RequestId);
@@ -59,7 +60,8 @@ public sealed class ManifestPersistenceV1Tests : IDisposable
     {
         var run = CreateRun("redaction") with
         {
-            Attempts = [new ProviderAttempt("image", "openai", "gpt-image", sensitive, 1,
+            Items = [ValidItem()],
+            Attempts = [new ProviderAttempt("image", "bench", "openai", "gpt-image", "idem-redaction", sensitive, 1,
                 DateTimeOffset.UtcNow, null, Hash, "image-v1", "started", new ProviderCost("USD", null, null))]
         };
 
@@ -196,7 +198,7 @@ public sealed class ManifestPersistenceV1Tests : IDisposable
             DateTimeOffset.Parse("2026-08-14T12:00:00Z"), Hash);
 
     private static ProviderAttempt ValidAttempt() =>
-        new("metadata", "openai", "model", null, 1, DateTimeOffset.Parse("2026-08-14T12:00:00Z"),
+        new("metadata", "bench", "openai", "model", "idem-valid", null, 1, DateTimeOffset.Parse("2026-08-14T12:00:00Z"),
             null, Hash, "metadata-v1", "started", new ProviderCost("USD", null, null));
 
     private static string Normalize(string value) => value.Replace("\r\n", "\n", StringComparison.Ordinal).Trim();

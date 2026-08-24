@@ -78,6 +78,21 @@ public sealed partial class RunStore
         return await File.ReadAllBytesAsync(path, cancellationToken);
     }
 
+    public async Task<ArtifactReference?> TryReferenceArtifactAsync(
+        string runId,
+        string stage,
+        string relativePath,
+        CancellationToken cancellationToken = default)
+    {
+        ValidateRunId(runId);
+        if (stage is not ("normalization" or "metadata" or "image" or "export"))
+            throw new ArgumentException("Estágio de artefato inválido.", nameof(stage));
+        var path = ResolveDescendant(GetRunDirectory(runId), relativePath);
+        if (!File.Exists(path)) return null;
+        var (sha256, length) = await ComputeIntegrityAsync(path, cancellationToken);
+        return new ArtifactReference(stage, relativePath.Replace(Path.DirectorySeparatorChar, '/'), sha256, length);
+    }
+
     public void Initialize()
     {
         Directory.CreateDirectory(RunsRoot);
@@ -323,7 +338,16 @@ public sealed partial class RunStore
         {
             if (attempt is null) throw new InvalidDataException("Tentativa nula no manifesto.");
             ValidateAttempt(attempt);
+            if (!(run.Items ?? []).Any(item => item.ExternalKey == attempt.ItemKey))
+                throw new InvalidDataException("itemKey da tentativa não existe no manifesto.");
         }
+        var duplicateAttempt = (run.Attempts ?? []).GroupBy(attempt =>
+                (attempt.Stage, attempt.ItemKey, attempt.InputHash, attempt.Attempt))
+            .FirstOrDefault(group => group.Count() > 1);
+        if (duplicateAttempt is not null) throw new InvalidDataException("Tentativa lógica duplicada no manifesto.");
+        var duplicateIdempotencyKey = (run.Attempts ?? []).GroupBy(attempt => attempt.IdempotencyKey, StringComparer.Ordinal)
+            .FirstOrDefault(group => group.Count() > 1)?.Key;
+        if (duplicateIdempotencyKey is not null) throw new InvalidDataException("Idempotency key duplicada no manifesto.");
         if (run.Usage is { EstimatedCost: < 0 } or { ObservedCost: < 0 } or { Attempts: < 0 })
             throw new InvalidDataException("Resumo de usage inválido.");
         if (run.Usage is { } usage) EnsureSafeText(usage.Currency, "moeda do usage");
@@ -392,14 +416,18 @@ public sealed partial class RunStore
     private static void ValidateAttempt(ProviderAttempt attempt)
     {
         if (attempt.Stage is not ("metadata" or "image")) throw new InvalidDataException("Estágio de tentativa inválido.");
-        if (attempt.Status is not ("started" or "succeeded" or "failed_retryable" or "failed_terminal"))
+        if (attempt.Status is not ("started" or "succeeded" or "failed_retryable" or "failed_uncertain" or "failed_terminal"))
             throw new InvalidDataException("Status de tentativa inválido.");
         if (attempt.Attempt < 1) throw new InvalidDataException("Número de tentativa inválido.");
         if (attempt.FinishedAt < attempt.StartedAt) throw new InvalidDataException("Duração de tentativa inválida.");
         ValidateSha256(attempt.InputHash, "inputHash da tentativa");
         EnsureSafeText(attempt.Stage, "estágio da tentativa");
+        EnsureSafeText(attempt.ItemKey, "itemKey da tentativa");
         EnsureSafeText(attempt.Provider, "provider");
         EnsureSafeText(attempt.Model, "model");
+        EnsureSafeText(attempt.IdempotencyKey, "idempotencyKey");
+        if (!IdempotencyKeyPattern().IsMatch(attempt.IdempotencyKey))
+            throw new InvalidDataException("idempotencyKey inválida.");
         EnsureSafeOptionalText(attempt.RequestId, "requestId");
         EnsureSafeOptionalText(attempt.PromptVersion, "promptVersion");
         EnsureSafeText(attempt.Status, "status da tentativa");
@@ -455,6 +483,9 @@ public sealed partial class RunStore
 
     [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]{0,63}$", RegexOptions.CultureInvariant)]
     private static partial Regex RunIdPattern();
+
+    [GeneratedRegex("^[A-Za-z0-9][A-Za-z0-9._-]{0,127}$", RegexOptions.CultureInvariant)]
+    private static partial Regex IdempotencyKeyPattern();
 
     [GeneratedRegex("^[a-f0-9]{64}$", RegexOptions.CultureInvariant)]
     private static partial Regex Sha256Pattern();

@@ -5,10 +5,16 @@ using PersonalUltra.ExerciseCatalogFactory.Logging;
 using PersonalUltra.ExerciseCatalogFactory.Intake;
 using PersonalUltra.ExerciseCatalogFactory.Persistence;
 using PersonalUltra.ExerciseCatalogFactory.Publishing.S3;
+using PersonalUltra.ExerciseCatalogFactory.Providers.Text;
+using System.Globalization;
 
 namespace PersonalUltra.ExerciseCatalogFactory.Cli;
 
-public sealed class FactoryApplication(FactorySettings settings, TextWriter output, TextWriter error)
+public sealed class FactoryApplication(
+    FactorySettings settings,
+    TextWriter output,
+    TextWriter error,
+    IMetadataProvider? metadataProvider = null)
 {
     public async Task<int> RunAsync(string[] args, CancellationToken cancellationToken = default)
     {
@@ -24,6 +30,11 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
             {
                 return await new BucketCommands(settings, output, error)
                     .RunAsync(args[1..], cancellationToken);
+            }
+
+            if (args[0].Equals("metadata", StringComparison.OrdinalIgnoreCase))
+            {
+                return await MetadataAsync(args[1..], cancellationToken);
             }
 
             var command = CommandLine.Parse(args);
@@ -74,6 +85,52 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
             await error.WriteLineAsync($"Falha local: {exception.Message}");
             return 2;
         }
+    }
+
+    private async Task<int> MetadataAsync(string[] args, CancellationToken cancellationToken)
+    {
+        var command = CommandLine.Parse(args);
+        if (command.Name != "enrich") return UnknownCommand($"metadata {command.Name}");
+        command.EnsureOnly("--workspace", "--run", "--max-items", "--max-cost", "--execute", "--retry-uncertain");
+        command.EnsureFlag("--execute");
+        command.EnsureFlag("--retry-uncertain");
+        var runId = command.RequiredOption("--run");
+        if (!int.TryParse(command.RequiredOption("--max-items"), NumberStyles.None, CultureInfo.InvariantCulture, out var maxItems))
+            throw new ArgumentException("--max-items inválido.");
+        if (!decimal.TryParse(command.RequiredOption("--max-cost"), NumberStyles.Number, CultureInfo.InvariantCulture, out var maxCost))
+            throw new ArgumentException("--max-cost inválido; use ponto como separador decimal.");
+        var execute = command.HasOption("--execute");
+        var retryUncertain = command.HasOption("--retry-uncertain");
+        if (retryUncertain && !execute)
+            throw new ArgumentException("--retry-uncertain exige confirmação conjunta com --execute.");
+        var workspace = command.Option("--workspace") is { } configuredWorkspace
+            ? FactorySettings.ResolveWorkspaceRoot(configuredWorkspace)
+            : settings.WorkspaceRoot;
+        var store = new RunStore(workspace);
+        var run = await store.LoadAsync(runId, cancellationToken);
+        if (run is null)
+        {
+            await error.WriteLineAsync($"Run não encontrado: {runId}");
+            return 2;
+        }
+
+        IMetadataProvider provider = metadataProvider ?? (execute
+            ? new OpenAiMetadataProvider(new HttpClient(), settings.GetOpenAiCredentials().ApiKey)
+            : new DryRunMetadataProvider());
+        if (retryUncertain)
+            await output.WriteLineAsync("ATENÇÃO: --retry-uncertain assume possível cobrança anterior e autoriza uma NOVA tentativa/cobrança dentro dos limites informados.");
+        var result = await new MetadataEnrichmentProcessor(store, settings, provider)
+            .ExecuteAsync(run, new MetadataExecutionOptions(maxItems, maxCost, execute, retryUncertain), cancellationToken);
+        if (!execute)
+        {
+            await output.WriteLineAsync($"Plano de metadados: itens={result.Planned}; estimativa máxima=USD {result.EstimatedCostUsd:F4}.");
+            await output.WriteLineAsync("Dry-run: nenhuma chamada OpenAI ou alteração no manifesto foi executada. Use --execute para confirmar.");
+            return 0;
+        }
+
+        await output.WriteLineAsync($"Enriquecimento: gerados={result.Generated}; cache hits={result.CacheHits}; falhas={result.Failed}; status={result.Run.Status}.");
+        await output.WriteLineAsync("Todas as propostas aguardam revisão humana; nenhuma foi aprovada automaticamente.");
+        return result.Failed == 0 ? 0 : 4;
     }
 
     private async Task<int> InitializeAsync(
@@ -293,7 +350,7 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
         }
 
         output.WriteLine("Adapter S3: disponível; use 'bucket doctor' para probe somente leitura.");
-        output.WriteLine("Adapter OpenAI: pendente; nenhuma conexão OpenAI foi tentada.");
+        output.WriteLine("Adapter OpenAI: disponível; enriquecimento permanece dry-run sem --execute.");
         output.WriteLine("Target profile: validação planejada para PU-ECF-009/010.");
 
         if (localErrors.Count == 0)
@@ -346,9 +403,16 @@ public sealed class FactoryApplication(FactorySettings settings, TextWriter outp
         output.WriteLine("  doctor [--workspace <pasta>]");
         output.WriteLine("  bucket doctor");
         output.WriteLine("  bucket smoke [--execute]");
+        output.WriteLine("  metadata enrich --run <id> --max-items <n> --max-cost <usd> [--execute] [--retry-uncertain]");
         output.WriteLine();
         output.WriteLine("Comandos mutáveis operam em dry-run, salvo confirmação explícita com --execute.");
     }
+}
+
+internal sealed class DryRunMetadataProvider : IMetadataProvider
+{
+    public Task<MetadataProviderResult> GenerateAsync(MetadataRequest request, ProviderCallContext call, CancellationToken cancellationToken) =>
+        throw new InvalidOperationException("O provider não pode ser chamado durante dry-run.");
 }
 
 internal sealed class ParsedCommand(string name, IReadOnlyDictionary<string, string?> options)
@@ -356,6 +420,10 @@ internal sealed class ParsedCommand(string name, IReadOnlyDictionary<string, str
     public string Name { get; } = name;
 
     public string? Option(string name) => options.GetValueOrDefault(name);
+
+    public string RequiredOption(string name) => Option(name) is { Length: > 0 } value
+        ? value
+        : throw new ArgumentException($"Use {name} <valor>.");
 
     public bool HasOption(string name) => options.ContainsKey(name);
 

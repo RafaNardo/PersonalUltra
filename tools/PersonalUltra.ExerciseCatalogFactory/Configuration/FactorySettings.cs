@@ -14,6 +14,10 @@ public sealed class FactorySettings
         string schemaVersion,
         string? openAiApiKey,
         string? metadataModel,
+        string metadataPromptVersion,
+        decimal metadataTemperature,
+        decimal metadataEstimatedCostUsd,
+        int metadataMaxAttempts,
         string imageModel,
         string bucketEndpointUrl,
         string bucketRegion,
@@ -26,6 +30,10 @@ public sealed class FactorySettings
         WorkspaceRoot = workspaceRoot;
         SchemaVersion = schemaVersion;
         MetadataModel = NullIfWhiteSpace(metadataModel);
+        MetadataPromptVersion = metadataPromptVersion;
+        MetadataTemperature = metadataTemperature;
+        MetadataEstimatedCostUsd = metadataEstimatedCostUsd;
+        MetadataMaxAttempts = metadataMaxAttempts;
         ImageModel = imageModel;
         BucketEndpointUrl = bucketEndpointUrl;
         BucketRegion = bucketRegion;
@@ -40,11 +48,21 @@ public sealed class FactorySettings
     public string WorkspaceRoot { get; }
     public string SchemaVersion { get; }
     public string? MetadataModel { get; }
+    public string MetadataPromptVersion { get; }
+    public decimal MetadataTemperature { get; }
+    public decimal MetadataEstimatedCostUsd { get; }
+    public int MetadataMaxAttempts { get; }
     public string ImageModel { get; }
     public string BucketEndpointUrl { get; }
     public string BucketRegion { get; }
     public bool BucketForcePathStyle { get; }
     public int SignedUrlLifetimeMinutes { get; }
+
+    internal OpenAiCredentials GetOpenAiCredentials()
+    {
+        if (_openAiApiKey is null) throw new InvalidOperationException("OpenAI não configurada. Secret ausente: ai-api-key.");
+        return new OpenAiCredentials(_openAiApiKey);
+    }
 
     internal BucketOptions GetBucketOptions() => new(
         BucketEndpointUrl,
@@ -81,6 +99,10 @@ public sealed class FactorySettings
             schemaVersion: configuration["Factory:SchemaVersion"] ?? "1",
             openAiApiKey: configuration["ai-api-key"],
             metadataModel: configuration["OpenAI:MetadataModel"],
+            metadataPromptVersion: configuration["OpenAI:MetadataPromptVersion"] ?? "exercise-metadata-v1",
+            metadataTemperature: configuration.GetValue("OpenAI:MetadataTemperature", 0m),
+            metadataEstimatedCostUsd: configuration.GetValue("OpenAI:MetadataEstimatedCostUsd", 0.01m),
+            metadataMaxAttempts: configuration.GetValue("OpenAI:MetadataMaxAttempts", 3),
             imageModel: configuration["OpenAI:ImageModel"] ?? "gpt-image-2",
             bucketEndpointUrl: configuration["RailwayBucket:EndpointUrl"] ?? string.Empty,
             bucketRegion: configuration["RailwayBucket:Region"] ?? "auto",
@@ -137,7 +159,12 @@ public sealed class FactorySettings
     {
         var errors = new List<string>();
         if (SchemaVersion != "1") errors.Add($"Factory:SchemaVersion não suportado: {SchemaVersion}");
+        if (MetadataModel is null) errors.Add("OpenAI:MetadataModel precisa ser configurado explicitamente.");
         if (string.IsNullOrWhiteSpace(ImageModel)) errors.Add("OpenAI:ImageModel não pode ficar vazio.");
+        if (string.IsNullOrWhiteSpace(MetadataPromptVersion)) errors.Add("OpenAI:MetadataPromptVersion não pode ficar vazio.");
+        if (MetadataTemperature is < 0 or > 2) errors.Add("OpenAI:MetadataTemperature deve ficar entre 0 e 2.");
+        if (MetadataEstimatedCostUsd <= 0) errors.Add("OpenAI:MetadataEstimatedCostUsd deve ser maior que zero.");
+        if (MetadataMaxAttempts is < 1 or > 5) errors.Add("OpenAI:MetadataMaxAttempts deve ficar entre 1 e 5.");
         try
         {
             _ = GetBucketOptions();
@@ -164,4 +191,9 @@ public sealed class FactorySettings
 
     private static string? NullIfWhiteSpace(string? value) =>
         string.IsNullOrWhiteSpace(value) ? null : value;
+}
+
+internal sealed class OpenAiCredentials(string apiKey)
+{
+    public string ApiKey { get; } = apiKey;
 }
