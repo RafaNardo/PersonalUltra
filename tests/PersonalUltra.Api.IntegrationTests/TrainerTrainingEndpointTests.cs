@@ -59,10 +59,9 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             Assert.DoesNotContain(items, item => item.Id == inactive.Id);
             Assert.Equal(items.OrderBy(item => item.Name).ThenBy(item => item.Slug).ThenBy(item => item.Id), items);
             var remote = Assert.Single(items.Take(1).Concat(items.Skip(1)).Where(item => item.ImageRef.StartsWith("media://", StringComparison.Ordinal)).Take(1));
-            Assert.StartsWith("media://exercise-catalog/v2/", remote.ImageRef);
+            Assert.StartsWith("media://exercise-catalog/delivery/v1/", remote.ImageRef);
             Assert.StartsWith("https://", remote.ImageUrl);
-            var legacy = Assert.Single(items.Where(item => item.ImageRef.StartsWith("assets/training/", StringComparison.Ordinal)).Take(1));
-            Assert.Null(legacy.ImageUrl);
+            Assert.All(items, item => Assert.StartsWith("https://", item.ImageUrl));
 
             using var verificationScope = factory.Services.CreateScope();
             var verificationDb = verificationScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();

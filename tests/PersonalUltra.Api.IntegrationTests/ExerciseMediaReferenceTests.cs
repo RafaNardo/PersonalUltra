@@ -14,6 +14,24 @@ public sealed class ExerciseMediaReferenceTests
         Assert.Equal("exercise-catalog/v2/agachamento-com-barra.png", reference.ObjectKey);
     }
 
+    [Fact]
+    public void Legacy_replacement_reference_maps_to_the_v3_bucket_key()
+    {
+        var reference = ExerciseMediaReference.Parse(
+            "media://exercise-catalog/v3/agachamento-livre.png");
+
+        Assert.Equal("exercise-catalog/v3/agachamento-livre.png", reference.ObjectKey);
+    }
+
+    [Fact]
+    public void Delivery_reference_maps_to_the_lightweight_webp_key()
+    {
+        var reference = ExerciseMediaReference.Parse(
+            "media://exercise-catalog/delivery/v1/agachamento-livre.webp");
+
+        Assert.Equal("exercise-catalog/delivery/v1/agachamento-livre.webp", reference.ObjectKey);
+    }
+
     [Theory]
     [InlineData("media://exercise-catalog/v2/../secret.png")]
     [InlineData("media://another-bucket/v2/agachamento.png")]

@@ -412,10 +412,11 @@ public sealed class FactoryApplication(
         output.WriteLine("  bucket doctor");
         output.WriteLine("  bucket smoke [--execute]");
         output.WriteLine("  metadata enrich --run <id> --max-items <n> --max-cost <usd> [--execute] [--retry-uncertain]");
-        output.WriteLine("  images plan (--all | --max-items <n>) --max-cost <usd>");
-        output.WriteLine("  images generate (--all | --max-items <n>) --max-cost <usd> [--execute]");
-        output.WriteLine("  images approve --file <approvals.txt>");
-        output.WriteLine("  images upload [--execute]");
+        output.WriteLine("  images plan [--batch legacy-v3] (--all | --max-items <n>) --max-cost <usd>");
+        output.WriteLine("  images generate [--batch legacy-v3] (--all | --max-items <n>) --max-cost <usd> [--execute]");
+        output.WriteLine("  images approve [--batch legacy-v3] --file <approvals.txt>");
+        output.WriteLine("  images upload [--batch legacy-v3] [--execute]");
+        output.WriteLine("  images delivery [--execute]");
         output.WriteLine("  images seed [--execute]");
         output.WriteLine();
         output.WriteLine("Comandos mutáveis operam em dry-run, salvo confirmação explícita com --execute.");

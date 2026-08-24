@@ -38,7 +38,8 @@ nos contratos finais.
 
 Todo DTO de exercício mantém o `imageRef` estável. Quando ele usa o esquema
 `media://`, as duas APIs acrescentam uma `imageUrl` HTTPS assinada somente na
-resposta; assets locais mantêm `imageUrl = null`. Credenciais do bucket nunca
+resposta. O catálogo atual usa somente WebP remotos de entrega; ausência de URL
+é tratada pelo placeholder/cache offline do mobile. Credenciais do bucket nunca
 entram nos contratos nem no app.
 
 ## Student API

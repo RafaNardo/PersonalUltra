@@ -9,6 +9,7 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
     {
         var now = timeProvider.GetUtcNow();
         await SeedExercisesAsync(cancellationToken);
+        await MigrateSeededExerciseSnapshotsAsync(cancellationToken);
         var trainer = await dbContext.Trainers.Include(x => x.Branding).SingleOrDefaultAsync(x => x.Id == DemoIds.TrainerId, cancellationToken);
         if (trainer is null)
         {
@@ -61,21 +62,58 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
 
     private async Task SeedExercisesAsync(CancellationToken cancellationToken)
     {
-        var existingSlugs = await dbContext.Exercises
-            .AsNoTracking()
-            .Select(x => x.Slug)
-            .ToHashSetAsync(cancellationToken);
+        var existingBySlug = await dbContext.Exercises
+            .ToDictionaryAsync(x => x.Slug, cancellationToken);
 
         foreach (var seed in ExerciseCatalogSeed.Exercises)
         {
-            // Slug is the stable seed key. Existing catalog rows are left
-            // untouched so a demo reset cannot overwrite real data.
-            if (!existingSlugs.Contains(seed.Slug))
-                dbContext.Exercises.Add(seed.ToEntity());
+            var expected = seed.ToEntity();
+            if (!existingBySlug.TryGetValue(seed.Slug, out var existing))
+            {
+                dbContext.Exercises.Add(expected);
+                continue;
+            }
+
+            // One-time migration to the lightweight delivery derivative. Only
+            // stable system-owned identities are migrated; user rows stay intact.
+            if (existing.Id == expected.Id && existing.ImageRef != expected.ImageRef &&
+                (existing.ImageRef.StartsWith("assets/training/", StringComparison.Ordinal) ||
+                 existing.ImageRef.StartsWith("media://exercise-catalog/v2/", StringComparison.Ordinal) ||
+                 existing.ImageRef.StartsWith("media://exercise-catalog/v3/", StringComparison.Ordinal)))
+                existing.ImageRef = expected.ImageRef;
         }
 
         await dbContext.SaveChangesAsync(cancellationToken);
     }
+
+    private async Task MigrateSeededExerciseSnapshotsAsync(CancellationToken cancellationToken)
+    {
+        var expectedById = ExerciseCatalogSeed.Exercises
+            .Select(seed => seed.ToEntity())
+            .ToDictionary(exercise => exercise.Id, exercise => exercise.ImageRef);
+        var workoutSnapshots = await dbContext.StudentWorkoutExercises
+            .Where(exercise => exercise.ExerciseId != null)
+            .ToListAsync(cancellationToken);
+        var sessionSnapshots = await dbContext.WorkoutSessionExercises
+            .Where(exercise => exercise.ExerciseId != null)
+            .ToListAsync(cancellationToken);
+
+        foreach (var snapshot in workoutSnapshots)
+            if (snapshot.ExerciseId is { } exerciseId && expectedById.TryGetValue(exerciseId, out var imageRef) &&
+                IsRetiredSeedReference(snapshot.ImageRef))
+                snapshot.ImageRef = imageRef;
+        foreach (var snapshot in sessionSnapshots)
+            if (snapshot.ExerciseId is { } exerciseId && expectedById.TryGetValue(exerciseId, out var imageRef) &&
+                IsRetiredSeedReference(snapshot.ImageRef))
+                snapshot.ImageRef = imageRef;
+
+        await dbContext.SaveChangesAsync(cancellationToken);
+    }
+
+    private static bool IsRetiredSeedReference(string? imageRef) => imageRef is not null &&
+        (imageRef.StartsWith("assets/training/", StringComparison.Ordinal) ||
+         imageRef.StartsWith("media://exercise-catalog/v2/", StringComparison.Ordinal) ||
+         imageRef.StartsWith("media://exercise-catalog/v3/", StringComparison.Ordinal));
 
     private async Task SeedDemoWorkoutsAsync(DateTimeOffset now, CancellationToken cancellationToken)
     {

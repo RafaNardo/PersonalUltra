@@ -39,6 +39,7 @@ internal sealed class ImagePilotService(
         RequireCurrentStyle();
         var store = CreateStore();
         var candidates = await ReadNormalizedCandidatesAsync(cancellationToken);
+        var visualHints = await ReadVisualHintsAsync(cancellationToken);
         var targetCount = Math.Min(maxItems, candidates.Count);
         var existing = await store.LoadAsync(cancellationToken);
         if (existing is not null)
@@ -50,7 +51,7 @@ internal sealed class ImagePilotService(
             {
                 var additions = candidates.Skip(existing.Items.Count).Take(targetCount - existing.Items.Count)
                     .Select(item => new ImagePilotItem(
-                        item.CanonicalName, item.Slug, BuildPrompt(item.CanonicalName, item.PrimaryMuscleGroup),
+                        item.CanonicalName, item.Slug, BuildPrompt(item.CanonicalName, item.PrimaryMuscleGroup, visualHints.GetValueOrDefault(item.Slug)),
                         $"files/{item.Slug}.png"));
                 existing = existing with { Items = existing.Items.Concat(additions).ToArray() };
             }
@@ -64,7 +65,7 @@ internal sealed class ImagePilotService(
             .Select(item => new ImagePilotItem(
                 item.CanonicalName,
                 item.Slug,
-                BuildPrompt(item.CanonicalName, item.PrimaryMuscleGroup),
+                BuildPrompt(item.CanonicalName, item.PrimaryMuscleGroup, visualHints.GetValueOrDefault(item.Slug)),
                 $"files/{item.Slug}.png"))
             .ToArray();
         EnsurePendingCost(selected, maxCost);
@@ -223,8 +224,11 @@ internal sealed class ImagePilotService(
                 var bytes = await File.ReadAllBytesAsync(path, cancellationToken);
                 RequirePng(bytes, item.Slug);
                 if (Sha256(bytes) != item.Sha256) throw new InvalidDataException($"Hash divergente para imagem aprovada: {item.Slug}");
-                // Keep already checkpointed object keys untouched; all new v2 uploads use the v2 prefix.
-                var key = ObjectKey.CreateCatalogImageV2(item.Slug);
+                // Keep already checkpointed object keys untouched; new keys are
+                // isolated by the immutable visual batch version.
+                var key = settings.ImagePromptVersion == "personal-ultra-exercise-image-v3"
+                    ? ObjectKey.CreateCatalogImageV3(item.Slug)
+                    : ObjectKey.CreateCatalogImageV2(item.Slug);
                 var existing = await actualStore.HeadAsync(key, cancellationToken);
                 if (existing is not null)
                 {
@@ -282,6 +286,9 @@ internal sealed class ImagePilotService(
         var catalog = new CatalogNormalizer().Normalize(rows, Path.GetFileName(settings.ImageCatalogPath), Sha256(bytes));
         var normalized = catalog.Items.Where(item => item.State == "normalized").ToArray();
         var byName = normalized.ToDictionary(item => item.CanonicalName, StringComparer.Ordinal);
+        if (settings.ImagePromptVersion == "personal-ultra-exercise-image-v3")
+            return normalized;
+
         var pilot = ExpectedPilotItems.Values.Select(name => byName.TryGetValue(name, out var item)
                 ? item
                 : throw new InvalidDataException($"Exercício inicial não encontrado entre os itens normalizados: {name}"))
@@ -325,7 +332,7 @@ internal sealed class ImagePilotService(
         }
     }
 
-    private string BuildPrompt(string name, string? muscleGroup)
+    private string BuildPrompt(string name, string? muscleGroup, string? visualHint = null)
     {
         var athlete = name.Sum(character => character) % 2 == 0
             ? "Uma atleta adulta usando top esportivo e legging"
@@ -333,6 +340,7 @@ internal sealed class ImagePilotService(
         return $"""
         {settings.ImagePromptVersion}. Crie uma única ilustração digital fitness premium para o exercício "{name}".
         Grupo principal: {muscleGroup ?? "não informado"}. Mostre uma posição estável, tecnicamente reconhecível e segura do movimento, com corpo inteiro e equipamento necessário visíveis.
+        Detalhe técnico específico: {visualHint ?? "represente a variação convencional descrita pelo nome"}.
         {athlete}, usando exclusivamente a paleta Personal Ultra: preto #080808, grafite/titânio #151515 e #222220, com detalhes laranja #FF6A13 e pequeno wordmark legível "ULTRA" no peito; nenhuma outra marca ou cor de destaque.
         Anatomia humana natural e proporcional, sem músculos expostos, overlay anatômico, cutaway, transparência da pele, fibras musculares pintadas ou destaque artificial de grupos musculares.
         Rosto natural e humano, expressão relaxada, textura de pele real e pequenas imperfeições sutis; sem aparência plástica, CGI, maquiagem excessiva ou estética de modelo fitness hiperproduzida.
@@ -348,7 +356,17 @@ internal sealed class ImagePilotService(
         var bytes = await File.ReadAllBytesAsync(settings.ImageCatalogPath, cancellationToken);
         var catalog = new CatalogNormalizer().Normalize(rows, Path.GetFileName(settings.ImageCatalogPath), Sha256(bytes));
         var item = catalog.Items.Single(value => value.CanonicalName == name);
-        return BuildPrompt(item.CanonicalName, item.PrimaryMuscleGroup);
+        var visualHint = rows.Single(row => CatalogNormalizer.Slugify(row.Item.Name) == item.Slug).Item.VisualHint;
+        return BuildPrompt(item.CanonicalName, item.PrimaryMuscleGroup, visualHint);
+    }
+
+    private async Task<IReadOnlyDictionary<string, string?>> ReadVisualHintsAsync(CancellationToken cancellationToken)
+    {
+        var rows = await CatalogInputReader.ReadAsync(settings.ImageCatalogPath, cancellationToken);
+        return rows.ToDictionary(
+            row => CatalogNormalizer.Slugify(row.Item.Name),
+            row => row.Item.VisualHint,
+            StringComparer.Ordinal);
     }
 
     private static string Sha256(byte[] bytes) => Convert.ToHexString(SHA256.HashData(bytes)).ToLowerInvariant();
@@ -357,8 +375,8 @@ internal sealed class ImagePilotService(
 
     private void RequireCurrentStyle()
     {
-        if (!string.Equals(settings.ImagePromptVersion, "personal-ultra-exercise-image-v2", StringComparison.Ordinal))
-            throw new InvalidOperationException("Apenas o style v2 pode gerar, aprovar ou publicar; o v1 permanece arquivado localmente.");
+        if (settings.ImagePromptVersion is not ("personal-ultra-exercise-image-v2" or "personal-ultra-exercise-image-v3"))
+            throw new InvalidOperationException("Apenas os styles v2 e v3 podem gerar, aprovar ou publicar; o v1 permanece arquivado localmente.");
     }
 
     private static void RequirePng(byte[] bytes, string slug)

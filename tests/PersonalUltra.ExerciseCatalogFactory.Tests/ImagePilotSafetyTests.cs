@@ -79,6 +79,13 @@ public sealed class ImagePilotSafetyTests : IDisposable
         Assert.Equal("*", request.IfNoneMatch);
         Assert.Equal("exercise-catalog/v1/cadeira-extensora.png", request.Key);
 
+        using var webpStream = new MemoryStream([1, 2, 3]);
+        var webpRequest = S3ObjectStore.CreatePutRequest(
+            "bucket", ObjectKey.CreateCatalogDeliveryV1("cadeira-extensora"), webpStream,
+            "image/webp", new string('b', 64));
+        Assert.Equal("exercise-catalog/delivery/v1/cadeira-extensora.webp", webpRequest.Key);
+        Assert.Equal("image/webp", webpRequest.ContentType);
+
         var providerFailure = new AmazonS3Exception("provider details must not escape")
         {
             StatusCode = HttpStatusCode.PreconditionFailed

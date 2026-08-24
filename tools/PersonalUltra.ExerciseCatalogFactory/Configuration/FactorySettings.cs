@@ -175,6 +175,21 @@ public sealed class FactorySettings
         return missing;
     }
 
+    internal FactorySettings ForImageBatch(string? batch)
+    {
+        if (string.IsNullOrWhiteSpace(batch) || batch == "catalog-v2") return this;
+        if (batch != "legacy-v3")
+            throw new ArgumentException("Batch de imagens desconhecido. Use catalog-v2 ou legacy-v3.", nameof(batch));
+
+        return new FactorySettings(
+            WorkspaceRoot, SchemaVersion, _openAiApiKey, MetadataModel, MetadataPromptVersion,
+            MetadataTemperature, MetadataEstimatedCostUsd, MetadataMaxAttempts, ImageModel,
+            BucketEndpointUrl, BucketRegion, BucketForcePathStyle, SignedUrlLifetimeMinutes,
+            _bucketName, _bucketAccessKeyId, _bucketSecretAccessKey,
+            ResolveRepositoryPath("tools/PersonalUltra.ExerciseCatalogFactory/Inputs/v3/legacy-exercise-images-v3.csv"),
+            ImageSize, ImageQuality, ImageEstimatedCostUsd, "personal-ultra-exercise-image-v3");
+    }
+
     public IReadOnlyList<string> ValidateLocalConfiguration()
     {
         var errors = new List<string>();

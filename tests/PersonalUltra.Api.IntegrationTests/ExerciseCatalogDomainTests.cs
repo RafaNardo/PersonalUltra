@@ -21,11 +21,10 @@ public sealed class ExerciseCatalogDomainTests
         {
             Assert.False(string.IsNullOrWhiteSpace(exercise.Name));
             Assert.False(string.IsNullOrWhiteSpace(exercise.PrimaryMuscleGroup));
-            Assert.EndsWith(".png", exercise.ImageRef);
+            Assert.EndsWith(".webp", exercise.ImageRef);
             Assert.True(exercise.IsActive);
         });
-        Assert.Equal(28, exercises.Count(exercise => exercise.ImageRef.StartsWith("assets/training/", StringComparison.Ordinal)));
-        Assert.Equal(203, exercises.Count(exercise => exercise.ImageRef.StartsWith("media://exercise-catalog/v2/", StringComparison.Ordinal)));
+        Assert.Equal(231, exercises.Count(exercise => exercise.ImageRef.StartsWith("media://exercise-catalog/delivery/v1/", StringComparison.Ordinal)));
         Assert.Contains(exercises, exercise => exercise.Name == "Supino reto com barra" && exercise.PrimaryMuscleGroup == "Peito");
         Assert.Contains(exercises, exercise => exercise.Name == "Remada baixa" && exercise.PrimaryMuscleGroup == "Costas");
         Assert.Contains(exercises, exercise => exercise.Name == "Desenvolvimento com halteres" && exercise.PrimaryMuscleGroup == "Ombros");
@@ -76,6 +75,26 @@ public sealed class ExerciseCatalogDomainTests
         Assert.Equal(existing.PrimaryMuscleGroup, persisted.PrimaryMuscleGroup);
         Assert.Equal(existing.ImageRef, persisted.ImageRef);
         Assert.False(persisted.IsActive);
+    }
+
+    [Fact]
+    public async Task Demo_seed_migrates_only_a_system_owned_donor_reference_to_v3()
+    {
+        await using var db = CreateDatabase();
+        db.Exercises.Add(new Exercise
+        {
+            Id = Guid.Parse("10000000-0000-0000-0000-000000000001"),
+            Name = "Supino reto com barra",
+            Slug = "supino-reto-com-barra",
+            PrimaryMuscleGroup = "Peito",
+            ImageRef = "assets/training/supino-reto-com-barra.png",
+        });
+        await db.SaveChangesAsync();
+
+        await new DemoDataSeeder(db, TimeProvider.System).SeedAsync(CancellationToken.None);
+
+        var exercise = await db.Exercises.AsNoTracking().SingleAsync(x => x.Slug == "supino-reto-com-barra");
+        Assert.Equal("media://exercise-catalog/delivery/v1/supino-reto-com-barra.webp", exercise.ImageRef);
     }
 
     [Fact]
@@ -132,48 +151,23 @@ public sealed class ExerciseCatalogDomainTests
     }
 
     [Fact]
-    public async Task Demo_seed_image_references_match_the_versioned_donor_asset_manifest()
+    public async Task Demo_seed_retires_all_donor_asset_references_in_favor_of_v3()
     {
         await using var db = CreateDatabase();
         await new DemoDataSeeder(db, TimeProvider.System).SeedAsync(CancellationToken.None);
 
-        var expected = new[]
-        {
-            "assets/training/abducao_com_elastico.png",
-            "assets/training/abducao_de_quadril_na_maquina.png",
-            "assets/training/afundo_com_halteres.png",
-            "assets/training/agachamento_goblet.png",
-            "assets/training/agachamento_livre.png",
-            "assets/training/agachamento_sumo.png",
-            "assets/training/cadeira_extensora.png",
-            "assets/training/cadeira_flexora.png",
-            "assets/training/coice_com_caneleira.png",
-            "assets/training/coice_no_cabo.png",
-            "assets/training/desenvolvimento-com-halteres.png",
-            "assets/training/elevacao-lateral-com-halteres.png",
-            "assets/training/elevacao_pelvica_com_barra.png",
-            "assets/training/elevacao_pelvica_unilateral_com_barra.png",
-            "assets/training/frog_pump.png",
-            "assets/training/leg_press_45.png",
-            "assets/training/levantamento-terra-romeno.png",
-            "assets/training/passada_com_halteres.png",
-            "assets/training/ponte_de_gluteo_unilateral.png",
-            "assets/training/ponte_de_gluteos.png",
-            "assets/training/pull_through_no_cabo.png",
-            "assets/training/puxada-dorsal-na-maquina.png",
-            "assets/training/remada-baixa.png",
-            "assets/training/rosca-direta-com-barra.png",
-            "assets/training/step_up_com_halteres.png",
-            "assets/training/stiff_com_barra.png",
-            "assets/training/supino-reto-com-barra.png",
-            "assets/training/triceps-na-polia-com-corda.png",
-        };
+        var legacyIds = Enumerable.Range(1, 28)
+            .Select(index => Guid.Parse($"10000000-0000-0000-0000-{index:000000000000}"))
+            .ToHashSet();
+        var actual = (await db.Exercises.AsNoTracking().ToListAsync())
+            .Where(exercise => legacyIds.Contains(exercise.Id))
+            .Select(exercise => exercise.ImageRef).OrderBy(x => x).ToArray();
 
-        var actual = await db.Exercises.AsNoTracking()
-            .Where(x => x.ImageRef.StartsWith("assets/training/"))
-            .Select(x => x.ImageRef).OrderBy(x => x).ToArrayAsync();
-
-        Assert.Equal(expected.OrderBy(x => x), actual);
+        Assert.Equal(28, actual.Length);
+        Assert.Contains("media://exercise-catalog/delivery/v1/agachamento-livre.webp", actual);
+        Assert.Contains("media://exercise-catalog/delivery/v1/supino-reto-com-barra.webp", actual);
+        Assert.DoesNotContain(await db.Exercises.Select(x => x.ImageRef).ToArrayAsync(),
+            imageRef => imageRef.StartsWith("assets/training/", StringComparison.Ordinal));
     }
 
     [Fact]
@@ -199,7 +193,7 @@ public sealed class ExerciseCatalogDomainTests
             Assert.All(workout.Exercises, exercise =>
             {
                 Assert.NotNull(exercise.ExerciseId);
-                Assert.StartsWith("assets/training/", exercise.ImageRef);
+                Assert.StartsWith("media://exercise-catalog/", exercise.ImageRef);
                 Assert.DoesNotContain("mock", exercise.ImageRef!, StringComparison.OrdinalIgnoreCase);
                 Assert.False(string.IsNullOrWhiteSpace(exercise.PrimaryMuscleGroup));
                 Assert.True(exercise.RepetitionsMin <= exercise.RepetitionsMax);

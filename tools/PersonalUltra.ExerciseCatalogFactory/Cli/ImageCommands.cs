@@ -12,11 +12,12 @@ internal sealed class ImageCommands(
     internal async Task<int> RunAsync(string[] args, CancellationToken cancellationToken)
     {
         var command = CommandLine.Parse(args);
+        var batchSettings = settings.ForImageBatch(command.Option("--batch"));
         var workspace = command.Option("--workspace") is { } configured
             ? FactorySettings.ResolveWorkspaceRoot(configured)
-            : settings.WorkspaceRoot;
+            : batchSettings.WorkspaceRoot;
         var service = new ImagePilotService(
-            settings,
+            batchSettings,
             provider,
             workspaceRoot: workspace,
             progress: message => output.WriteLineAsync(message));
@@ -27,17 +28,35 @@ internal sealed class ImageCommands(
             "regenerate" => await RegenerateAsync(command, service, cancellationToken),
             "approve" => await ApproveAsync(command, service, cancellationToken),
             "upload" => await UploadAsync(command, service, cancellationToken),
-            "seed" => await SeedAsync(command, workspace, cancellationToken),
+            "delivery" => await DeliveryAsync(command, workspace, cancellationToken),
+            "seed" => await SeedAsync(command, workspace, batchSettings, cancellationToken),
             _ => throw new ArgumentException($"Comando desconhecido: images {command.Name}")
         };
     }
 
-    private async Task<int> SeedAsync(ParsedCommand command, string workspace, CancellationToken cancellationToken)
+    private async Task<int> DeliveryAsync(ParsedCommand command, string workspace, CancellationToken cancellationToken)
     {
         command.EnsureOnly("--workspace", "--execute");
         command.EnsureFlag("--execute");
         var execute = command.HasOption("--execute");
-        var result = await new ExerciseSeedExporter(settings, workspace).ExportAsync(execute, cancellationToken);
+        var result = await new ImageDeliveryService(
+            settings,
+            workspaceRoot: workspace,
+            progress: message => output.WriteLineAsync(message))
+            .RunAsync(execute, cancellationToken);
+        await output.WriteLineAsync(
+            $"Entrega WebP: total={result.Total}; prontas={result.Ready}; convertidas={result.Converted}; enviadas={result.Uploaded}; tamanho={result.TotalBytes / 1024d / 1024d:F1} MB; modo={(execute ? "executado" : "dry-run")}.");
+        return 0;
+    }
+
+    private async Task<int> SeedAsync(ParsedCommand command, string workspace, FactorySettings batchSettings, CancellationToken cancellationToken)
+    {
+        command.EnsureOnly("--workspace", "--batch", "--execute");
+        command.EnsureFlag("--execute");
+        if (batchSettings.ImagePromptVersion != "personal-ultra-exercise-image-v2")
+            throw new ArgumentException("O seed combinado permanece no catalog-v2; o legacy-v3 é aplicado pelo seed legado estável.");
+        var execute = command.HasOption("--execute");
+        var result = await new ExerciseSeedExporter(batchSettings, workspace).ExportAsync(execute, cancellationToken);
         await output.WriteLineAsync(
             $"Seed: catálogo={result.NormalizedCount}; legado preservado={result.LegacyCount}; novos={result.GeneratedCount}; " +
             $"modo={(execute ? "gerado" : "dry-run")}.");
@@ -50,7 +69,7 @@ internal sealed class ImageCommands(
 
     private async Task<int> RegenerateAsync(ParsedCommand command, ImagePilotService service, CancellationToken cancellationToken)
     {
-        command.EnsureOnly("--workspace", "--slug", "--max-cost", "--execute");
+        command.EnsureOnly("--workspace", "--batch", "--slug", "--max-cost", "--execute");
         command.EnsureFlag("--execute");
         if (!decimal.TryParse(command.RequiredOption("--max-cost"), NumberStyles.Number, CultureInfo.InvariantCulture, out var maxCost))
             throw new ArgumentException("--max-cost inválido; use ponto como separador decimal.");
@@ -66,7 +85,7 @@ internal sealed class ImageCommands(
 
     private async Task<int> PlanAsync(ParsedCommand command, ImagePilotService service, CancellationToken cancellationToken)
     {
-        command.EnsureOnly("--workspace", "--max-items", "--all", "--max-cost");
+        command.EnsureOnly("--workspace", "--batch", "--max-items", "--all", "--max-cost");
         command.EnsureFlag("--all");
         var (maxItems, maxCost) = ReadLimits(command);
         var manifest = await service.PlanAsync(maxItems, maxCost, cancellationToken);
@@ -77,7 +96,7 @@ internal sealed class ImageCommands(
 
     private async Task<int> GenerateAsync(ParsedCommand command, ImagePilotService service, CancellationToken cancellationToken)
     {
-        command.EnsureOnly("--workspace", "--max-items", "--all", "--max-cost", "--execute");
+        command.EnsureOnly("--workspace", "--batch", "--max-items", "--all", "--max-cost", "--execute");
         command.EnsureFlag("--all");
         command.EnsureFlag("--execute");
         var (maxItems, maxCost) = ReadLimits(command);
@@ -94,7 +113,7 @@ internal sealed class ImageCommands(
 
     private async Task<int> ApproveAsync(ParsedCommand command, ImagePilotService service, CancellationToken cancellationToken)
     {
-        command.EnsureOnly("--workspace", "--file");
+        command.EnsureOnly("--workspace", "--batch", "--file");
         var file = Path.GetFullPath(command.RequiredOption("--file"));
         var manifest = await service.ApproveAsync(file, cancellationToken);
         await output.WriteLineAsync($"Aprovações registradas: {manifest.Items.Count(item => item.Approved)}. Nenhum upload foi feito.");
@@ -103,7 +122,7 @@ internal sealed class ImageCommands(
 
     private async Task<int> UploadAsync(ParsedCommand command, ImagePilotService service, CancellationToken cancellationToken)
     {
-        command.EnsureOnly("--workspace", "--execute");
+        command.EnsureOnly("--workspace", "--batch", "--execute");
         command.EnsureFlag("--execute");
         var execute = command.HasOption("--execute");
         var result = await service.UploadAsync(execute, cancellationToken);

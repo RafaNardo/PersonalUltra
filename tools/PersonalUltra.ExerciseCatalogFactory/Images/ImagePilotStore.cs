@@ -12,9 +12,12 @@ internal sealed class ImagePilotStore(string workspaceRoot, string promptVersion
         UnmappedMemberHandling = JsonUnmappedMemberHandling.Disallow
     };
 
-    internal string Root { get; } = promptVersion == "personal-ultra-exercise-image-v2"
-        ? Path.Combine(workspaceRoot, "images", "v2")
-        : Path.Combine(workspaceRoot, "images", "unsupported", CatalogNormalizer.Slugify(promptVersion));
+    internal string Root { get; } = promptVersion switch
+    {
+        "personal-ultra-exercise-image-v2" => Path.Combine(workspaceRoot, "images", "v2"),
+        "personal-ultra-exercise-image-v3" => Path.Combine(workspaceRoot, "images", "v3"),
+        _ => Path.Combine(workspaceRoot, "images", "unsupported", CatalogNormalizer.Slugify(promptVersion))
+    };
     internal string FilesRoot => Path.Combine(Root, "files");
     internal string ManifestPath => Path.Combine(Root, "manifest.v1.json");
 

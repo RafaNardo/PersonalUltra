@@ -142,6 +142,31 @@ public sealed class ImagePilotServiceTests : IDisposable
     }
 
     [Fact]
+    public async Task Legacy_v3_batch_contains_all_28_donor_replacements_and_uses_v3_keys()
+    {
+        var provider = new FakeProvider();
+        var objectStore = new FakeObjectStore();
+        var settings = FactorySettingsTests.CreateSettings(_workspace).ForImageBatch("legacy-v3");
+        var service = new ImagePilotService(settings, provider, objectStore);
+
+        var manifest = await service.PlanAsync(int.MaxValue, 1m, default);
+
+        Assert.Equal(28, manifest.Items.Count);
+        Assert.Equal("personal-ultra-exercise-image-v3", manifest.PromptVersion);
+        Assert.Contains(manifest.Items, item => item.Slug == "afundo-com-halteres" &&
+            item.Prompt.Contains("Afundo estacionário", StringComparison.Ordinal));
+
+        var generated = await service.GenerateAsync(1, 1m, true, default);
+        var approvals = Path.Combine(_workspace, "approved-v3.txt");
+        await File.WriteAllTextAsync(approvals, generated.Manifest.Items[0].Slug);
+        await service.ApproveAsync(approvals, default);
+        await service.UploadAsync(true, default);
+
+        Assert.Equal($"exercise-catalog/v3/{generated.Manifest.Items[0].Slug}.png", Assert.Single(objectStore.Keys));
+        Assert.True(File.Exists(Path.Combine(_workspace, "images", "v3", generated.Manifest.Items[0].LocalFile)));
+    }
+
+    [Fact]
     public async Task Dry_runs_never_call_external_providers()
     {
         var provider = new FakeProvider();

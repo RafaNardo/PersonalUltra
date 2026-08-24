@@ -207,7 +207,7 @@ internal sealed class S3ObjectStore : IObjectStore
 
     private static void RequireContentType(string contentType)
     {
-        if (contentType is not ("text/plain; charset=utf-8" or "image/png"))
+        if (contentType is not ("text/plain; charset=utf-8" or "image/png" or "image/webp"))
         {
             throw new ArgumentException("MIME não permitido.", nameof(contentType));
         }

@@ -5,8 +5,8 @@ namespace PersonalUltra.Infrastructure;
 /// <summary>
 /// The V1 exercise catalog is system-owned. Keep this list deterministic and
 /// keyed by slug so it can be safely applied every time the demo starts.
-/// Image references point at the local donor assets restored under the mobile
-/// app's assets/training directory; no remote media is required here.
+/// Images use immutable bucket keys. The original 28 identities remain stable,
+/// but their donor illustrations were retired from the mobile bundle in v3.
 /// </summary>
 internal static class ExerciseCatalogSeed
 {
@@ -61,9 +61,7 @@ internal static class ExerciseCatalogSeed
             Slug = Slug,
             PrimaryMuscleGroup = PrimaryMuscleGroup,
             Equipment = Equipment,
-            ImageRef = ImageRef.StartsWith("media://", StringComparison.Ordinal)
-                ? ImageRef
-                : $"assets/training/{ImageRef}.png",
+            ImageRef = $"media://exercise-catalog/delivery/v1/{Slug}.webp",
             Instructions = Instructions,
             IsActive = true,
         };

@@ -44,6 +44,20 @@ internal sealed partial class ObjectKey
         return new ObjectKey($"exercise-catalog/v2/{slug}.png");
     }
 
+    internal static ObjectKey CreateCatalogImageV3(string slug)
+    {
+        if (!SlugPattern().IsMatch(slug))
+            throw new ArgumentException("Slug inválido para imagem do catálogo.", nameof(slug));
+        return new ObjectKey($"exercise-catalog/v3/{slug}.png");
+    }
+
+    internal static ObjectKey CreateCatalogDeliveryV1(string slug)
+    {
+        if (!SlugPattern().IsMatch(slug))
+            throw new ArgumentException("Slug inválido para imagem do catálogo.", nameof(slug));
+        return new ObjectKey($"exercise-catalog/delivery/v1/{slug}.webp");
+    }
+
     public override string ToString() => Value;
 
     [GeneratedRegex("^[a-z0-9][a-z0-9-]{7,63}$", RegexOptions.CultureInvariant)]

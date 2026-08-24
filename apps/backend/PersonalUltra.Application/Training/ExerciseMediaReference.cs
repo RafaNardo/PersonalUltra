@@ -31,12 +31,12 @@ public readonly partial record struct ExerciseMediaReference
             !SupportedPath().IsMatch(uri.AbsolutePath))
         {
             throw new FormatException(
-                "Exercise ImageRef must match media://exercise-catalog/v2/<slug>.png.");
+                "Exercise ImageRef must match a supported versioned exercise-catalog key.");
         }
 
         return new ExerciseMediaReference(value, $"exercise-catalog{uri.AbsolutePath}");
     }
 
-    [GeneratedRegex("^/v2/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.png$", RegexOptions.CultureInvariant)]
+    [GeneratedRegex("^(?:/v(?:2|3)/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.png|/delivery/v1/[a-z0-9](?:[a-z0-9-]*[a-z0-9])?\\.webp)$", RegexOptions.CultureInvariant)]
     private static partial Regex SupportedPath();
 }

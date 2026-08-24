@@ -56,7 +56,7 @@ addresses when testing the Podman stack from a device.
 
 After a clean Railway deploy, verify both `/health` routes, then authenticate as
 Trainer and query `/api/v1/training/exercises`. The expected response has 231
-items: 28 bundled `assets/training/...` references and 203 `media://...`
+items: 231 referências remotas estáveis `media://exercise-catalog/delivery/v1/...`; nenhum desenho de exercício é empacotado no Expo
 references with temporary HTTPS `imageUrl` values. Open at least one returned
 URL and confirm a PNG response before testing the same exercise in preview,
 Student execution and summary.

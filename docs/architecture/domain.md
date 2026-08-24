@@ -71,7 +71,7 @@ SetPerformance
 - `Slug` or another stable key if useful for seed/assets
 - `PrimaryMuscleGroup`
 - optional equipment/category metadata
-- `ImageRef` provider-neutral (`assets/training/...` ou `media://...`)
+- `ImageRef` estável e provider-neutral (`media://exercise-catalog/delivery/v1/...`); URLs assinadas nunca são persistidas
 - optional `Instructions`
 - `IsActive`
 

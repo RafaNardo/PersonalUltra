@@ -32,14 +32,18 @@ arquivos deste diretório; não duplicá-las aqui.
 | ECF-006 — adapter e smoke privado S3 | concluído; smoke real aprovado | `d0f940c` |
 | ECF-007/009 — geração e publicação visual v2 | 220 imagens aprovadas e publicadas | `acd0b5e` |
 | ECF-010 — exporter Personal Ultra | 203 entradas novas geradas; legado preservado | `acd0b5e` |
-| ECF-011 — URLs assinadas e cache Expo | concluído; aguardando deploy | próximo commit |
-| ECF-012 — apply e validação | PostgreSQL/seed idempotente validados localmente | próximo commit |
+| ECF-011 — URLs assinadas e cache Expo | concluído e publicado | `7db686f` |
+| ECF-012 — apply e validação | PostgreSQL/seed idempotente e APIs públicas validados | `7db686f` |
+| ECF-013 — substituição legada e entrega leve | 28 masters v3 + 231 WebP publicados | working tree |
 
 O lote visual v2 contém 220 imagens aprovadas e publicadas sob
 `exercise-catalog/v2/<slug>.png`. O exporter gerou 203 exercícios novos e o
-catálogo resultante contém 231 itens: 28 legados locais mais 203 novos com
-referência `media://`. As APIs retornam `imageUrl` assinada sem alterar a
-referência persistida; o Expo usa cache em disco por `ImageRef` e placeholder.
+catálogo resultante contém 231 itens. Os 28 desenhos legados foram retirados do
+bundle e regenerados como masters v3. Para entrega, 203 masters v2 + 28 masters
+v3 viram 231 derivados WebP 640×640 sob
+`exercise-catalog/delivery/v1/<slug>.webp`; o lote inteiro ocupa cerca de
+5,6 MB. As APIs retornam `imageUrl` assinada sem alterar a referência persistida;
+o Expo usa cache em disco por `ImageRef` e placeholder.
 
 O intake contém 232 candidatos, preserva exatamente os 28 GUIDs/slugs legados,
 usa UUID v5 para itens novos e produz catálogo/relatório retomáveis. Resultado
@@ -57,11 +61,8 @@ linha; isso pertence ao enriquecimento/review, não a um preenchimento fictício
    IDs por heurística.
 2. **Conteúdo:** definir revisor biomecânico. Metadados gerados ficam pendentes
    até aprovação explícita.
-3. **Deploy:** antes do push que dispara Railway, configurar em `StudentApi` e
-   `TrainerApi` as três Variable References `RailwayBucket__BucketName`,
-   `RailwayBucket__AccessKeyId` e `RailwayBucket__SecretAccessKey`. No primeiro
-   deploy do banco limpo, subir Student primeiro com seed ativo e Trainer depois
-   com seed inativo.
+3. **Deploy:** as referências do bucket já estão configuradas nas duas APIs.
+   Student permanece como único responsável pelo seed; Trainer não semeia.
 
 ## Retomada imediata
 
@@ -73,9 +74,9 @@ anterior `InvalidAccessKeyId` foi resolvido após a atualização da configuraç
 
 Retomada imediata:
 
-1. Configurar as três referências do bucket nas duas APIs Railway.
-2. Fazer deploy sequencial sobre o banco vazio e validar 231 exercícios, uma
-   `imageUrl` PNG real e os fluxos Trainer/Student.
+1. Fazer commit/push do lote v3 + entrega WebP e validar uma URL pública WebP.
+2. Revisar visualmente os 28 masters v3 e usar `images regenerate --batch
+   legacy-v3` apenas para imagens rejeitadas em uma futura versão imutável.
 3. Iniciar a auditoria de nutrição já enfileirada abaixo.
 
 Antes de cada avanço: implementar, revisar, testar, fazer commit intencional e

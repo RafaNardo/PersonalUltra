@@ -116,6 +116,18 @@ dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images upload
 # Validar o lote publicado e gerar o seed C# (dry-run primeiro)
 dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images seed
 dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images seed --execute
+
+# Substituir os 28 desenhos legados (lote isolado v3, estimativa USD 0,56)
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images plan --batch legacy-v3 --all --max-cost 1.00
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images generate --batch legacy-v3 --all --max-cost 1.00 --execute
+# revise workspace/images/v3/files e informe um slug aprovado por linha
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images approve --batch legacy-v3 --file approved-images-v3.txt
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images upload --batch legacy-v3
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images upload --batch legacy-v3 --execute
+
+# Criar WebP 640 px e publicar a entrega leve dos 231 exercícios
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images delivery
+dotnet run --project tools/PersonalUltra.ExerciseCatalogFactory -- images delivery --execute
 ```
 
 O style atual é `personal-ultra-exercise-image-v2`. Seu manifesto fica em
@@ -133,9 +145,11 @@ publicados, com object key v2 e arquivo local de hash idêntico. Ele gera
 slug dos 28 itens legados e nunca escreve diretamente no banco. O seeder do
 demo apenas inclui slugs ausentes e não sobrescreve registros existentes.
 
-As referências novas são `media://exercise-catalog/v2/<slug>.png`. Elas já
-ficam persistidas no catálogo, mas as imagens remotas somente aparecerão nas
-APIs e no Expo depois da implementação do resolver de mídia em `PU-ECF-011`.
+Os PNGs v2/v3 são masters versionados. O app consome somente os derivados
+`media://exercise-catalog/delivery/v1/<slug>.webp`: 640×640, qualidade 78,
+gerados localmente sem custo OpenAI e publicados com tamanho/hash verificados.
+TrainerApi e StudentApi resolvem a referência para HTTPS assinado, e o Expo
+mantém cache em disco usando a referência estável como chave.
 Uma interrupção durante a chamada deixa `<slug>.png.pending`; confirme a
 cobrança antes de remover conscientemente esse marcador e tentar novamente.
 
@@ -143,6 +157,11 @@ As dez imagens geradas anteriormente com o style v1 permanecem intactas em
 `workspace/images/manifest.v1.json` e `workspace/images/files/` apenas como
 arquivo/referência local. Os comandos v2 não leem, aprovam, publicam, movem ou
 sobrescrevem esse material.
+
+O input curado do lote legado fica em `Inputs/v3/legacy-exercise-images-v3.csv`.
+Ele explicita as variações ambíguas (por exemplo afundo estacionário, remada
+com triângulo e desenvolvimento sentado) para que o prompt não dependa do nome
+curto herdado. Seu manifesto e PNGs ficam exclusivamente em `workspace/images/v3`.
 
 Modelo, qualidade, tamanho, custo estimado por imagem e versão do prompt ficam
 em `appsettings.json`. O custo é um teto operacional configurável, não uma
