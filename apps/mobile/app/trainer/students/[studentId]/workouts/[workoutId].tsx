@@ -1,7 +1,7 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
@@ -9,7 +9,7 @@ import { useTrainerStudent } from '@/src/features/trainer/students/hooks';
 import { useDeleteTrainerStudentWorkout, useTrainerStudentWorkout, useUpdateTrainerStudentWorkout } from '@/src/features/trainer/training/hooks';
 import { useWorkoutEditorStore, workoutEditorKey, type WorkoutEditorExercise } from '@/src/features/trainer/training/workout-editor-store';
 import { feedback } from '@/src/platform/feedback';
-import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { ExerciseImage } from '@/src/shared/training/exercise-image';
 
 export default function TrainerStudentWorkoutScreen() {
   const { studentId, workoutId } = useLocalSearchParams<{ studentId: string; workoutId: string }>();
@@ -92,10 +92,9 @@ export default function TrainerStudentWorkoutScreen() {
 }
 
 function ExerciseCard({ exercise, index, count, onMove, onEdit, onRemove }: { exercise: WorkoutEditorExercise; index: number; count: number; onMove: (to: number) => void; onEdit: () => void; onRemove: () => void }) {
-  const source = exerciseMediaSource(exercise.imageRef);
   return <Card style={styles.exercise}>
     <View style={styles.exerciseHeader}>
-      {source ? <Image source={source} accessible={false} resizeMode="cover" style={styles.thumbnail} /> : <View style={styles.thumbnailFallback}><Text style={styles.thumbnailFallbackText}>{index + 1}</Text></View>}
+      <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessible={false} style={styles.thumbnail} />
       <View style={styles.exerciseIdentity}><Text style={styles.exerciseName}>{exercise.name}</Text>{exercise.primaryMuscleGroup || exercise.equipment ? <Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text> : null}<Text style={styles.prescription}>{exercise.sets} séries · {exercise.repetitionsMin}–{exercise.repetitionsMax} reps · {exercise.restSeconds}s</Text></View>
     </View>
     {exercise.notes ? <Text style={styles.copy}>{exercise.notes}</Text> : null}

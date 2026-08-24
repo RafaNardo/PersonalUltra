@@ -22,6 +22,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__PersonalUltraDatabase: Host=postgres;Port=5432;Database=personal_ultra;Username=personal_ultra;Password=personal_ultra
+      DemoData__SeedOnStartup: "true"
+      RailwayBucket__BucketName: ${RAILWAY_BUCKET_NAME}
+      RailwayBucket__AccessKeyId: ${RAILWAY_BUCKET_ACCESS_KEY_ID}
+      RailwayBucket__SecretAccessKey: ${RAILWAY_BUCKET_SECRET_ACCESS_KEY}
     ports:
       - "8080:8080"
     depends_on:
@@ -35,6 +39,10 @@ services:
     environment:
       ASPNETCORE_ENVIRONMENT: Development
       ConnectionStrings__PersonalUltraDatabase: Host=postgres;Port=5432;Database=personal_ultra;Username=personal_ultra;Password=personal_ultra
+      DemoData__SeedOnStartup: "false"
+      RailwayBucket__BucketName: ${RAILWAY_BUCKET_NAME}
+      RailwayBucket__AccessKeyId: ${RAILWAY_BUCKET_ACCESS_KEY_ID}
+      RailwayBucket__SecretAccessKey: ${RAILWAY_BUCKET_SECRET_ACCESS_KEY}
     ports:
       - "8081:8080"
     depends_on:

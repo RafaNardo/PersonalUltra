@@ -30,13 +30,16 @@ arquivos deste diretório; não duplicá-las aqui.
 | ECF-003 — intake determinístico e identidades | código concluído; gate humano aberto | `d4745e0` |
 | ECF-004 — enriquecimento OpenAI estruturado e retomável | concluído; nenhuma chamada paga executada | `72e98d3` |
 | ECF-006 — adapter e smoke privado S3 | concluído; smoke real aprovado | `d0f940c` |
-| ECF-007/009 — geração e publicação visual v2 | 220 imagens aprovadas e publicadas | neste commit |
-| ECF-010 — exporter Personal Ultra | 203 entradas novas geradas; legado preservado | neste commit |
+| ECF-007/009 — geração e publicação visual v2 | 220 imagens aprovadas e publicadas | `acd0b5e` |
+| ECF-010 — exporter Personal Ultra | 203 entradas novas geradas; legado preservado | `acd0b5e` |
+| ECF-011 — URLs assinadas e cache Expo | concluído; aguardando deploy | próximo commit |
+| ECF-012 — apply e validação | PostgreSQL/seed idempotente validados localmente | próximo commit |
 
 O lote visual v2 contém 220 imagens aprovadas e publicadas sob
 `exercise-catalog/v2/<slug>.png`. O exporter gerou 203 exercícios novos e o
 catálogo resultante contém 231 itens: 28 legados locais mais 203 novos com
-referência `media://`. O consumo remoto no app ainda não existe.
+referência `media://`. As APIs retornam `imageUrl` assinada sem alterar a
+referência persistida; o Expo usa cache em disco por `ImageRef` e placeholder.
 
 O intake contém 232 candidatos, preserva exatamente os 28 GUIDs/slugs legados,
 usa UUID v5 para itens novos e produz catálogo/relatório retomáveis. Resultado
@@ -54,9 +57,11 @@ linha; isso pertence ao enriquecimento/review, não a um preenchimento fictício
    IDs por heurística.
 2. **Conteúdo:** definir revisor biomecânico. Metadados gerados ficam pendentes
    até aprovação explícita.
-3. **Imagem:** confirmar acesso da conta ao modelo configurado. O piloto possui
-   dez exercícios, executados em dois lotes de cinco; revisar o primeiro antes
-   do segundo e só então congelar `styleVersion`/tratamento de marca.
+3. **Deploy:** antes do push que dispara Railway, configurar em `StudentApi` e
+   `TrainerApi` as três Variable References `RailwayBucket__BucketName`,
+   `RailwayBucket__AccessKeyId` e `RailwayBucket__SecretAccessKey`. No primeiro
+   deploy do banco limpo, subir Student primeiro com seed ativo e Trainer depois
+   com seed inativo.
 
 ## Retomada imediata
 
@@ -66,14 +71,12 @@ autenticado, GET assinado, bytes, SHA-256, MIME, DELETE da chave exata e
 `NotFound` final; o cleanup foi confirmado e nenhum objeto permaneceu. O erro
 anterior `InvalidAccessKeyId` foi resolvido após a atualização da configuração.
 
-Seguir em sequência:
+Retomada imediata:
 
-1. Piloto visual enxuto: planejar dez, gerar com confirmação paga, revisar os
-   PNGs locais, registrar os slugs aprovados e subir somente eles.
-2. Após a revisão: decidir se workflows mais pesados de metadados/QA entregam
-   valor antes de implementá-los.
-3. Depois: publicação, exporter, consumo remoto nas
-   duas APIs/Expo e validação ponta a ponta.
+1. Configurar as três referências do bucket nas duas APIs Railway.
+2. Fazer deploy sequencial sobre o banco vazio e validar 231 exercícios, uma
+   `imageUrl` PNG real e os fluxos Trainer/Student.
+3. Iniciar a auditoria de nutrição já enfileirada abaixo.
 
 Antes de cada avanço: implementar, revisar, testar, fazer commit intencional e
 push. Parar em falha externa, gasto pago ou decisão humana. Os comandos de

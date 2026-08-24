@@ -1,12 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentSessionDetail } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { ExerciseImage } from '@/src/shared/training/exercise-image';
 
 /**
  * A history screen is deliberately server-backed. It must remain useful after
@@ -56,10 +56,9 @@ function SummaryContent({ summary }: { summary: StudentSessionDetail }) {
 }
 
 function SummaryExercise({ exercise }: { exercise: StudentSessionDetail['exercises'][number] }) {
-  const source = exerciseMediaSource(exercise.imageRef);
   return <Card style={styles.exerciseCard}>
     <View style={styles.exerciseHeader}>
-      {source ? <Image source={source} style={styles.thumbnail} resizeMode="cover" accessibilityLabel={`Imagem do exercício ${exercise.name}`} /> : null}
+      <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} />
       <View style={styles.exerciseIdentity}><Text style={styles.exerciseName}>{exercise.sequence}. {exercise.name}</Text><Text style={styles.copy}>{exercise.completedSets} de {exercise.sets} séries concluídas</Text></View>
       <Tag tone={exercise.completedSets >= exercise.sets ? 'success' : 'neutral'}>{exercise.completedSets >= exercise.sets ? 'Concluído' : 'Parcial'}</Tag>
     </View>

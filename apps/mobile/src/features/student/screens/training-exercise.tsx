@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
-import { Image, StyleSheet, Text, TextInput, View } from 'react-native';
+import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { ApiError } from '@/src/api/shared-http';
 import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
@@ -10,7 +10,7 @@ import { useInviteSessionStore } from '@/src/features/student/invite/session-sto
 import { cacheWorkout, cachedSession, pendingSetCount, pendingSetDetails, queueSet, syncPendingSets, updateCachedExerciseProgress } from '@/src/features/student/offline/training-db';
 import { orderedExercises, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
 import { parseActualSetPerformance } from '@/src/features/student/training/set-performance';
-import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { ExerciseImage } from '@/src/shared/training/exercise-image';
 
 export function StudentTrainingExerciseScreen() {
   const { sessionId, exerciseId } = useLocalSearchParams<{ sessionId: string; exerciseId: string }>();
@@ -73,7 +73,6 @@ function FocusedExercise({ session, exercise, authToken, studentId, isOfflineSna
   const [repetitions, setRepetitions] = useState(() => previousPerformance ? String(previousPerformance.repetitions) : '');
   const [saving, setSaving] = useState(false);
   const [message, setMessage] = useState<{ tone: 'error' | 'offline'; text: string }>();
-  const source = exerciseMediaSource(exercise.imageRef);
   const setNumber = exercise.completedSets + 1;
   useEffect(() => {
     const previous = exercise.performances?.at(-1) ?? exercise.previousPerformance;
@@ -118,7 +117,7 @@ function FocusedExercise({ session, exercise, authToken, studentId, isOfflineSna
   return <Screen style={styles.page}>
     <TopBar eyebrow={`EXERCÍCIO ${position} DE ${session.exercises.length}`} title={exercise.name} onBack={() => router.back()} />
     {isOfflineSnapshot ? <Card style={styles.offlineCard}><Text style={styles.offlineTitle}>Modo offline</Text><Text style={styles.copy}>Sua série será sincronizada quando a conexão voltar.</Text></Card> : null}
-    {source ? <Image source={source} style={styles.exerciseImage} resizeMode="cover" accessibilityLabel={`Imagem do exercício ${exercise.name}`} /> : null}
+    <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.exerciseImage} />
     <View style={styles.contextRow}><Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text><Text style={styles.setProgress}>{Math.min(exercise.completedSets, exercise.sets)}/{exercise.sets} séries</Text></View>
     <View style={styles.prescription}><Prescription label="Repetições" value={`${exercise.repetitionsMin}–${exercise.repetitionsMax}`} /><Prescription label="Descanso" value={`${exercise.restSeconds}s`} /></View>
     {exercise.instructions ? <Detail label="INSTRUÇÕES" value={exercise.instructions} /> : null}

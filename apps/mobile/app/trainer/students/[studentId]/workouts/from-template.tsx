@@ -1,13 +1,13 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { Alert, Image, StyleSheet, Text, View } from 'react-native';
+import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, ListItem, LoadingView, SearchField, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { useTrainerStudent } from '@/src/features/trainer/students/hooks';
 import { useApplyTrainerTemplate, useTrainerTemplate, useTrainerTemplates } from '@/src/features/trainer/training/hooks';
 import { feedback } from '@/src/platform/feedback';
-import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { ExerciseImage } from '@/src/shared/training/exercise-image';
 import { filterTemplates, TemplateMuscleFilters, templateGroups } from '@/src/features/trainer/training/template-filters';
 
 export default function ApplyTemplateToStudentScreen() {
@@ -54,9 +54,8 @@ export default function ApplyTemplateToStudentScreen() {
         <View style={styles.summaryHeader}><View style={styles.identity}><Text style={styles.modelName}>{template.name}</Text><Text style={styles.meta}>{exercises.length} {exercises.length === 1 ? 'exercício configurado' : 'exercícios configurados'}</Text></View><Tag tone="success">PRONTO PARA USAR</Tag></View>
         {template.notes ? <Text style={styles.copy}>{template.notes}</Text> : null}
         <View style={styles.exerciseList}>{exercises.map((exercise) => {
-          const source = exerciseMediaSource(exercise.imageRef);
           return <View key={`${exercise.exerciseId}-${exercise.sequence}`} style={styles.exercise}>
-            {source ? <Image source={source} style={styles.thumbnail} /> : <View style={styles.thumbnail} />}
+            <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} />
             <View style={styles.identity}><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.meta}>{exercise.sets} séries · {exercise.repetitionsMin}–{exercise.repetitionsMax} reps · {exercise.restSeconds}s</Text></View>
           </View>;
         })}</View>

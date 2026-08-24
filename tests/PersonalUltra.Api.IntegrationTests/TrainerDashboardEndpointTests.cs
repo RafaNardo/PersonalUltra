@@ -186,6 +186,7 @@ public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Progra
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
         builder.UseEnvironment("Development");
+        ConfigureExerciseMediaTestBucket(builder);
         builder.ConfigureServices(services =>
         {
             services.RemoveAll<DbContextOptions<PersonalUltraDbContext>>();
@@ -193,5 +194,16 @@ public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Progra
             services.RemoveAll<IDbContextOptionsConfiguration<PersonalUltraDbContext>>();
             services.AddDbContext<PersonalUltraDbContext>(options => options.UseInMemoryDatabase(databaseName));
         });
+    }
+
+    private static void ConfigureExerciseMediaTestBucket(IWebHostBuilder builder)
+    {
+        builder.UseSetting("RailwayBucket:EndpointUrl", "https://test.storageapi.dev");
+        builder.UseSetting("RailwayBucket:Region", "auto");
+        builder.UseSetting("RailwayBucket:ForcePathStyle", "false");
+        builder.UseSetting("RailwayBucket:SignedUrlLifetimeMinutes", "15");
+        builder.UseSetting("RailwayBucket:BucketName", "personal-ultra-tests");
+        builder.UseSetting("RailwayBucket:AccessKeyId", "test-access-key");
+        builder.UseSetting("RailwayBucket:SecretAccessKey", "test-secret-key");
     }
 }

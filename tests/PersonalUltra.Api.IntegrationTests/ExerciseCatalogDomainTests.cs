@@ -29,9 +29,12 @@ public sealed class ExerciseCatalogDomainTests
         Assert.Contains(exercises, exercise => exercise.Name == "Supino reto com barra" && exercise.PrimaryMuscleGroup == "Peito");
         Assert.Contains(exercises, exercise => exercise.Name == "Remada baixa" && exercise.PrimaryMuscleGroup == "Costas");
         Assert.Contains(exercises, exercise => exercise.Name == "Desenvolvimento com halteres" && exercise.PrimaryMuscleGroup == "Ombros");
-        Assert.Contains(exercises, exercise => exercise.Name == "Rosca direta com barra" && exercise.PrimaryMuscleGroup == "Braços");
-        Assert.Contains(exercises, exercise => exercise.Name == "Agachamento livre" && exercise.PrimaryMuscleGroup == "Pernas");
+        Assert.Contains(exercises, exercise => exercise.Name == "Rosca direta com barra" && exercise.PrimaryMuscleGroup == "Bíceps");
+        Assert.Contains(exercises, exercise => exercise.Name == "Agachamento livre" && exercise.PrimaryMuscleGroup == "Quadríceps");
         Assert.Contains(exercises, exercise => exercise.Name == "Elevação pélvica com barra" && exercise.PrimaryMuscleGroup == "Glúteos");
+        Assert.Equal(
+            ["Bíceps", "Cardio", "Core", "Corpo inteiro", "Costas", "Glúteos", "Ombros", "Panturrilhas", "Peito", "Posteriores da coxa", "Quadríceps", "Tríceps"],
+            exercises.Select(exercise => exercise.PrimaryMuscleGroup).Distinct().OrderBy(group => group).ToArray());
     }
 
     [Fact]

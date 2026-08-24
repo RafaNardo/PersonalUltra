@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useRef, useState } from 'react';
-import { Alert, Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import type { TrainerExerciseCatalogItem, WorkoutExercise } from '@/src/api/trainer-client';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
@@ -11,7 +11,7 @@ import { useCreateTrainerTemplate, useTrainerExerciseCatalog, useTrainerTemplate
 import { initialExercisePrescription, parseExercisePrescription, prescriptionDraftFromDefaults, validateExercisePrescription, type ExercisePrescriptionDraft } from '@/src/features/trainer/training/prescription';
 import { loadTemplateDraft, removeTemplateDraft, saveTemplateDraft } from '@/src/features/trainer/training/template-draft-storage';
 import { feedback } from '@/src/platform/feedback';
-import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { ExerciseImage } from '@/src/shared/training/exercise-image';
 
 export default function TrainerTemplateEditorScreen() {
   const { id, draftId } = useLocalSearchParams<{ id: string; draftId?: string }>();
@@ -106,7 +106,7 @@ export default function TrainerTemplateEditorScreen() {
       setExercises((current) => current.map((exercise, index) => index === configuration.index ? { ...exercise, ...parsed } : exercise));
     } else if (configuration.catalog) {
       const exercise = configuration.catalog;
-      setExercises((current) => [...current, { exerciseId: exercise.id, name: exercise.name, primaryMuscleGroup: exercise.primaryMuscleGroup, equipment: exercise.equipment, imageRef: exercise.imageRef, instructions: exercise.instructions, sequence: current.length + 1, ...parsed }]);
+      setExercises((current) => [...current, { exerciseId: exercise.id, name: exercise.name, primaryMuscleGroup: exercise.primaryMuscleGroup, equipment: exercise.equipment, imageRef: exercise.imageRef, imageUrl: exercise.imageUrl, instructions: exercise.instructions, sequence: current.length + 1, ...parsed }]);
     }
     setConfiguration(undefined);
     setShowCatalog(false);
@@ -139,12 +139,11 @@ export default function TrainerTemplateEditorScreen() {
 
   if (configuration) {
     const exercise = configuration.catalog ?? exercises[configuration.index!];
-    const source = exerciseMediaSource(exercise.imageRef);
     const cancelConfiguration = () => { const adding = Boolean(configuration.catalog); setConfiguration(undefined); if (adding) setShowCatalog(true); };
     return <Screen withinTabs style={styles.page}>
       <TopBar eyebrow={name.trim() || (isNew ? 'NOVO MODELO' : 'MODELO DE TREINO')} title={exercise.name} onBack={cancelConfiguration} />
       <Text style={styles.exerciseMeta}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text>
-      <View style={styles.heroFrame}>{source ? <Image source={source} accessibilityLabel={`Demonstração do exercício ${exercise.name}`} resizeMode="cover" style={styles.heroImage} /> : <View accessibilityLabel="Imagem indisponível" style={styles.heroFallback}><Text style={styles.copy}>Imagem indisponível</Text></View>}</View>
+      <View style={styles.heroFrame}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Demonstração do exercício ${exercise.name}`} style={styles.heroImage} /></View>
       {exercise.instructions ? <Card style={styles.instructions}><Text style={styles.sectionEyebrow}>INSTRUÇÕES</Text><Text style={styles.instructionsCopy}>{exercise.instructions}</Text></Card> : null}
       <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Configuração</Text><Text style={styles.sectionHint}>Prescrição do modelo</Text></View>
       <PrescriptionPanel name={exercise.name} draft={prescription} errors={prescriptionErrors} onChange={setPrescription} onCancel={cancelConfiguration} onSave={commitConfiguration} disabled={!prescriptionValid} />
@@ -166,8 +165,7 @@ export default function TrainerTemplateEditorScreen() {
 }
 
 function TemplateExerciseCard({ exercise, index, count, onEdit, onRemove, onMove }: { exercise: WorkoutExercise; index: number; count: number; onEdit: () => void; onRemove: () => void; onMove: (to: number) => void }) {
-  const source = exerciseMediaSource(exercise.imageRef);
-  return <Card style={styles.exerciseCard}><View style={styles.exerciseHeader}>{source ? <Image source={source} style={styles.thumbnail} /> : <View style={styles.thumbnail} />}<View style={styles.catalogIdentity}><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.exerciseContext}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text><Text style={styles.prescription}>{exercise.sets} séries · {exercise.repetitionsMin}–{exercise.repetitionsMax} reps · {exercise.restSeconds}s</Text></View></View>{exercise.notes ? <Text style={styles.copy}>{exercise.notes}</Text> : null}<View style={styles.actions}><OrderButton label={`Mover ${exercise.name} para cima`} disabled={index === 0} symbol="↑" onPress={() => onMove(index - 1)} /><OrderButton label={`Mover ${exercise.name} para baixo`} disabled={index === count - 1} symbol="↓" onPress={() => onMove(index + 1)} /><Pressable accessibilityRole="button" onPress={onEdit} style={styles.textButton}><Text style={styles.edit}>Editar</Text></Pressable><Pressable accessibilityRole="button" onPress={onRemove} style={styles.textButton}><Text style={styles.remove}>Remover</Text></Pressable></View></Card>;
+  return <Card style={styles.exerciseCard}><View style={styles.exerciseHeader}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} /><View style={styles.catalogIdentity}><Text style={styles.exerciseName}>{exercise.name}</Text><Text style={styles.exerciseContext}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text><Text style={styles.prescription}>{exercise.sets} séries · {exercise.repetitionsMin}–{exercise.repetitionsMax} reps · {exercise.restSeconds}s</Text></View></View>{exercise.notes ? <Text style={styles.copy}>{exercise.notes}</Text> : null}<View style={styles.actions}><OrderButton label={`Mover ${exercise.name} para cima`} disabled={index === 0} symbol="↑" onPress={() => onMove(index - 1)} /><OrderButton label={`Mover ${exercise.name} para baixo`} disabled={index === count - 1} symbol="↓" onPress={() => onMove(index + 1)} /><Pressable accessibilityRole="button" onPress={onEdit} style={styles.textButton}><Text style={styles.edit}>Editar</Text></Pressable><Pressable accessibilityRole="button" onPress={onRemove} style={styles.textButton}><Text style={styles.remove}>Remover</Text></Pressable></View></Card>;
 }
 
 function PrescriptionPanel({ name, draft, errors, onChange, onCancel, onSave, disabled }: { name: string; draft: ExercisePrescriptionDraft; errors: ReturnType<typeof validateExercisePrescription>; onChange: (draft: ExercisePrescriptionDraft) => void; onCancel: () => void; onSave: () => void; disabled: boolean }) {

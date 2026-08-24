@@ -376,6 +376,13 @@ resolvidas pelas APIs/mobile; isso permanece exclusivamente em `PU-ECF-011`.
 - legado local preservado;
 - URLs expiradas renovam por refetch sem alterar snapshots.
 
+Situação: concluído e revisado. `ImageRef` permanece
+provider-neutral no banco e nos snapshots; `imageUrl` é assinada somente nas
+respostas das duas APIs. `expo-image` usa cache em disco por `ImageRef`, recupera
+bytes já baixados offline e mostra placeholder quando necessário. URLs assinadas
+não são persistidas no SQLite. Os três segredos do bucket são obrigatórios em
+ambos os hosts e a inicialização falha de forma explícita quando ausentes.
+
 ### `PU-ECF-012` — Apply e validação ponta a ponta
 
 - verificar e aplicar pacote em branch limpa;
@@ -386,6 +393,18 @@ resolvidas pelas APIs/mobile; isso permanece exclusivamente em `PU-ECF-011`.
 - cenário offline continua funcional com placeholder/cache;
 - run incremental valida cache hit, item novo, rename, duplicata e regeneração;
 - runbook final documenta uma próxima carga.
+
+Para banco vazio, apenas um host executa o seed. No compose e no primeiro deploy
+Railway esse papel pertence ao `StudentApi`; o `TrainerApi` compartilha o mesmo
+banco com o seed desativado. O catálogo esperado contém 231 exercícios: 28
+legados locais e 203 referências remotas.
+
+Validação local concluída em PostgreSQL 16/Podman: primeira inicialização criou
+231 linhas (`28` locais e `203` remotas) em exatamente 12 grupos canônicos; a
+segunda inicialização permaneceu com 231. Os dois Containerfiles .NET 10, o
+catálogo filtrado, os contratos assinados, o typecheck e o export iOS passaram.
+O gate restante é operacional: configurar as três Variable References antes do
+deploy Railway.
 
 ## Validação mínima
 

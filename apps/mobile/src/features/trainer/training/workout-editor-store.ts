@@ -51,6 +51,7 @@ export const useWorkoutEditorStore = create<WorkoutEditorState>((set) => ({
         primaryMuscleGroup: exercise.primaryMuscleGroup,
         equipment: exercise.equipment,
         imageRef: exercise.imageRef,
+        imageUrl: exercise.imageUrl,
         instructions: exercise.instructions,
         ...prescription,
       };

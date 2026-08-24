@@ -2,7 +2,7 @@ namespace PersonalUltra.TrainerApi.Contracts;
 
 public sealed record WorkoutTemplateSummary(Guid Id, string Name, string Notes, int ExerciseCount, DateTimeOffset UpdatedAt, IReadOnlyList<string> MuscleGroups);
 public sealed record WorkoutTemplateExerciseInput(Guid ExerciseId, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string? Notes);
-public sealed record WorkoutTemplateExerciseResponse(Guid ExerciseId, string Name, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string? Notes);
+public sealed record WorkoutTemplateExerciseResponse(Guid ExerciseId, string Name, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? ImageUrl, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string? Notes);
 public sealed record WorkoutTemplateRequest(string Name, string? Notes, IReadOnlyList<WorkoutTemplateExerciseInput> Exercises);
 public sealed record WorkoutTemplateResponse(Guid Id, string Name, string Notes, IReadOnlyList<WorkoutTemplateExerciseResponse> Exercises);
 public sealed record ApplyWorkoutRequest(Guid StudentId);
@@ -16,7 +16,7 @@ public sealed record TrainerStudentWorkoutSummary(Guid Id, string Name, string N
 public sealed record TrainerStudentWorkoutCreateRequest(string Name, string? Notes);
 public sealed record TrainerStudentWorkoutDetail(Guid Id, Guid StudentId, string Name, string Notes, int SuggestedOrder, DateTimeOffset CreatedAt, IReadOnlyList<TrainerStudentWorkoutExercise> Exercises);
 public sealed record ReorderTrainerStudentWorkoutsRequest(IReadOnlyList<Guid> WorkoutIds);
-public sealed record TrainerStudentWorkoutExercise(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
+public sealed record TrainerStudentWorkoutExercise(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? ImageUrl, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
 public sealed record TrainerStudentWorkoutUpdateRequest(string? Name, IReadOnlyList<TrainerStudentWorkoutExerciseInput> Exercises);
 public sealed record TrainerStudentWorkoutExerciseInput(Guid? Id, Guid? ExerciseId, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string? Notes);
-public sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? Instructions, bool IsActive);
+public sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? ImageUrl, string? Instructions, bool IsActive);

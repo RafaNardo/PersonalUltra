@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using Microsoft.EntityFrameworkCore;
+using PersonalUltra.Application.Training;
 using PersonalUltra.Domain;
 using PersonalUltra.Infrastructure;
 using PersonalUltra.TrainerApi.Contracts;
@@ -12,7 +13,7 @@ public static class TrainingEndpointExtensions
     {
         var exercises = app.MapGroup("/api/v1/training/exercises").RequireAuthorization();
 
-        exercises.MapGet("/", async (string? search, string? muscleGroup, PersonalUltraDbContext db, HttpContext context, CancellationToken ct) =>
+        exercises.MapGet("/", async (string? search, string? muscleGroup, PersonalUltraDbContext db, IExerciseMediaResolver mediaResolver, HttpContext context, CancellationToken ct) =>
         {
             var normalizedSearch = search?.Trim();
             var normalizedMuscleGroup = muscleGroup?.Trim();
@@ -39,10 +40,10 @@ public static class TrainingEndpointExtensions
                 .OrderBy(x => x.Name)
                 .ThenBy(x => x.Slug)
                 .ThenBy(x => x.Id)
-                .Select(x => new TrainerExerciseCatalogItem(x.Id, x.Name, x.Slug, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.IsActive))
+                .Select(x => new TrainerExerciseCatalogItem(x.Id, x.Name, x.Slug, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, null, x.Instructions, x.IsActive))
                 .ToListAsync(ct);
 
-            return Results.Ok(result);
+            return Results.Ok(result.Select(item => item with { ImageUrl = mediaResolver.ResolveUrl(item.ImageRef) }).ToArray());
         });
 
         var templates = app.MapGroup("/api/v1/training/templates").RequireAuthorization();
@@ -59,7 +60,7 @@ public static class TrainingEndpointExtensions
             return Results.Ok(result);
         });
 
-        templates.MapGet("/{id:guid}", async (Guid id, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        templates.MapGet("/{id:guid}", async (Guid id, PersonalUltraDbContext db, IExerciseMediaResolver mediaResolver, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
         {
             var item = await db.WorkoutTemplates
                 .AsNoTracking()
@@ -68,10 +69,10 @@ public static class TrainingEndpointExtensions
                 .SingleOrDefaultAsync(x => x.Id == id && x.TrainerId == TrainerId(user), ct);
             return item is null
                 ? context.ApiError("TEMPLATE_NOT_FOUND", "Treino não encontrado.", 404)
-                : Results.Ok(ToResponse(item));
+                : Results.Ok(ToResponse(item, mediaResolver));
         });
 
-        templates.MapPost("/", async (WorkoutTemplateRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
+        templates.MapPost("/", async (WorkoutTemplateRequest request, PersonalUltraDbContext db, IExerciseMediaResolver mediaResolver, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
         {
             var validation = Validate(request);
             if (validation is not null)
@@ -95,10 +96,10 @@ public static class TrainingEndpointExtensions
 
             db.WorkoutTemplates.Add(template);
             await db.SaveChangesAsync(ct);
-            return Results.Created($"/api/v1/training/templates/{template.Id}", ToResponse(template));
+            return Results.Created($"/api/v1/training/templates/{template.Id}", ToResponse(template, mediaResolver));
         });
 
-        templates.MapPut("/{id:guid}", async (Guid id, WorkoutTemplateRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
+        templates.MapPut("/{id:guid}", async (Guid id, WorkoutTemplateRequest request, PersonalUltraDbContext db, IExerciseMediaResolver mediaResolver, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
         {
             var validation = Validate(request);
             if (validation is not null)
@@ -127,7 +128,7 @@ public static class TrainingEndpointExtensions
                 await transaction.CommitAsync(ct);
 
             var updated = await db.WorkoutTemplates.AsNoTracking().Include(x => x.Exercises).ThenInclude(x => x.Exercise).SingleAsync(x => x.Id == id, ct);
-            return Results.Ok(ToResponse(updated));
+            return Results.Ok(ToResponse(updated, mediaResolver));
         });
 
         templates.MapDelete("/{id:guid}", async (Guid id, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
@@ -144,7 +145,7 @@ public static class TrainingEndpointExtensions
             return Results.NoContent();
         });
 
-        templates.MapPost("/{id:guid}/duplicate", async (Guid id, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
+        templates.MapPost("/{id:guid}/duplicate", async (Guid id, PersonalUltraDbContext db, IExerciseMediaResolver mediaResolver, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
         {
             var source = await db.WorkoutTemplates
                 .Include(x => x.Exercises)
@@ -179,7 +180,7 @@ public static class TrainingEndpointExtensions
 
             db.WorkoutTemplates.Add(copy);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(ToResponse(copy));
+            return Results.Ok(ToResponse(copy, mediaResolver));
         });
 
         templates.MapPost("/{id:guid}/apply", async (Guid id, ApplyWorkoutRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
@@ -230,7 +231,7 @@ public static class TrainingEndpointExtensions
             return Results.Ok(new TrainerStudentWorkoutListResponse(workouts));
         }).RequireAuthorization();
 
-        app.MapPost("/api/v1/students/{studentId:guid}/workouts", async (Guid studentId, TrainerStudentWorkoutCreateRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
+        app.MapPost("/api/v1/students/{studentId:guid}/workouts", async (Guid studentId, TrainerStudentWorkoutCreateRequest request, PersonalUltraDbContext db, IExerciseMediaResolver mediaResolver, ClaimsPrincipal user, TimeProvider clock, HttpContext context, CancellationToken ct) =>
         {
             var trainerId = TrainerId(user);
             if (!await OwnsStudent(db, trainerId, studentId, ct))
@@ -255,10 +256,10 @@ public static class TrainingEndpointExtensions
             };
             db.StudentWorkouts.Add(workout);
             await db.SaveChangesAsync(ct);
-            return Results.Ok(ToStudentWorkoutDetail(workout));
+            return Results.Ok(ToStudentWorkoutDetail(workout, mediaResolver));
         }).RequireAuthorization();
 
-        app.MapGet("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        app.MapGet("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, PersonalUltraDbContext db, IExerciseMediaResolver mediaResolver, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
         {
             var trainerId = TrainerId(user);
             if (!await OwnsStudent(db, trainerId, studentId, ct))
@@ -276,12 +277,12 @@ public static class TrainingEndpointExtensions
                     x.CreatedAt,
                     x.Exercises
                         .OrderBy(exercise => exercise.Sequence)
-                        .Select(exercise => new TrainerStudentWorkoutExercise(exercise.Id, exercise.ExerciseId, exercise.Name, exercise.PrimaryMuscleGroup, exercise.Equipment, exercise.ImageRef, exercise.Instructions, exercise.Sequence, exercise.Sets, exercise.RepetitionsMin, exercise.RepetitionsMax, exercise.RestSeconds, exercise.Notes))
+                        .Select(exercise => new TrainerStudentWorkoutExercise(exercise.Id, exercise.ExerciseId, exercise.Name, exercise.PrimaryMuscleGroup, exercise.Equipment, exercise.ImageRef, null, exercise.Instructions, exercise.Sequence, exercise.Sets, exercise.RepetitionsMin, exercise.RepetitionsMax, exercise.RestSeconds, exercise.Notes))
                         .ToArray()))
                 .SingleOrDefaultAsync(ct);
             return workout is null
                 ? context.ApiError("WORKOUT_NOT_FOUND", "Treino não encontrado para este aluno.", 404)
-                : Results.Ok(workout);
+                : Results.Ok(workout with { Exercises = workout.Exercises.Select(exercise => exercise with { ImageUrl = mediaResolver.ResolveUrl(exercise.ImageRef) }).ToArray() });
         }).RequireAuthorization();
 
         app.MapPut("/api/v1/students/{studentId:guid}/workouts/order", async (Guid studentId, ReorderTrainerStudentWorkoutsRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
@@ -337,7 +338,7 @@ public static class TrainingEndpointExtensions
             return Results.NoContent();
         }).RequireAuthorization();
 
-        app.MapPut("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, TrainerStudentWorkoutUpdateRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
+        app.MapPut("/api/v1/students/{studentId:guid}/workouts/{workoutId:guid}", async (Guid studentId, Guid workoutId, TrainerStudentWorkoutUpdateRequest request, PersonalUltraDbContext db, IExerciseMediaResolver mediaResolver, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
         {
             var trainerId = TrainerId(user);
             if (!await OwnsStudent(db, trainerId, studentId, ct))
@@ -427,7 +428,7 @@ public static class TrainingEndpointExtensions
                 .AsNoTracking()
                 .Include(x => x.Exercises)
                 .SingleAsync(x => x.Id == workout.Id, ct);
-            return Results.Ok(ToStudentWorkoutDetail(updated));
+            return Results.Ok(ToStudentWorkoutDetail(updated, mediaResolver));
         }).RequireAuthorization();
 
         app.MapGet("/api/v1/students/{studentId:guid}/training-history", async (Guid studentId, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>
@@ -477,16 +478,16 @@ public static class TrainingEndpointExtensions
         Notes = input.Notes?.Trim() ?? "",
     };
 
-    private static WorkoutTemplateResponse ToResponse(WorkoutTemplate item) => new(
+    private static WorkoutTemplateResponse ToResponse(WorkoutTemplate item, IExerciseMediaResolver mediaResolver) => new(
         item.Id,
         item.Name,
         item.Notes,
         item.Exercises
             .OrderBy(x => x.Sequence)
-            .Select(x => new WorkoutTemplateExerciseResponse(x.ExerciseId, x.Exercise.Name, x.Exercise.PrimaryMuscleGroup, x.Exercise.Equipment, x.Exercise.ImageRef, x.Exercise.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
+            .Select(x => new WorkoutTemplateExerciseResponse(x.ExerciseId, x.Exercise.Name, x.Exercise.PrimaryMuscleGroup, x.Exercise.Equipment, x.Exercise.ImageRef, mediaResolver.ResolveUrl(x.Exercise.ImageRef), x.Exercise.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
             .ToArray());
 
-    private static TrainerStudentWorkoutDetail ToStudentWorkoutDetail(StudentWorkout workout) => new(
+    private static TrainerStudentWorkoutDetail ToStudentWorkoutDetail(StudentWorkout workout, IExerciseMediaResolver mediaResolver) => new(
         workout.Id,
         workout.StudentId,
         workout.Name,
@@ -495,7 +496,7 @@ public static class TrainingEndpointExtensions
         workout.CreatedAt,
         workout.Exercises
             .OrderBy(x => x.Sequence)
-            .Select(x => new TrainerStudentWorkoutExercise(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
+            .Select(x => new TrainerStudentWorkoutExercise(x.Id, x.ExerciseId, x.Name, x.PrimaryMuscleGroup, x.Equipment, x.ImageRef, mediaResolver.ResolveUrl(x.ImageRef), x.Instructions, x.Sequence, x.Sets, x.RepetitionsMin, x.RepetitionsMax, x.RestSeconds, x.Notes))
             .ToArray());
 
     private static async Task<int> NextSuggestedOrder(PersonalUltraDbContext db, Guid studentId, CancellationToken cancellationToken)

@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { AppState, Image, StyleSheet, Text, View } from 'react-native';
+import { AppState, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
 import { ApiError } from '@/src/api/shared-http';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
@@ -10,7 +10,7 @@ import { inviteApi, type StudentSession } from '@/src/features/student/invite/ap
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
 import { cacheWorkout, cachedWorkout, clearCachedSession, pendingSetCount, pendingSetDetails, syncPendingSets } from '@/src/features/student/offline/training-db';
 import { currentExercise, exerciseProgressState, orderedExercises, sessionProgress, useStudentTrainingSessionStore, withPendingProgress } from '@/src/features/student/training/session-state';
-import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { ExerciseImage } from '@/src/shared/training/exercise-image';
 
 export function StudentTrainingSessionScreen() {
   const { id, start } = useLocalSearchParams<{ id: string; start?: string }>();
@@ -159,10 +159,9 @@ function SessionOverview({ session, isOfflineSnapshot, authToken }: { session: S
 
 function OverviewExercise({ session, exercise, onOpen }: { session: StudentSession; exercise: StudentSession['exercises'][number]; onOpen: () => void }) {
   const state = exerciseProgressState(session, exercise);
-  const source = exerciseMediaSource(exercise.imageRef);
   const stateLabel = state === 'completed' ? 'Concluído' : state === 'current' ? 'Próximo sugerido' : 'Pendente';
   return <Card style={[styles.card, state === 'current' && styles.currentCard]}>
-    <View style={styles.exerciseRow}>{source ? <Image source={source} style={styles.thumbnail} resizeMode="cover" accessibilityLabel={`Imagem do exercício ${exercise.name}`} /> : null}<View style={styles.exerciseIdentity}><Text style={styles.sequence}>{exercise.sequence}. {exercise.name}</Text>{(exercise.primaryMuscleGroup || exercise.equipment) ? <Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text> : null}</View><Tag tone={state === 'completed' ? 'success' : state === 'current' ? 'primary' : 'neutral'}>{stateLabel}</Tag></View>
+    <View style={styles.exerciseRow}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} /><View style={styles.exerciseIdentity}><Text style={styles.sequence}>{exercise.sequence}. {exercise.name}</Text>{(exercise.primaryMuscleGroup || exercise.equipment) ? <Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text> : null}</View><Tag tone={state === 'completed' ? 'success' : state === 'current' ? 'primary' : 'neutral'}>{stateLabel}</Tag></View>
     <View style={styles.prescription}><Prescription label="Séries" value={`${Math.min(exercise.completedSets, exercise.sets)}/${exercise.sets}`} /><Prescription label="Repetições" value={`${exercise.repetitionsMin}–${exercise.repetitionsMax}`} /><Prescription label="Descanso" value={`${exercise.restSeconds}s`} /></View>
     {exercise.instructions ? <Text numberOfLines={2} style={styles.copy}>{exercise.instructions}</Text> : null}
     {exercise.notes ? <Text numberOfLines={2} style={styles.note}>Personal: {exercise.notes}</Text> : null}

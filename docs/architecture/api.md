@@ -10,6 +10,7 @@ Base: `/api/v1`
 - `GET /students/{id}/progress/weight`
 - `POST /student-invites`
 - `GET/POST/PUT/DELETE /training/templates`
+- `GET /training/exercises`
 - `GET/PUT /settings/prescription`
 - `POST /students/{id}/training/from-template/{templateId}`
 - `GET/PUT /students/{id}/training`
@@ -34,6 +35,11 @@ receber dia da semana ou indicador de recomendação. A reordenação exige todo
 treinos ativos do aluno exatamente uma vez e sempre valida o vínculo com o
 Trainer autenticado. Não existem campos de dia ou recomendação no domínio ou
 nos contratos finais.
+
+Todo DTO de exercício mantém o `imageRef` estável. Quando ele usa o esquema
+`media://`, as duas APIs acrescentam uma `imageUrl` HTTPS assinada somente na
+resposta; assets locais mantêm `imageUrl = null`. Credenciais do bucket nunca
+entram nos contratos nem no app.
 
 ## Student API
 - `GET /bootstrap`

@@ -7,6 +7,7 @@ using PersonalUltra.Infrastructure;
 var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<PersonalUltraDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("PersonalUltraDatabase")));
 builder.Services.AddSingleton(TimeProvider.System);
+builder.Services.AddExerciseMediaResolver(builder.Configuration);
 builder.Services.AddSingleton<DemoSessionTokenService>();
 builder.Services.AddScoped<DemoDataSeeder>();
 builder.Services.AddAuthentication(DevAuthenticationHandler.SchemeName)

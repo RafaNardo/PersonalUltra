@@ -1,8 +1,8 @@
-import type { ImageSourcePropType } from 'react-native';
+import type { ImageSource } from 'expo-image';
 
 // Metro resolves local images at build time, so every seeded ImageRef must use a
 // static require instead of a dynamically constructed path.
-const exerciseMediaByRef: Record<string, ImageSourcePropType> = {
+const exerciseMediaByRef: Record<string, number> = {
   'assets/training/abducao_com_elastico.png': require('../../../assets/training/abducao_com_elastico.png'),
   'assets/training/abducao_de_quadril_na_maquina.png': require('../../../assets/training/abducao_de_quadril_na_maquina.png'),
   'assets/training/afundo_com_halteres.png': require('../../../assets/training/afundo_com_halteres.png'),
@@ -35,7 +35,19 @@ const exerciseMediaByRef: Record<string, ImageSourcePropType> = {
 
 export const SEEDED_EXERCISE_MEDIA_REFS = Object.freeze(Object.keys(exerciseMediaByRef));
 
-export function exerciseMediaSource(imageRef?: string): ImageSourcePropType | undefined {
-  if (!imageRef) return undefined;
-  return exerciseMediaByRef[imageRef.trim().replace(/^\/+/, '')];
+export function exerciseMediaSource(imageRef?: string, imageUrl?: string): number | ImageSource | undefined {
+  const normalizedRef = imageRef?.trim().replace(/^\/+/, '');
+  const localSource = normalizedRef ? exerciseMediaByRef[normalizedRef] : undefined;
+  if (localSource) return localSource;
+
+  const remoteUrl = imageUrl?.trim();
+  if (!normalizedRef || !remoteUrl) return undefined;
+  try {
+    const parsed = new URL(remoteUrl);
+    return parsed.protocol === 'https:' && !parsed.username && !parsed.password
+      ? { uri: parsed.toString(), cacheKey: normalizedRef }
+      : undefined;
+  } catch {
+    return undefined;
+  }
 }

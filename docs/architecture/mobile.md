@@ -40,3 +40,9 @@ apps/
 
 ## Offline
 Offline é prioritário na execução de treino do Student. O editor do Trainer não precisa ser offline na demo.
+
+Imagens de exercício passam pela primitive compartilhada `ExerciseImage`.
+Assets legados usam `require(...)` literal; imagens remotas usam `expo-image`,
+cache em disco com chave estável `imageRef` e placeholder quando os bytes ainda
+não estiverem disponíveis offline. URLs assinadas não são persistidas nos
+snapshots SQLite nem em drafts locais.

@@ -30,13 +30,13 @@ export type TrainerMessage = { id: string; studentId: string; message: string; s
 export type TrainerAnamnesis = { goal: string; experienceLevel: string; trainingDaysPerWeek: number; sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number; weightKg: number; healthConditions: string; movementRestrictions: string; currentPainDescription: string; nutritionPreferences: string; nutritionRestrictions: string; completedAt: string };
 export type StudentInvite = { id: string; token: string; inviteCode: string; inviteUrl: string; email?: string; expiresAt: string; replacedPendingInvite: boolean };
 export type WorkoutTemplate = { id: string; name: string; notes: string; exerciseCount?: number; updatedAt?: string; muscleGroups?: string[]; exercises?: WorkoutExercise[] };
-export type WorkoutExercise = { exerciseId: string; name: string; primaryMuscleGroup: string; equipment?: string; imageRef: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string };
+export type WorkoutExercise = { exerciseId: string; name: string; primaryMuscleGroup: string; equipment?: string; imageRef: string; imageUrl?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string };
 export type WorkoutExerciseInput = Omit<WorkoutExercise, 'name'>;
 export type TrainerStudentWorkoutSummary = { id: string; name: string; notes: string; suggestedOrder: number; exerciseCount: number; createdAt: string };
-export type TrainerStudentWorkoutExercise = { id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string };
+export type TrainerStudentWorkoutExercise = { id: string; exerciseId?: string; name: string; primaryMuscleGroup?: string; equipment?: string; imageRef?: string; imageUrl?: string; instructions?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes: string };
 export type TrainerStudentWorkout = Omit<TrainerStudentWorkoutSummary, 'exerciseCount'> & { studentId: string; exercises: TrainerStudentWorkoutExercise[] };
 export type TrainerStudentWorkoutExerciseInput = { id?: string; exerciseId?: string; sequence: number; sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; notes?: string };
-export type TrainerExerciseCatalogItem = { id: string; name: string; slug: string; primaryMuscleGroup: string; equipment?: string; imageRef: string; instructions?: string; isActive: boolean };
+export type TrainerExerciseCatalogItem = { id: string; name: string; slug: string; primaryMuscleGroup: string; equipment?: string; imageRef: string; imageUrl?: string; instructions?: string; isActive: boolean };
 export type TrainerNutrition = { id: string; name: string; notes: string; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ foodName: string; quantityGrams: number }> }> };
 export type TrainerPrescriptionSettings = { sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; isCustomized: boolean };
 

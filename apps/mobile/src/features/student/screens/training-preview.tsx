@@ -1,12 +1,12 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { Image, StyleSheet, Text, View } from 'react-native';
+import { StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { inviteApi, type StudentWorkoutPreview } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
-import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { ExerciseImage } from '@/src/shared/training/exercise-image';
 
 export function StudentTrainingPreviewScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -33,10 +33,9 @@ export function StudentTrainingPreviewScreen() {
 }
 
 function PreviewExercise({ exercise }: { exercise: StudentWorkoutPreview['exercises'][number] }) {
-  const source = exerciseMediaSource(exercise.imageRef);
   return <Card style={styles.exerciseCard}>
     <View style={styles.exerciseHeader}>
-      {source ? <Image source={source} style={styles.exerciseImage} resizeMode="cover" accessibilityLabel={`Imagem do exercício ${exercise.name}`} /> : <View style={styles.imageFallback}><Text style={styles.sequence}>{exercise.sequence}</Text></View>}
+      <ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.exerciseImage} />
       <View style={styles.identity}><Text style={styles.title}>{exercise.sequence}. {exercise.name}</Text>{(exercise.primaryMuscleGroup || exercise.equipment) ? <Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text> : null}</View>
     </View>
     <View style={styles.prescription}><Prescription label="Séries" value={String(exercise.sets)} /><Prescription label="Repetições" value={`${exercise.repetitionsMin}–${exercise.repetitionsMax}`} /><Prescription label="Descanso" value={`${exercise.restSeconds}s`} /></View>

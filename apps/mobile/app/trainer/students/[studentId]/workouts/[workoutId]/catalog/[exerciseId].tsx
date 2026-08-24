@@ -1,6 +1,6 @@
 import { router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useState } from 'react';
-import { Image, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
@@ -10,7 +10,7 @@ import { useTrainerExerciseCatalog, useTrainerStudentWorkout } from '@/src/featu
 import { hasPrescriptionErrors, initialExercisePrescription, prescriptionDraftFromDefaults, validateExercisePrescription, type ExercisePrescriptionDraft } from '@/src/features/trainer/training/prescription';
 import { useWorkoutEditorStore, workoutEditorKey } from '@/src/features/trainer/training/workout-editor-store';
 import { feedback } from '@/src/platform/feedback';
-import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { ExerciseImage } from '@/src/shared/training/exercise-image';
 
 export default function TrainerExerciseConfigurationScreen() {
   const { studentId, workoutId, exerciseId, workoutExerciseId } = useLocalSearchParams<{ studentId: string; workoutId: string; exerciseId: string; workoutExerciseId?: string }>();
@@ -47,7 +47,6 @@ export default function TrainerExerciseConfigurationScreen() {
   const exercise = editingExercise ?? catalogExercise;
   if (!exercise) return <ErrorView message={workoutExerciseId ? 'Este item não está mais no rascunho do treino.' : 'Este exercício não está disponível no catálogo ativo.'} onRetry={workoutExerciseId ? undefined : () => catalog.refetch()} />;
 
-  const source = exerciseMediaSource(exercise.imageRef);
   const update = (field: keyof ExercisePrescriptionDraft, value: string) => setDraft((current) => ({ ...current, [field]: value }));
   const invalid = hasPrescriptionErrors(errors);
   const atLimit = !editingExercise && editor!.exercises.length >= 30;
@@ -66,7 +65,7 @@ export default function TrainerExerciseConfigurationScreen() {
   return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow={`${student.data!.firstName} ${student.data!.lastName} · ${workout.data!.name}`} title={exercise.name} onBack={leaveConfiguration} />
     <Text style={styles.meta}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text>
-    <View style={styles.heroFrame}>{source ? <Image source={source} accessibilityLabel={`Demonstração do exercício ${exercise.name}`} resizeMode="cover" style={styles.heroImage} /> : <View accessibilityLabel="Imagem indisponível" style={styles.heroFallback}><Text style={styles.heroFallbackText}>Imagem indisponível</Text></View>}</View>
+    <View style={styles.heroFrame}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Demonstração do exercício ${exercise.name}`} style={styles.heroImage} /></View>
     {exercise.instructions ? <Card style={styles.instructions}><Text style={styles.sectionEyebrow}>INSTRUÇÕES</Text><Text style={styles.instructionsCopy}>{exercise.instructions}</Text></Card> : null}
 
     <View style={styles.sectionHeader}><Text style={styles.sectionTitle}>Configuração</Text><Text style={styles.sectionHint}>Prescrição do Trainer</Text></View>

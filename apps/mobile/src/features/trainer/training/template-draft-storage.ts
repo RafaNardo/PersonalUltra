@@ -30,7 +30,7 @@ export async function createTemplateDraft(source: WorkoutTemplate) {
 }
 
 export async function saveTemplateDraft(draft: LocalTemplateDraft): Promise<LocalTemplateDraft> {
-  const saved: LocalTemplateDraft = { ...draft, schemaVersion, updatedAt: new Date().toISOString() };
+  const saved: LocalTemplateDraft = { ...draft, exercises: withoutSignedImageUrls(draft.exercises), schemaVersion, updatedAt: new Date().toISOString() };
   await Storage.setItem(`${keyPrefix}:${draft.id}`, JSON.stringify(saved));
   return saved;
 }
@@ -45,7 +45,7 @@ export async function loadTemplateDraft(id: string): Promise<LocalTemplateDraft 
       await Storage.removeItem(key);
       return undefined;
     }
-    return value as LocalTemplateDraft;
+    return { ...value, exercises: withoutSignedImageUrls(value.exercises) } as LocalTemplateDraft;
   } catch {
     await Storage.removeItem(key);
     return undefined;
@@ -54,4 +54,8 @@ export async function loadTemplateDraft(id: string): Promise<LocalTemplateDraft 
 
 export async function removeTemplateDraft(id: string) {
   await Storage.removeItem(`${keyPrefix}:${id}`);
+}
+
+function withoutSignedImageUrls(exercises: WorkoutExercise[]): WorkoutExercise[] {
+  return exercises.map(({ imageUrl: _signedUrl, ...exercise }) => exercise as WorkoutExercise);
 }

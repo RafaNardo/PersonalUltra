@@ -1,13 +1,13 @@
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { router, useLocalSearchParams } from 'expo-router';
-import { Alert, Image, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
 import { useDeleteTrainerTemplate, useTrainerTemplate } from '@/src/features/trainer/training/hooks';
 import { createTemplateDraft } from '@/src/features/trainer/training/template-draft-storage';
 import { feedback } from '@/src/platform/feedback';
-import { exerciseMediaSource } from '@/src/shared/training/exercise-media';
+import { ExerciseImage } from '@/src/shared/training/exercise-image';
 
 export default function TrainerTemplateDetailScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
@@ -41,8 +41,7 @@ export default function TrainerTemplateDetailScreen() {
     {value.notes ? <Text style={styles.intro}>{value.notes}</Text> : <Text style={styles.intro}>Modelo reutilizável da sua biblioteca.</Text>}
     <Card style={styles.summary}><View><Text style={styles.summaryLabel}>ESTRUTURA</Text><Text style={styles.summaryValue}>{value.exercises?.length ?? 0} {(value.exercises?.length ?? 0) === 1 ? 'exercício configurado' : 'exercícios configurados'}</Text></View><Ionicons name="albums-outline" size={28} color={colors.primary} /></Card>
     <View style={styles.list}>{(value.exercises ?? []).map((exercise) => {
-      const source = exerciseMediaSource(exercise.imageRef);
-      return <Card key={`${exercise.exerciseId}-${exercise.sequence}`} style={styles.exercise}><View style={styles.exerciseHeader}>{source ? <Image source={source} resizeMode="cover" style={styles.thumbnail} /> : <View style={styles.thumbnail} />}<View style={styles.identity}><Text style={styles.exerciseName}>{exercise.sequence}. {exercise.name}</Text><Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text><Text style={styles.prescription}>{exercise.sets} séries · {exercise.repetitionsMin}–{exercise.repetitionsMax} reps · {exercise.restSeconds}s</Text></View></View>{exercise.notes ? <Text style={styles.notes}>{exercise.notes}</Text> : null}</Card>;
+      return <Card key={`${exercise.exerciseId}-${exercise.sequence}`} style={styles.exercise}><View style={styles.exerciseHeader}><ExerciseImage imageRef={exercise.imageRef} imageUrl={exercise.imageUrl} accessibilityLabel={`Imagem do exercício ${exercise.name}`} style={styles.thumbnail} /><View style={styles.identity}><Text style={styles.exerciseName}>{exercise.sequence}. {exercise.name}</Text><Text style={styles.context}>{[exercise.primaryMuscleGroup, exercise.equipment].filter(Boolean).join(' · ')}</Text><Text style={styles.prescription}>{exercise.sets} séries · {exercise.repetitionsMin}–{exercise.repetitionsMax} reps · {exercise.restSeconds}s</Text></View></View>{exercise.notes ? <Text style={styles.notes}>{exercise.notes}</Text> : null}</Card>;
     })}</View>
     <Button onPress={() => router.push({ pathname: '/trainer/training/[id]', params: { id: value.id } })}>Editar modelo</Button>
     <Button variant="secondary" onPress={() => void copyAsDraft()}>Criar novo a partir deste</Button>

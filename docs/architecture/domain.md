@@ -71,9 +71,13 @@ SetPerformance
 - `Slug` or another stable key if useful for seed/assets
 - `PrimaryMuscleGroup`
 - optional equipment/category metadata
-- `ImageRef` / `ImageUrl`
+- `ImageRef` provider-neutral (`assets/training/...` ou `media://...`)
 - optional `Instructions`
 - `IsActive`
+
+`ImageUrl` não pertence ao domínio nem aos snapshots. Para referências remotas,
+ela é assinada temporariamente pela Infrastructure e adicionada somente aos
+contratos HTTP de Trainer/Student.
 
 Video is V2. A nullable `VideoUrl` may exist only if it is cheap and creates no V1 workflow.
 

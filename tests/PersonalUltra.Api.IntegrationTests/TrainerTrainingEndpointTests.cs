@@ -58,6 +58,15 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
             });
             Assert.DoesNotContain(items, item => item.Id == inactive.Id);
             Assert.Equal(items.OrderBy(item => item.Name).ThenBy(item => item.Slug).ThenBy(item => item.Id), items);
+            var remote = Assert.Single(items.Take(1).Concat(items.Skip(1)).Where(item => item.ImageRef.StartsWith("media://", StringComparison.Ordinal)).Take(1));
+            Assert.StartsWith("media://exercise-catalog/v2/", remote.ImageRef);
+            Assert.StartsWith("https://", remote.ImageUrl);
+            var legacy = Assert.Single(items.Where(item => item.ImageRef.StartsWith("assets/training/", StringComparison.Ordinal)).Take(1));
+            Assert.Null(legacy.ImageUrl);
+
+            using var verificationScope = factory.Services.CreateScope();
+            var verificationDb = verificationScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            Assert.Equal(remote.ImageRef, await verificationDb.Exercises.Where(x => x.Id == remote.Id).Select(x => x.ImageRef).SingleAsync());
         }
         finally
         {
@@ -80,6 +89,31 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
         var item = Assert.Single(items!);
         Assert.Equal("Supino reto com barra", item.Name);
         Assert.Equal("Peito", item.PrimaryMuscleGroup);
+    }
+
+    [Theory]
+    [InlineData("Bíceps")]
+    [InlineData("Cardio")]
+    [InlineData("Core")]
+    [InlineData("Corpo inteiro")]
+    [InlineData("Costas")]
+    [InlineData("Glúteos")]
+    [InlineData("Ombros")]
+    [InlineData("Panturrilhas")]
+    [InlineData("Peito")]
+    [InlineData("Posteriores da coxa")]
+    [InlineData("Quadríceps")]
+    [InlineData("Tríceps")]
+    public async Task Trainer_catalog_exposes_each_canonical_muscle_group(string muscleGroup)
+    {
+        var response = await client.GetAsync(
+            $"/api/v1/training/exercises/?muscleGroup={Uri.EscapeDataString(muscleGroup)}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var items = await response.Content.ReadFromJsonAsync<TrainerExerciseCatalogItem[]>();
+        Assert.NotNull(items);
+        Assert.NotEmpty(items!);
+        Assert.All(items, item => Assert.Equal(muscleGroup, item.PrimaryMuscleGroup));
     }
 
     [Fact]
@@ -990,7 +1024,7 @@ public sealed class TrainerTrainingEndpointTests : IClassFixture<TrainerApiFacto
     private sealed record TemplateExerciseResponse(Guid ExerciseId, string Name, string ImageRef, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
     private sealed record AppliedWorkoutResponse(Guid Id, int SuggestedOrder);
     private sealed record ErrorResponse(string Code);
-    private sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? Instructions, bool IsActive);
+    private sealed record TrainerExerciseCatalogItem(Guid Id, string Name, string Slug, string PrimaryMuscleGroup, string? Equipment, string ImageRef, string? ImageUrl, string? Instructions, bool IsActive);
     private sealed record StudentWorkoutListResponse(IReadOnlyList<StudentWorkoutSummaryResponse> Workouts);
     private sealed record StudentWorkoutSummaryResponse(Guid Id, string Name, int SuggestedOrder, int ExerciseCount);
     private sealed record StudentWorkoutDetailResponse(Guid Id, Guid StudentId, string Name, int SuggestedOrder, IReadOnlyList<StudentWorkoutExerciseResponse> Exercises);

@@ -46,22 +46,23 @@ export async function initializeTrainingDatabase() {
 export async function cacheWorkout(session: CachedWorkoutSnapshot, studentId: string) {
   const db = await database();
   const updatedAt = new Date().toISOString();
-  const ownedSession = { ...session, studentId };
+  const stableSession = withoutSignedImageUrls(session);
+  const ownedSession = { ...stableSession, studentId };
   await db.runAsync('INSERT OR REPLACE INTO cached_workout (session_id, student_id, payload, updated_at) VALUES (?, ?, ?, ?)', session.sessionId, studentId, JSON.stringify(ownedSession), updatedAt);
-  for (const exercise of session.exercises) await db.runAsync('INSERT OR REPLACE INTO cached_exercises (exercise_id, session_id, student_id, payload, updated_at) VALUES (?, ?, ?, ?, ?)', exercise.id, session.sessionId, studentId, JSON.stringify(exercise), updatedAt);
+  for (const exercise of stableSession.exercises) await db.runAsync('INSERT OR REPLACE INTO cached_exercises (exercise_id, session_id, student_id, payload, updated_at) VALUES (?, ?, ?, ?, ?)', exercise.id, session.sessionId, studentId, JSON.stringify(exercise), updatedAt);
 }
 
 export async function cachedWorkout<T>(workoutId: string | undefined, studentId: string): Promise<T | undefined> {
   const db = await database();
   const rows = await db.getAllAsync<{ payload: string }>('SELECT payload FROM cached_workout WHERE student_id = ? ORDER BY updated_at DESC', studentId);
-  for (const row of rows) { const parsed = JSON.parse(row.payload) as T & { workoutId?: string }; if (!workoutId || parsed.workoutId === workoutId) return parsed; }
+  for (const row of rows) { const parsed = withoutSignedImageUrls(JSON.parse(row.payload) as CachedWorkoutSnapshot) as unknown as T & { workoutId?: string }; if (!workoutId || parsed.workoutId === workoutId) return parsed; }
   return undefined;
 }
 
 export async function cachedSession<T extends { sessionId?: string }>(sessionId: string, studentId: string): Promise<T | undefined> {
   const db = await database();
   const row = await db.getFirstAsync<{ payload: string }>('SELECT payload FROM cached_workout WHERE session_id = ? AND student_id = ?', sessionId, studentId);
-  return row ? JSON.parse(row.payload) as T : undefined;
+  return row ? withoutSignedImageUrls(JSON.parse(row.payload) as CachedWorkoutSnapshot) as unknown as T : undefined;
 }
 
 export type PendingSet = { studentId: string; sessionId: string; exerciseId: string; input: CompleteSetInput };
@@ -121,7 +122,7 @@ export async function pendingSetCount(sessionId: string, studentId: string): Pro
 }
 export async function updateCachedExerciseProgress(sessionId: string, studentId: string, exerciseId: string, completedSets: number, performance?: { setNumber: number; weightKg: number; repetitions: number; completedAt: string }) {
   const db = await database(); const row = await db.getFirstAsync<{ payload: string }>('SELECT payload FROM cached_workout WHERE session_id = ? AND student_id = ?', sessionId, studentId); if (!row) return;
-  const snapshot = JSON.parse(row.payload) as CachedWorkoutSnapshot; const exercise = snapshot.exercises.find((item) => item.id === exerciseId); if (!exercise) return; exercise.completedSets = Math.max(exercise.completedSets, completedSets); if (performance) exercise.performances = [...(exercise.performances ?? []).filter((item) => item.setNumber !== performance.setNumber), performance].sort((left, right) => left.setNumber - right.setNumber); const updatedAt = new Date().toISOString();
+  const snapshot = withoutSignedImageUrls(JSON.parse(row.payload) as CachedWorkoutSnapshot); const exercise = snapshot.exercises.find((item) => item.id === exerciseId); if (!exercise) return; exercise.completedSets = Math.max(exercise.completedSets, completedSets); if (performance) exercise.performances = [...(exercise.performances ?? []).filter((item) => item.setNumber !== performance.setNumber), performance].sort((left, right) => left.setNumber - right.setNumber); const updatedAt = new Date().toISOString();
   await db.withTransactionAsync(async () => { await db.runAsync('UPDATE cached_workout SET payload = ?, updated_at = ? WHERE session_id = ? AND student_id = ?', JSON.stringify(snapshot), updatedAt, sessionId, studentId); await db.runAsync('UPDATE cached_exercises SET payload = ?, updated_at = ? WHERE exercise_id = ? AND session_id = ? AND student_id = ?', JSON.stringify(exercise), updatedAt, exerciseId, sessionId, studentId); });
 }
 export async function clearCachedSession(sessionId: string, studentId: string) {
@@ -134,3 +135,11 @@ export async function clearCachedSession(sessionId: string, studentId: string) {
 export async function removePendingSet(clientOperationId: string, studentId: string) { const db = await database(); await db.runAsync('DELETE FROM pending_operations WHERE client_operation_id = ? AND student_id = ?', clientOperationId, studentId); await db.runAsync('DELETE FROM local_sets WHERE client_operation_id = ? AND student_id = ?', clientOperationId, studentId); }
 export async function clearTrainingData() { const db = await database(); await db.execAsync('DELETE FROM pending_operations; DELETE FROM local_sets; DELETE FROM cached_exercises; DELETE FROM cached_workout;'); }
 export async function syncPendingSets(studentId: string, send: (pending: PendingSet) => Promise<void>): Promise<SyncResult> { const pending = await pendingSets(studentId); return syncSequentially(pending, send, (item) => removePendingSet(item.input.clientOperationId, studentId)); }
+
+function withoutSignedImageUrls<T extends CachedWorkoutSnapshot>(session: T): T {
+  const exercises = session.exercises.map((exercise) => {
+    const { imageUrl: _signedUrl, ...stableExercise } = exercise as typeof exercise & { imageUrl?: string };
+    return stableExercise;
+  });
+  return { ...session, exercises } as T;
+}

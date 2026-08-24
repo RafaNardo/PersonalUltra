@@ -22,6 +22,50 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     }
 
     [Fact]
+    public async Task Student_preview_returns_signed_media_url_without_changing_snapshot_reference()
+    {
+        var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
+        var sessionToken = await login.Content.ReadFromJsonAsync<LoginResponse>();
+        client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", sessionToken!.AccessToken);
+        var workoutId = Guid.NewGuid();
+        Guid workoutExerciseId;
+        string stableImageRef;
+
+        using (var scope = factory.Services.CreateScope())
+        {
+            var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            var exercise = await db.Exercises.AsNoTracking().FirstAsync(x => x.ImageRef.StartsWith("media://"));
+            stableImageRef = exercise.ImageRef;
+            var workout = new StudentWorkout { Id = workoutId, TrainerId = DemoIds.TrainerId, StudentId = DemoIds.StudentId, Name = "Treino com mídia remota", SuggestedOrder = 99, CreatedAt = DateTimeOffset.UtcNow };
+            var snapshot = StudentWorkoutExercise.FromCatalog(workoutId, exercise, 1, 3, 8, 12, 60);
+            workoutExerciseId = snapshot.Id;
+            workout.Exercises.Add(snapshot);
+            db.StudentWorkouts.Add(workout);
+            await db.SaveChangesAsync();
+        }
+
+        try
+        {
+            var preview = await client.GetFromJsonAsync<PreviewResponse>($"/api/v1/training/{workoutId}");
+            var item = Assert.Single(preview!.Exercises);
+            Assert.Equal(stableImageRef, item.ImageRef);
+            Assert.StartsWith("https://", item.ImageUrl);
+
+            using var verificationScope = factory.Services.CreateScope();
+            var verificationDb = verificationScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            Assert.Equal(stableImageRef, await verificationDb.StudentWorkoutExercises.Where(x => x.Id == workoutExerciseId).Select(x => x.ImageRef).SingleAsync());
+        }
+        finally
+        {
+            using var cleanupScope = factory.Services.CreateScope();
+            var cleanupDb = cleanupScope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
+            cleanupDb.StudentWorkoutExercises.RemoveRange(cleanupDb.StudentWorkoutExercises.Where(x => x.StudentWorkoutId == workoutId));
+            cleanupDb.StudentWorkouts.RemoveRange(cleanupDb.StudentWorkouts.Where(x => x.Id == workoutId));
+            await cleanupDb.SaveChangesAsync();
+        }
+    }
+
+    [Fact]
     public async Task Training_list_and_preview_are_neutral_and_ordered_by_suggested_order()
     {
         var login = await client.PostAsJsonAsync("/api/v1/auth/student-login", new { email = "demo@student.personalultra.local" });
@@ -452,7 +496,7 @@ public sealed class StudentTrainingEndpointTests : IClassFixture<StudentApiFacto
     private sealed record TrainingResponse(IReadOnlyList<TrainingHistoryItem> History);
     private sealed record TrainingHistoryItem(Guid SessionId, string Status, int CompletedSets);
     private sealed record PreviewResponse(Guid Id, int SuggestedOrder, string State, Guid? ActiveSessionId, DateTimeOffset? LastCompletedAt, IReadOnlyList<PreviewExerciseResponse> Exercises);
-    private sealed record PreviewExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
+    private sealed record PreviewExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? ImageUrl, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes);
     private sealed record CompletionResponse(Guid Id, string Status, DateTimeOffset? CompletedAt);
     private sealed record SessionDetailResponse(Guid SessionId, Guid WorkoutId, string WorkoutName, string Status, DateTimeOffset StartedAt, DateTimeOffset? CompletedAt, IReadOnlyList<SessionDetailExerciseResponse> Exercises);
     private sealed record SessionDetailExerciseResponse(Guid Id, Guid? ExerciseId, string Name, string? PrimaryMuscleGroup, string? Equipment, string? ImageRef, string? Instructions, int Sequence, int Sets, int RepetitionsMin, int RepetitionsMax, int RestSeconds, string Notes, int CompletedSets, IReadOnlyList<SessionDetailPerformanceResponse> Performances);
