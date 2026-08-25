@@ -214,6 +214,32 @@ Antes de considerar a demo comercialmente fechada, o refactor `M3R` acima tem pr
 
 **DoD M4:** demo comercial completa, incluindo branding dinâmico por Trainer.
 
+### M4N — Substituições manuais de alimentos
+
+Permitir que o Trainer cadastre alternativas explícitas para um alimento
+prescrito, sem cálculo nutricional ou recomendação automática. A direção
+completa está em `docs/design/nutrition-substitutions-milestone.md`.
+
+- `PU-M4N-001`: modelar alternativas ligadas ao item de refeição e ao item de
+  preset, com nome, quantidade, unidade, sequência e observação opcional.
+- `PU-M4N-002`: incluir alternativas na persistência e nos contratos das duas
+  APIs, preservando a validação atômica do documento.
+- `PU-M4N-003`: permitir ao Trainer adicionar, editar, remover e reordenar
+  alternativas no editor individual da refeição e nos presets.
+- `PU-M4N-004`: exibir alternativas no Student em seção expansível e read-only.
+- `PU-M4N-005`: preservar alternativas ao editar/reordenar refeições e aplicar
+  presets por snapshot independente.
+- `PU-M4N-006`: cobrir ownership, round-trip Trainer → Student, validação,
+  snapshots e ausência de alternativas.
+
+**Non-goals M4N:** cálculo de equivalência, recomendação ou substituição
+automática, catálogo nutricional, scanner, IA, diário de adesão ou alteração do
+plano original pelo Student.
+
+**DoD M4N:** Trainer informa, por exemplo, `Carne vermelha — 150 g` com a
+alternativa `Peixe — 200 g`; Student a visualiza com clareza, sem o sistema
+afirmar equivalência nutricional ou modificar a prescrição.
+
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
 

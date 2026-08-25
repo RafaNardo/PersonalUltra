@@ -81,6 +81,10 @@ concluídas a partir da conversa antiga.
 - O resumo nutricional do detalhe Trainer é editável separadamente (nome,
   orientações e metas) e preserva as refeições. Cada card de refeição explicita
   a ação de toque para edição individual.
+- A próxima extensão nutricional planejada é a milestone `M4N`: substituições
+  manuais por alimento, documentadas em
+  `docs/design/nutrition-substitutions-milestone.md`. Ela não está autorizada
+  para implementação automática.
 
 ## Validação padrão
 
