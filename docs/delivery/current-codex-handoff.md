@@ -81,10 +81,13 @@ concluídas a partir da conversa antiga.
 - O resumo nutricional do detalhe Trainer é editável separadamente (nome,
   orientações e metas) e preserva as refeições. Cada card de refeição explicita
   a ação de toque para edição individual.
-- A próxima extensão nutricional planejada é a milestone `M4N`: substituições
-  manuais por alimento, documentadas em
-  `docs/design/nutrition-substitutions-milestone.md`. Ela não está autorizada
-  para implementação automática.
+- `M4N` foi concluída: substituições manuais por alimento são ordenadas,
+  validadas e preservadas nos snapshots de presets; o Student as consulta em
+  modo expansível e read-only. A direção está em
+  `docs/design/nutrition-substitutions-milestone.md`.
+- A bottom nav usa o inset inferior real e as telas densas do treino passam a
+  quebrar/empilhar blocos de texto e métricas para suportar fonte Android
+  ampliada sem sobrepor a navegação do sistema.
 
 ## Validação padrão
 

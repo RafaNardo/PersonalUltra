@@ -1,8 +1,10 @@
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { StudentTabBarIcon } from '@/src/features/student/components/student-tab-bar-icon';
 import { colors, typography } from '@/src/design/tokens';
 
 export default function StudentTabsLayout() {
+  const insets = useSafeAreaInsets();
   return (
     <Tabs
       screenOptions={{
@@ -13,8 +15,8 @@ export default function StudentTabsLayout() {
           backgroundColor: colors.surface,
           borderTopColor: colors.border,
           borderTopWidth: 1,
-          height: 78,
-          paddingBottom: 10,
+          height: 68 + Math.max(insets.bottom, 10),
+          paddingBottom: Math.max(insets.bottom, 10),
           paddingTop: 7,
         },
         tabBarItemStyle: { paddingVertical: 2 },

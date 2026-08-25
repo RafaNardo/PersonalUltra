@@ -1,9 +1,11 @@
 import { Tabs } from 'expo-router';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { TabBarIcon } from '@/src/components/tab-bar-icon';
 import { colors, typography } from '@/src/design/tokens';
 
 export default function TrainerLayout() {
-  return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.textMuted, tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1, height: 78, paddingBottom: 10, paddingTop: 7 }, tabBarItemStyle: { paddingVertical: 2 }, tabBarIconStyle: { marginBottom: 1 }, tabBarLabelStyle: { ...typography.caption, fontSize: 10, lineHeight: 13 } }}>
+  const insets = useSafeAreaInsets();
+  return <Tabs screenOptions={{ headerShown: false, tabBarActiveTintColor: colors.primary, tabBarInactiveTintColor: colors.textMuted, tabBarStyle: { backgroundColor: colors.surface, borderTopColor: colors.border, borderTopWidth: 1, height: 68 + Math.max(insets.bottom, 10), paddingBottom: Math.max(insets.bottom, 10), paddingTop: 7 }, tabBarItemStyle: { paddingVertical: 2 }, tabBarIconStyle: { marginBottom: 1 }, tabBarLabelStyle: { ...typography.caption, fontSize: 10, lineHeight: 13 } }}>
     <Tabs.Screen name="index" options={{ title: 'Início', tabBarIcon: (props) => <TabBarIcon {...props} active="home" inactive="home-outline" /> }} />
     <Tabs.Screen name="students" options={{ title: 'Alunos', tabBarIcon: (props) => <TabBarIcon {...props} active="people" inactive="people-outline" /> }} />
     <Tabs.Screen name="training" options={{ title: 'Treinos', tabBarIcon: (props) => <TabBarIcon {...props} active="barbell" inactive="barbell-outline" /> }} />
