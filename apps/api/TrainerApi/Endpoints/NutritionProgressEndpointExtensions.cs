@@ -49,6 +49,10 @@ public static class NutritionProgressEndpointExtensions
             plan.UpdatedByTrainerId = trainerId;
             plan.Name = request!.Name!.Trim();
             plan.Notes = request.Notes?.Trim() ?? "";
+            plan.DailyCalories = request.DailyGoals?.Calories;
+            plan.DailyProteinGrams = request.DailyGoals?.ProteinGrams;
+            plan.DailyCarbohydratesGrams = request.DailyGoals?.CarbohydratesGrams;
+            plan.DailyFatGrams = request.DailyGoals?.FatGrams;
             plan.UpdatedAt = now;
 
             db.MealFoods.RemoveRange(plan.Meals.SelectMany(x => x.Foods));
@@ -90,6 +94,9 @@ public static class NutritionProgressEndpointExtensions
         if (request is null) return "Informe o plano alimentar.";
         if (string.IsNullOrWhiteSpace(request.Name) || request.Name.Length > 200) return "Informe um nome de plano com até 200 caracteres.";
         if (request.Notes?.Length > 2000) return "As observações do plano devem ter até 2000 caracteres.";
+        if (request.DailyGoals is { } goals && new[] { goals.Calories, goals.ProteinGrams, goals.CarbohydratesGrams, goals.FatGrams }.Any(value => value is < 0)) return "As metas diárias não podem ser negativas.";
+        if (request.DailyGoals is { Calories: > 20000 }) return "As calorias diárias devem ser menores ou iguais a 20000.";
+        if (request.DailyGoals is { } macroGoals && new[] { macroGoals.ProteinGrams, macroGoals.CarbohydratesGrams, macroGoals.FatGrams }.Any(value => value is > 2000)) return "Os macronutrientes diários devem ser menores ou iguais a 2000 g.";
         if (request.Meals is null || request.Meals.Count is < 1 or > 20) return "Informe de 1 a 20 refeições.";
         if (request.Meals.Any(x => x is null)) return "Informe refeições válidas.";
 
@@ -120,5 +127,6 @@ public static class NutritionProgressEndpointExtensions
         plan.Meals.OrderBy(x => x.Sequence).Select(meal => new MealResponse(
             meal.Id, meal.Name, meal.Sequence, meal.Notes,
             meal.Foods.OrderBy(x => x.Sequence).Select(food => new MealFoodResponse(
-                food.Id, food.FoodName, food.Quantity, food.Unit, food.Sequence)).ToArray())).ToArray());
+                food.Id, food.FoodName, food.Quantity, food.Unit, food.Sequence)).ToArray())).ToArray(),
+        new NutritionDailyGoalsResponse(plan.DailyCalories, plan.DailyProteinGrams, plan.DailyCarbohydratesGrams, plan.DailyFatGrams));
 }

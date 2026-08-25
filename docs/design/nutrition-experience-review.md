@@ -47,6 +47,8 @@ não conhece.
   e descer, mantendo a edição completa apenas como alternativa;
 - manter o aluno identificado no cabeçalho;
 - editar nome e observações gerais sem perder o conteúdo persistido;
+- registrar, sem cálculo automático, calorias e macronutrientes diários que o
+  Trainer decidir informar;
 - adicionar, editar, remover e reordenar várias refeições;
 - adicionar, editar, remover e reordenar vários itens em cada refeição;
 - aceitar unidades simples (`g`, `ml`, `unidade`, `fatia`, `colher`, `dose` e
@@ -81,6 +83,9 @@ de atores.
 - mostrar plano, observações, refeições e itens na ordem persistida;
 - mostrar Trainer responsável e data da última atualização, sem alegar
   credencial profissional;
+- quando cadastradas pelo Trainer, apresentar metas diárias de calorias,
+  proteínas, carboidratos e gorduras como referência motivacional, sem cálculo
+  ou recomendação automática;
 - distinguir carregamento, erro, ausência de plano, plano sem refeições e
   refeição sem itens;
 - não exibir macros, metas, adesão ou recomendações que não foram cadastradas.
@@ -117,8 +122,8 @@ alegação de habilitação.
 
 ## Fora do escopo
 
-- catálogo de alimentos, calorias ou macronutrientes;
-- metas, cálculos ou recomendações automáticas;
+- catálogo de alimentos, cálculos ou recomendações automáticas;
+- metas calculadas automaticamente;
 - diário, adesão, fotos, scanner ou lista de compras;
 - alternativas automáticas e geração por IA;
 - rascunho/publicação separados, histórico de versões ou vigência;

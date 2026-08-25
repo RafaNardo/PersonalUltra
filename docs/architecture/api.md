@@ -94,6 +94,10 @@ com unidade, data da última atualização e o nome do Trainer responsável. O
 depois da persistência bem-sucedida; não existe mutation Student, rascunho ou
 versionamento na demo.
 
+O documento também aceita e devolve `dailyGoals` opcional com `calories`,
+`proteinGrams`, `carbohydratesGrams` e `fatGrams`. São referências manuais: as
+APIs não calculam, ajustam ou recomendam macronutrientes.
+
 Cada preset de alimentação pertence ao Trainer autenticado e representa uma
 única refeição com seus itens. Aplicá-lo acrescenta um snapshot ao plano do
 Student, portanto não remove refeições existentes e edições futuras no preset

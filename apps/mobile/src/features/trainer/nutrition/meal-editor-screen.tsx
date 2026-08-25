@@ -36,7 +36,7 @@ export function NutritionMealEditorScreen() {
       const currentMeals = [...(nutrition.data?.meals ?? [])].sort((a, b) => a.sequence - b.sequence);
       const nextMeals = creating ? [...currentMeals.map((item) => ({ name: item.name, notes: item.notes, foods: item.foods })), edited] : currentMeals.map((item) => item.id === mealId ? edited : { name: item.name, notes: item.notes, foods: item.foods });
       const meals = nextMeals.map((item, mealIndex) => ({ name: item.name, notes: item.notes, sequence: mealIndex + 1, foods: [...item.foods].sort((a, b) => a.sequence - b.sequence).map((food, foodIndex) => ({ foodName: food.foodName, quantity: food.quantity, unit: food.unit, sequence: foodIndex + 1 })) }));
-      save.mutate({ name: nutrition.data?.name ?? `Alimentação de ${student.data!.firstName}`, notes: nutrition.data?.notes ?? '', meals }, { onSuccess: () => { feedback.success(); Alert.alert(creating ? 'Refeição adicionada' : 'Refeição atualizada', `${edited.name} foi salva.`); returnToNutrition(); } });
+      save.mutate({ name: nutrition.data?.name ?? `Alimentação de ${student.data!.firstName}`, notes: nutrition.data?.notes ?? '', dailyGoals: nutrition.data?.dailyGoals, meals }, { onSuccess: () => { feedback.success(); Alert.alert(creating ? 'Refeição adicionada' : 'Refeição atualizada', `${edited.name} foi salva.`); returnToNutrition(); } });
     }} />
   </Screen>;
 }

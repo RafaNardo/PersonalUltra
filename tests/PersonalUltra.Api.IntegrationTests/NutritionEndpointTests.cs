@@ -61,6 +61,7 @@ public sealed class NutritionEndpointTests
         {
             name = "  Plano flexível  ",
             notes = "  Observação geral  ",
+            dailyGoals = new { calories = 2200m, proteinGrams = 140m, carbohydratesGrams = 260m, fatGrams = 70m },
             meals = new object[]
             {
                 new
@@ -90,6 +91,10 @@ public sealed class NutritionEndpointTests
         Assert.NotNull(trainerPlan);
         Assert.Equal("Plano flexível", trainerPlan!.Name);
         Assert.Equal("Observação geral", trainerPlan.Notes);
+        Assert.Equal(2200m, trainerPlan.DailyGoals!.Calories);
+        Assert.Equal(140m, trainerPlan.DailyGoals.ProteinGrams);
+        Assert.Equal(260m, trainerPlan.DailyGoals.CarbohydratesGrams);
+        Assert.Equal(70m, trainerPlan.DailyGoals.FatGrams);
         Assert.Equal("Severo", trainerPlan.ResponsibleTrainerName);
         Assert.NotEqual(default, trainerPlan.UpdatedAt);
         Assert.Equal([1, 2], trainerPlan.Meals.Select(x => x.Sequence));
@@ -170,6 +175,7 @@ public sealed class NutritionEndpointTests
             new { name = "Plano", notes = "", meals = (object?)null },
             new { name = new string('x', 201), notes = "", meals = new[] { new { name = "Refeição", sequence = 1, notes = "", foods = new[] { validFood } } } },
             new { name = "Plano", notes = new string('x', 2001), meals = new[] { new { name = "Refeição", sequence = 1, notes = "", foods = new[] { validFood } } } },
+            new { name = "Plano", notes = "", dailyGoals = new { calories = -1m }, meals = new[] { new { name = "Refeição", sequence = 1, notes = "", foods = new[] { validFood } } } },
             new { name = "Plano", notes = "", meals = Array.Empty<object>() },
             new { name = "Plano", notes = "", meals = Enumerable.Range(1, 21).Select(i => new { name = $"R{i}", sequence = i, notes = "", foods = new[] { validFood } }).ToArray() },
             new { name = "Plano", notes = "", meals = new object?[] { null } },
@@ -217,7 +223,8 @@ public sealed class NutritionEndpointTests
 
     private sealed record LoginResponse(string AccessToken);
     private sealed record ErrorResponse(string Code, string Message, JsonElement Details, string TraceId);
-    private sealed record NutritionResponse(Guid Id, string Name, string Notes, DateTimeOffset UpdatedAt, string ResponsibleTrainerName, IReadOnlyList<MealResponse> Meals);
+    private sealed record NutritionResponse(Guid Id, string Name, string Notes, DateTimeOffset UpdatedAt, string ResponsibleTrainerName, IReadOnlyList<MealResponse> Meals, DailyGoalsResponse? DailyGoals = null);
+    private sealed record DailyGoalsResponse(decimal? Calories, decimal? ProteinGrams, decimal? CarbohydratesGrams, decimal? FatGrams);
     private sealed record MealResponse(Guid Id, string Name, int Sequence, string Notes, IReadOnlyList<FoodResponse> Foods);
     private sealed record FoodResponse(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence);
 }

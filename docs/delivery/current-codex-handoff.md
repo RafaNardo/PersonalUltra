@@ -74,6 +74,10 @@ concluídas a partir da conversa antiga.
   `1a865e9`.
 - Telas Student sem sessão usam `Redirect` declarativo; não chamar
   `router.replace` durante render. Correção `19b2d32`.
+- Metas diárias manuais do plano (`calories`, proteína, carboidratos e gordura)
+  são opcionais, persistidas no mesmo `NutritionPlan` e exibidas ao Student
+  somente como referência informativa. Não existe cálculo automático. A
+  migration correspondente é `20260825125052_AddNutritionDailyGoals`.
 
 ## Validação padrão
 

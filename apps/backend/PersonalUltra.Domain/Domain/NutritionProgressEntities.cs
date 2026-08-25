@@ -9,6 +9,10 @@ public sealed class NutritionPlan
     public Guid StudentId { get; set; }
     public string Name { get; set; } = null!;
     public string Notes { get; set; } = "";
+    public decimal? DailyCalories { get; set; }
+    public decimal? DailyProteinGrams { get; set; }
+    public decimal? DailyCarbohydratesGrams { get; set; }
+    public decimal? DailyFatGrams { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public DateTimeOffset UpdatedAt { get; set; }
     public Trainer Trainer { get; set; } = null!;

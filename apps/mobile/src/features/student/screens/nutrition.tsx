@@ -14,6 +14,10 @@ function formatUpdatedAt(value: string) {
   return `Atualizado em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(date)}`;
 }
 
+function goalValue(value: number | undefined, suffix: string) {
+  return value === undefined ? null : `${new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 1 }).format(value)} ${suffix}`;
+}
+
 export function StudentNutritionScreen() {
   const session = useInviteSessionStore((state) => state.session);
   const query = useQuery({ queryKey: ['student', session?.studentId, 'nutrition'], queryFn: () => inviteApi.nutrition(session!.accessToken), enabled: Boolean(session) });
@@ -26,6 +30,7 @@ export function StudentNutritionScreen() {
     <TopBar eyebrow="ALIMENTAÇÃO" title={query.data.name} />
     <View style={styles.planMeta}><Text style={styles.responsible}>Orientado por {query.data.responsibleTrainerName}</Text><Text style={styles.updatedAt}>{formatUpdatedAt(query.data.updatedAt)}</Text></View>
     {query.data.notes ? <Text style={styles.copy}>{query.data.notes}</Text> : null}
+    {query.data.dailyGoals && [query.data.dailyGoals.calories, query.data.dailyGoals.proteinGrams, query.data.dailyGoals.carbohydratesGrams, query.data.dailyGoals.fatGrams].some((value) => value !== undefined) ? <Card style={styles.goalsCard}><Text style={styles.sequence}>SUA REFERÊNCIA DIÁRIA</Text><Text style={styles.title}>Metas para o seu dia</Text><Text style={styles.goalsCopy}>Um passo de cada vez: consistência também é progresso.</Text><View style={styles.goalGrid}>{[[goalValue(query.data.dailyGoals.calories, 'kcal'), 'Calorias'], [goalValue(query.data.dailyGoals.proteinGrams, 'g'), 'Proteínas'], [goalValue(query.data.dailyGoals.carbohydratesGrams, 'g'), 'Carboidratos'], [goalValue(query.data.dailyGoals.fatGrams, 'g'), 'Gorduras']].filter(([value]) => value).map(([value, label]) => <View key={label} style={styles.goal}><Text style={styles.goalValue}>{value}</Text><Text style={styles.goalLabel}>{label}</Text></View>)}</View></Card> : null}
     {meals.length === 0 ? <EmptyState variant="section" status="PLANO EM PREPARAÇÃO" title="As refeições ainda serão organizadas." message="Seu personal já iniciou este plano. Quando as refeições forem salvas, elas aparecerão aqui." /> : meals.map((meal) => {
       const foods = [...meal.foods].sort((left, right) => left.sequence - right.sequence);
       return <Card key={meal.id} style={styles.card}>
@@ -58,5 +63,11 @@ const styles = StyleSheet.create({
   foodRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   food: { ...typography.bodyLG, color: colors.textPrimary, flex: 1 },
   quantity: { ...typography.bodyMD, color: colors.titaniumLight, textAlign: 'right' },
+  goalsCard: { gap: spacing.sm, borderColor: colors.primary },
+  goalsCopy: { ...typography.bodyMD, color: colors.textSecondary },
+  goalGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },
+  goal: { flexGrow: 1, flexBasis: '42%', padding: spacing.md, gap: spacing.xxs, borderRadius: 12, backgroundColor: colors.surfaceElevated },
+  goalValue: { ...typography.headingMD, color: colors.textPrimary },
+  goalLabel: { ...typography.caption, color: colors.titaniumLight },
   emptyPage: { paddingVertical: spacing.xl, gap: spacing.xxl },
 });

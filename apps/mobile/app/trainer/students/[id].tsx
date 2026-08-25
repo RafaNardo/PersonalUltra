@@ -150,7 +150,7 @@ function NutritionMealCard({ meal, index, count, busy, onMove, onEdit }: { meal:
 }
 
 function nutritionPlanInput(plan: TrainerNutrition, meals: TrainerNutritionMeal[]) {
-  return { name: plan.name, notes: plan.notes, meals: meals.map((meal, mealIndex) => ({ name: meal.name, notes: meal.notes, sequence: mealIndex + 1, foods: [...meal.foods].sort((a, b) => a.sequence - b.sequence).map((food, foodIndex) => ({ foodName: food.foodName, quantity: food.quantity, unit: food.unit, sequence: foodIndex + 1 })) })) };
+  return { name: plan.name, notes: plan.notes, dailyGoals: plan.dailyGoals, meals: meals.map((meal, mealIndex) => ({ name: meal.name, notes: meal.notes, sequence: mealIndex + 1, foods: [...meal.foods].sort((a, b) => a.sequence - b.sequence).map((food, foodIndex) => ({ foodName: food.foodName, quantity: food.quantity, unit: food.unit, sequence: foodIndex + 1 })) })) };
 }
 
 function anamnesisLabel(status: 'NotStarted' | 'InProgress' | 'Completed') {

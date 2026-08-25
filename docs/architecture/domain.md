@@ -13,6 +13,14 @@
 
 `TrainerPrescriptionSettings` guarda somente os padrões editáveis usados como ponto de partida ao criar uma nova prescrição (`Sets`, faixa de repetições e descanso). Ela pertence ao Trainer, não ao catálogo global, e nunca altera retroativamente presets ou treinos já salvos. No domínio e na API, o preset continua representado tecnicamente por `WorkoutTemplate`.
 
+## Nutrition
+
+`NutritionPlan` pertence a um Student e contém refeições ordenadas. Além do
+nome e das observações, pode guardar metas diárias opcionais inseridas
+manualmente pelo Trainer: calorias, proteína, carboidratos e gordura. Esses
+campos são referência informativa; o domínio não deriva valores nem registra
+adesão.
+
 ## Training
 - `Exercise`
 - `WorkoutTemplate` (pertence ao Trainer)
