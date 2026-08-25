@@ -8,9 +8,9 @@ concluídas a partir da conversa antiga.
 ## Estado do repositório
 
 - Repositório: `C:\git\PresonalUltra`; branch publicada: `main`.
-- Últimos commits funcionais: `3978c54` (presets de alimentação no domínio/API),
-  `e70e946` (workspace de alimentação Trainer) e `19b2d32` (guards declarativos
-  de sessão Student).
+- Últimos commits funcionais: `cd1866a` (presets corrigidos para refeições
+  individuais), `3978c54` (fundação dos presets no domínio/API) e `e70e946`
+  (workspace de alimentação Trainer).
 - Stack: .NET 10, EF Core/PostgreSQL, Expo/React Native/Expo Router, TypeScript,
   TanStack Query, Zustand e SQLite offline.
 - APIs públicas:
@@ -65,9 +65,9 @@ concluídas a partir da conversa antiga.
   unidade, ordem persistida, autoria/atualização, validação atômica, editor
   Trainer completo e leitura Student read-only. Commits `2a1ef83` e `23e5b4c`;
   direção em `docs/design/nutrition-experience-review.md`.
-- Presets de alimentação Trainer-owned com CRUD/duplicação e aplicação por
-  snapshot, mais bottom nav e seção `Alimentação` no detalhe do aluno. Commits
-  `3978c54` e `e70e946`.
+- Presets Trainer-owned representam uma única refeição e são acrescentados ao
+  plano por snapshot, sem remover as refeições existentes. A bottom nav e o
+  detalhe do aluno expõem `Alimentação`. Correção semântica: `cd1866a`.
 - Telas Student sem sessão usam `Redirect` declarativo; não chamar
   `router.replace` durante render. Correção `19b2d32`.
 
@@ -115,8 +115,8 @@ nunca devem ser lidos ou impressos.
 - Salvar é uma substituição integral e atômica que disponibiliza a versão ao
   Student; rascunho/versionamento não foram introduzidos.
 - `MealFood` é um item textual ordenado, sem catálogo global, macros ou geração.
-- `NutritionTemplate` replica essa estrutura para reutilização pelo Trainer;
-  aplicar cria um snapshot independente e substituir exige confirmação.
+- `NutritionTemplate` representa tecnicamente um preset de uma única refeição;
+  aplicar acrescenta um snapshot independente ao plano existente.
 - Atribuição identifica o Trainer responsável sem alegar credencial clínica.
 - A revisão jurídica/produto continua obrigatória antes de produção, conforme
   `docs/product/nutrition-note.md`.

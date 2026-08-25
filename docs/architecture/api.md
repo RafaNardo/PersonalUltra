@@ -20,7 +20,7 @@ Base: `/api/v1`
 - `GET/POST /nutrition/templates`
 - `GET/PUT/DELETE /nutrition/templates/{templateId}`
 - `POST /nutrition/templates/{templateId}/duplicate`
-- `POST /students/{id}/nutrition/from-template/{templateId}`
+- `POST /students/{id}/nutrition/meals/from-template/{templateId}`
 - `POST /students/{id}/messages`
 
 ### Dashboard inicial
@@ -94,11 +94,11 @@ com unidade, data da última atualização e o nome do Trainer responsável. O
 depois da persistência bem-sucedida; não existe mutation Student, rascunho ou
 versionamento na demo.
 
-Presets de alimentação pertencem ao Trainer autenticado. Aplicá-los copia um
-snapshot para o plano do Student, portanto edições futuras no preset não alteram
-planos já aplicados. Quando já existe plano, a API retorna conflito até receber
-`replaceExisting=true`; a confirmação de substituição é deliberadamente
-explícita no mobile.
+Cada preset de alimentação pertence ao Trainer autenticado e representa uma
+única refeição com seus itens. Aplicá-lo acrescenta um snapshot ao plano do
+Student, portanto não remove refeições existentes e edições futuras no preset
+não alteram cópias já aplicadas. Se ainda não existe plano, a primeira refeição
+cria a estrutura inicial automaticamente.
 
 As APIs compartilham Domain/Application/Infrastructure e banco, mas não devem compartilhar controllers/endpoints específicos dos atores.
 

@@ -126,11 +126,12 @@ rastreabilidade mínima de criação/última alteração. Salvar substitui o doc
 completo de forma atômica e o Student permanece read-only. A direção de UX e os
 non-goals estão em `docs/design/nutrition-experience-review.md`.
 
-O preset replica a mesma estrutura simples de refeições e itens para servir de
-ponto de partida. Aplicá-lo cria IDs novos e um snapshot independente no
-`NutritionPlan`; editar ou excluir o preset não modifica alunos. Substituir um
-plano existente mantém sua identidade e autoria original, atualiza o Trainer
-responsável e exige confirmação explícita.
+Cada preset representa exatamente uma refeição reutilizável, como `Café com
+ovos`, e contém seus itens ordenados. Aplicá-lo cria IDs novos e acrescenta um
+snapshot independente ao `NutritionPlan`; editar ou excluir o preset não
+modifica alunos nem remove refeições existentes. O container técnico
+`NutritionTemplate` permanece compatível com a migration já publicada, mas sua
+invariante de aplicação é uma única `NutritionTemplateMeal`.
 
 ## Progress
 - `WeightEntry` apenas na V1.

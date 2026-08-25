@@ -53,8 +53,8 @@ The gate covers:
 - nutrition ownership/authentication, empty state, Trainer-to-Student roundtrip,
   ordered meals/items with units, attribution, full replacement and validation
   failures that preserve the previous plan;
-- nutrition preset CRUD/duplication, Trainer ownership, independent snapshot
-  application and explicit replacement without losing original authorship.
+- meal-preset CRUD/duplication, Trainer ownership, independent snapshot
+  application and append without losing existing content or original authorship.
 
 Weight endpoints currently have no dedicated integration tests and remain an
 explicit gap. Nutrition presets add five dedicated scenarios, bringing the gate

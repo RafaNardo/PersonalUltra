@@ -41,8 +41,8 @@ não conhece.
   resumo de peso dentro de `Resumo`;
 - mostrar o plano atual em cards por refeição, no mesmo vocabulário visual do
   fluxo de treinos;
-- iniciar uma nova alimentação escolhendo entre `Usar um preset` e
-  `Criar do zero`;
+- adicionar cada refeição escolhendo entre `Usar preset de refeição` e
+  `Criar manualmente`;
 - manter o aluno identificado no cabeçalho;
 - editar nome e observações gerais sem perder o conteúdo persistido;
 - adicionar, editar, remover e reordenar várias refeições;
@@ -56,10 +56,11 @@ não conhece.
 ### Presets
 
 A biblioteca pertence ao Trainer e permite criar, editar, duplicar e excluir
-presets com a mesma estrutura do plano. A aplicação sempre cria uma cópia
-independente: mudanças posteriores no preset não afetam o Student. Se o aluno já
-possui alimentação, a revisão informa qual plano será substituído e pede uma
-segunda confirmação antes de enviar `replaceExisting=true`.
+presets de uma única refeição, por exemplo `Café com ovos`, `Café 2` ou `Café com
+tapioca`. Aplicar um preset acrescenta uma cópia independente ao plano: não
+substitui as outras refeições e mudanças posteriores no preset não afetam o
+Student. Se ainda não existe plano, a primeira refeição cria sua estrutura
+inicial; as seguintes são acrescentadas na ordem atual.
 
 ## Experiência Student
 
@@ -108,5 +109,5 @@ alegação de habilitação.
 - diário, adesão, fotos, scanner ou lista de compras;
 - alternativas automáticas e geração por IA;
 - rascunho/publicação separados, histórico de versões ou vigência;
-- sincronização retroativa entre preset e planos já aplicados;
+- sincronização retroativa entre preset e refeições já aplicadas;
 - credenciais profissionais e compliance production-ready.
