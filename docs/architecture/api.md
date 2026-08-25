@@ -17,6 +17,10 @@ Base: `/api/v1`
 - `DELETE /students/{id}/workouts/{workoutId}` (remoção lógica; preserva histórico)
 - `PUT /students/{id}/workouts/order`
 - `GET/PUT /students/{id}/nutrition`
+- `GET/POST /nutrition/templates`
+- `GET/PUT/DELETE /nutrition/templates/{templateId}`
+- `POST /nutrition/templates/{templateId}/duplicate`
+- `POST /students/{id}/nutrition/from-template/{templateId}`
 - `POST /students/{id}/messages`
 
 ### Dashboard inicial
@@ -89,6 +93,12 @@ com unidade, data da última atualização e o nome do Trainer responsável. O
 `PUT` Trainer valida o documento inteiro e o disponibiliza ao Student somente
 depois da persistência bem-sucedida; não existe mutation Student, rascunho ou
 versionamento na demo.
+
+Presets de alimentação pertencem ao Trainer autenticado. Aplicá-los copia um
+snapshot para o plano do Student, portanto edições futuras no preset não alteram
+planos já aplicados. Quando já existe plano, a API retorna conflito até receber
+`replaceExisting=true`; a confirmação de substituição é deliberadamente
+explícita no mobile.
 
 As APIs compartilham Domain/Application/Infrastructure e banco, mas não devem compartilhar controllers/endpoints específicos dos atores.
 

@@ -185,6 +185,8 @@ O refactor das superfícies Trainer da M4 deve seguir `docs/design/trainer-exper
 - `PU-M4-016`: aplicar branding dinâmico e validado na experiência Student, garantindo que o primitive compartilhado de empty state receba o accent validado sem alterar cores semânticas.
 - `PU-M4-017`: integrar alimentação e progresso ao detalhe do aluno no Trainer, consolidando as seções disponíveis e seus estados `inline` sem plano ou medições.
 - `PU-M4-018`: concluída antecipadamente por decisão de produto: o fluxo legado SVR baseado em `Member` foi retirado, e a entrada do aluno permanece apoiada apenas em `Student`. A autenticação demo por e-mail permanece até a fundação de autenticação real na M5.
+- `PU-M4-019`: presets de alimentação Trainer-owned, aplicação por snapshot,
+  entrada `Alimentação` na bottom nav e seção operacional no detalhe do aluno.
 
 Implementação concluída na demo: alimentação Trainer/Student, registro e consulta de peso, Coach explicativo read-only, seed ampliado, reset demo, branding validado por Trainer e aplicado ao contexto Student, além da consolidação no detalhe do aluno.
 
@@ -195,6 +197,12 @@ persistida em modo read-only. A API valida o payload integral antes de substitui
 o plano e o gate cobre o roundtrip Trainer → Student, ownership, ausência válida
 e rejeições atômicas. A direção e os non-goals estão em
 `docs/design/nutrition-experience-review.md`.
+
+**Presets de alimentação (2026-08-24): concluídos.** A biblioteca suporta CRUD
+e duplicação, a aplicação copia um snapshot independente e a substituição de um
+plano existente exige confirmação explícita. O Trainer ganhou uma superfície
+`Alimentação` na navegação inferior; no detalhe do aluno, `Evolução` foi
+substituída por `Alimentação` e o peso permanece disponível em `Resumo`.
 
 Antes de considerar a demo comercialmente fechada, o refactor `M3R` acima tem prioridade sobre novos refinamentos de M4, pois montagem/prescrição de treino é uma superfície central do produto.
 

@@ -35,6 +35,14 @@ não conhece.
 
 ## Experiência Trainer
 
+- oferecer `Alimentação` na navegação inferior, com uma visão operacional dos
+  alunos e do estado de seus planos;
+- substituir a aba `Evolução` do detalhe do aluno por `Alimentação`, mantendo o
+  resumo de peso dentro de `Resumo`;
+- mostrar o plano atual em cards por refeição, no mesmo vocabulário visual do
+  fluxo de treinos;
+- iniciar uma nova alimentação escolhendo entre `Usar um preset` e
+  `Criar do zero`;
 - manter o aluno identificado no cabeçalho;
 - editar nome e observações gerais sem perder o conteúdo persistido;
 - adicionar, editar, remover e reordenar várias refeições;
@@ -44,6 +52,14 @@ não conhece.
 - revisar toda a estrutura na mesma tela antes de salvar;
 - explicar que salvar disponibiliza a atualização ao Student;
 - preservar o draft local quando validação ou rede falhar.
+
+### Presets
+
+A biblioteca pertence ao Trainer e permite criar, editar, duplicar e excluir
+presets com a mesma estrutura do plano. A aplicação sempre cria uma cópia
+independente: mudanças posteriores no preset não afetam o Student. Se o aluno já
+possui alimentação, a revisão informa qual plano será substituído e pede uma
+segunda confirmação antes de enviar `replaceExisting=true`.
 
 ## Experiência Student
 
@@ -92,4 +108,5 @@ alegação de habilitação.
 - diário, adesão, fotos, scanner ou lista de compras;
 - alternativas automáticas e geração por IA;
 - rascunho/publicação separados, histórico de versões ou vigência;
+- sincronização retroativa entre preset e planos já aplicados;
 - credenciais profissionais e compliance production-ready.

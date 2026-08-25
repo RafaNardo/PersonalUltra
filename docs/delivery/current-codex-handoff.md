@@ -8,9 +8,9 @@ concluídas a partir da conversa antiga.
 ## Estado do repositório
 
 - Repositório: `C:\git\PresonalUltra`; branch publicada: `main`.
-- Últimos commits funcionais: `2a1ef83` (domínio/API/testes de nutrição),
-  `23e5b4c` (fluxo mobile Trainer/Student) e `19b2d32` (guards declarativos de
-  sessão Student).
+- Últimos commits funcionais: `3978c54` (presets de alimentação no domínio/API),
+  `e70e946` (workspace de alimentação Trainer) e `19b2d32` (guards declarativos
+  de sessão Student).
 - Stack: .NET 10, EF Core/PostgreSQL, Expo/React Native/Expo Router, TypeScript,
   TanStack Query, Zustand e SQLite offline.
 - APIs públicas:
@@ -57,7 +57,7 @@ concluídas a partir da conversa antiga.
 - Execução multimodal/fluida M3RX, migration, histórico factual e conclusão sem
   dados sintéticos. Commit `c7b949b`; design em
   `docs/design/training-execution-refinement.md`.
-- Gate de regressão API: comando `npm run test:api:regression`, atualmente 100
+- Gate de regressão API: comando `npm run test:api:regression`, atualmente 105
   testes. Commits-base `ab4c3d4` e `c41ae7b`; cobertura de nutrição em
   `2a1ef83`; detalhes em
   `docs/testing/api-regression.md`.
@@ -65,6 +65,9 @@ concluídas a partir da conversa antiga.
   unidade, ordem persistida, autoria/atualização, validação atômica, editor
   Trainer completo e leitura Student read-only. Commits `2a1ef83` e `23e5b4c`;
   direção em `docs/design/nutrition-experience-review.md`.
+- Presets de alimentação Trainer-owned com CRUD/duplicação e aplicação por
+  snapshot, mais bottom nav e seção `Alimentação` no detalhe do aluno. Commits
+  `3978c54` e `e70e946`.
 - Telas Student sem sessão usam `Redirect` declarativo; não chamar
   `router.replace` durante render. Correção `19b2d32`.
 
@@ -84,7 +87,7 @@ cd apps/mobile
 npx expo export --platform ios --output-dir .expo-export-validation
 ```
 
-O último gate conhecido passou com 100/100 testes de API, 136/136 testes da
+O último gate conhecido passou com 105/105 testes de API, 136/136 testes da
 Factory, build .NET sem warnings, typecheck e export iOS. As duas APIs públicas
 responderam health 200 e os contratos públicos retornaram `trackingMode`.
 
@@ -112,11 +115,12 @@ nunca devem ser lidos ou impressos.
 - Salvar é uma substituição integral e atômica que disponibiliza a versão ao
   Student; rascunho/versionamento não foram introduzidos.
 - `MealFood` é um item textual ordenado, sem catálogo global, macros ou geração.
+- `NutritionTemplate` replica essa estrutura para reutilização pelo Trainer;
+  aplicar cria um snapshot independente e substituir exige confirmação.
 - Atribuição identifica o Trainer responsável sem alegar credencial clínica.
 - A revisão jurídica/produto continua obrigatória antes de produção, conforme
   `docs/product/nutrition-note.md`.
-- Não há outra tarefa de produto acordada neste handoff. A lacuna explícita
-  restante no gate é Weight API.
+- A lacuna explícita restante no gate é Weight API.
 
 ## Arquivos locais do usuário
 

@@ -52,11 +52,13 @@ The gate covers:
 - prescription settings and catalog/demo seed idempotency;
 - nutrition ownership/authentication, empty state, Trainer-to-Student roundtrip,
   ordered meals/items with units, attribution, full replacement and validation
-  failures that preserve the previous plan.
+  failures that preserve the previous plan;
+- nutrition preset CRUD/duplication, Trainer ownership, independent snapshot
+  application and explicit replacement without losing original authorship.
 
 Weight endpoints currently have no dedicated integration tests and remain an
-explicit gap. The nutrition review added four dedicated scenarios, bringing the
-gate to 100 tests.
+explicit gap. Nutrition presets add five dedicated scenarios, bringing the gate
+to 105 tests.
 
 ## What this gate does not prove
 

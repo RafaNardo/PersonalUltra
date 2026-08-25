@@ -115,6 +115,9 @@ See `docs/design/trainer-training-refactor.md` for the approved Trainer flow and
 - `NutritionPlan`
 - `Meal`
 - `MealFood`
+- `NutritionTemplate` (pertence ao Trainer)
+- `NutritionTemplateMeal`
+- `NutritionTemplateFood`
 
 Na demo, `MealFood` é um item textual ordenado da prescrição, com quantidade e
 unidade. Não existe catálogo global de alimentos, macros ou geração automática.
@@ -122,6 +125,12 @@ unidade. Não existe catálogo global de alimentos, macros ou geração automát
 rastreabilidade mínima de criação/última alteração. Salvar substitui o documento
 completo de forma atômica e o Student permanece read-only. A direção de UX e os
 non-goals estão em `docs/design/nutrition-experience-review.md`.
+
+O preset replica a mesma estrutura simples de refeições e itens para servir de
+ponto de partida. Aplicá-lo cria IDs novos e um snapshot independente no
+`NutritionPlan`; editar ou excluir o preset não modifica alunos. Substituir um
+plano existente mantém sua identidade e autoria original, atualiza o Trainer
+responsável e exige confirmação explícita.
 
 ## Progress
 - `WeightEntry` apenas na V1.
