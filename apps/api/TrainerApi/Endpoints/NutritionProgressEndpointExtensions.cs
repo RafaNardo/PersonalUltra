@@ -19,7 +19,7 @@ public static class NutritionProgressEndpointExtensions
                 return context.ApiError("STUDENT_NOT_FOUND", "Aluno não encontrado.", 404);
 
             var plan = await db.NutritionPlans.AsNoTracking()
-                .Include(x => x.Trainer).Include(x => x.Meals).ThenInclude(x => x.Foods)
+                .Include(x => x.Trainer).Include(x => x.Meals).ThenInclude(x => x.Foods).ThenInclude(x => x.Alternatives)
                 .SingleOrDefaultAsync(x => x.StudentId == studentId, ct);
             return plan is null ? Results.Text("null", "application/json") : Results.Ok(ToResponse(plan));
         });
@@ -66,10 +66,16 @@ public static class NutritionProgressEndpointExtensions
                     Id = Guid.NewGuid(), NutritionPlanId = plan.Id, Name = inputMeal.Name!.Trim(),
                     Sequence = mealIndex + 1, Notes = inputMeal.Notes?.Trim() ?? "",
                 };
-                meal.Foods.AddRange(inputMeal.Foods!.Select(x => x!).OrderBy(x => x.Sequence).Select((food, foodIndex) => new MealFood
+                meal.Foods.AddRange(inputMeal.Foods!.Select(x => x!).OrderBy(x => x.Sequence).Select((food, foodIndex) =>
                 {
-                    Id = Guid.NewGuid(), MealId = meal.Id, FoodName = food.FoodName!.Trim(),
-                    Quantity = food.Quantity, Unit = food.Unit!.Trim(), Sequence = foodIndex + 1,
+                    var entity = new MealFood { Id = Guid.NewGuid(), MealId = meal.Id, FoodName = food.FoodName!.Trim(),
+                        Quantity = IsFree(food.Unit) ? 1 : food.Quantity, Unit = food.Unit!.Trim(), Sequence = foodIndex + 1 };
+                    entity.Alternatives.AddRange(food.Alternatives?.Where(x => x is not null).Select(x => x!).OrderBy(x => x.Sequence).Select((alternative, alternativeIndex) => new MealFoodAlternative
+                    {
+                        Id = Guid.NewGuid(), MealFoodId = entity.Id, FoodName = alternative.FoodName!.Trim(), Quantity = IsFree(alternative.Unit) ? 1 : alternative.Quantity,
+                        Unit = alternative.Unit!.Trim(), Sequence = alternativeIndex + 1, Notes = alternative.Notes?.Trim() ?? ""
+                    }) ?? []);
+                    return entity;
                 }));
                 plan.Meals.Add(meal);
                 db.Meals.Add(meal);
@@ -114,6 +120,17 @@ public static class NutritionProgressEndpointExtensions
             if (foods.Any(x => x.Quantity <= 0 || x.Quantity > 10000)) return "A quantidade de cada item deve ser maior que zero e menor ou igual a 10000.";
             if (foods.Any(x => string.IsNullOrWhiteSpace(x.Unit) || x.Unit.Length > 40)) return "Cada item deve ter uma unidade com até 40 caracteres.";
             if (foods.Any(x => x.Sequence <= 0) || foods.Select(x => x.Sequence).Distinct().Count() != foods.Length) return "As sequências dos itens devem ser positivas e distintas em cada refeição.";
+            if (foods.Any(x => x.Alternatives is { Count: > 10 })) return "Cada item pode ter no máximo 10 alternativas.";
+            foreach (var food in foods)
+            {
+                var alternatives = food.Alternatives?.Where(x => x is not null).Select(x => x!).ToArray() ?? [];
+                if (alternatives.Length != (food.Alternatives?.Count ?? 0)) return "Informe alternativas válidas para cada item.";
+                if (alternatives.Any(x => string.IsNullOrWhiteSpace(x.FoodName) || x.FoodName.Length > 200)) return "Cada alternativa deve ter nome com até 200 caracteres.";
+                if (alternatives.Any(x => x.Quantity <= 0 || x.Quantity > 10000)) return "A quantidade de cada alternativa deve ser maior que zero e menor ou igual a 10000.";
+                if (alternatives.Any(x => string.IsNullOrWhiteSpace(x.Unit) || x.Unit.Length > 40)) return "Cada alternativa deve ter uma unidade com até 40 caracteres.";
+                if (alternatives.Any(x => x.Notes?.Length > 1000)) return "As observações das alternativas devem ter até 1000 caracteres.";
+                if (alternatives.Any(x => x.Sequence <= 0) || alternatives.Select(x => x.Sequence).Distinct().Count() != alternatives.Length) return "As sequências das alternativas devem ser positivas e distintas.";
+            }
         }
         return null;
     }
@@ -127,6 +144,9 @@ public static class NutritionProgressEndpointExtensions
         plan.Meals.OrderBy(x => x.Sequence).Select(meal => new MealResponse(
             meal.Id, meal.Name, meal.Sequence, meal.Notes,
             meal.Foods.OrderBy(x => x.Sequence).Select(food => new MealFoodResponse(
-                food.Id, food.FoodName, food.Quantity, food.Unit, food.Sequence)).ToArray())).ToArray(),
+                food.Id, food.FoodName, food.Quantity, food.Unit, food.Sequence,
+                food.Alternatives.OrderBy(x => x.Sequence).Select(x => new MealFoodAlternativeResponse(x.Id, x.FoodName, x.Quantity, x.Unit, x.Sequence, x.Notes)).ToArray())).ToArray())).ToArray(),
         new NutritionDailyGoalsResponse(plan.DailyCalories, plan.DailyProteinGrams, plan.DailyCarbohydratesGrams, plan.DailyFatGrams));
+
+    private static bool IsFree(string? unit) => string.Equals(unit?.Trim(), "livre", StringComparison.OrdinalIgnoreCase);
 }

@@ -1,5 +1,6 @@
 namespace PersonalUltra.StudentApi.Contracts;
-public sealed record StudentMealFood(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence);
+public sealed record StudentMealFoodAlternative(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence, string Notes);
+public sealed record StudentMealFood(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence, IReadOnlyList<StudentMealFoodAlternative> Alternatives);
 public sealed record StudentMeal(Guid Id, string Name, int Sequence, string Notes, IReadOnlyList<StudentMealFood> Foods);
 public sealed record StudentNutritionDailyGoals(decimal? Calories, decimal? ProteinGrams, decimal? CarbohydratesGrams, decimal? FatGrams);
 public sealed record StudentNutrition(Guid Id, string Name, string Notes, DateTimeOffset UpdatedAt, string ResponsibleTrainerName, IReadOnlyList<StudentMeal> Meals, StudentNutritionDailyGoals? DailyGoals = null);

@@ -154,7 +154,7 @@ public static class NutritionTemplateEndpointExtensions
     }
 
     private static IQueryable<NutritionTemplate> Query(PersonalUltraDbContext db) =>
-        db.NutritionTemplates.Include(x => x.Meals).ThenInclude(x => x.Foods);
+        db.NutritionTemplates.Include(x => x.Meals).ThenInclude(x => x.Foods).ThenInclude(x => x.Alternatives);
 
     private static NutritionTemplateMeal CreateTemplateMeal(Guid templateId, NutritionMealTemplateRequest request)
     {
@@ -163,10 +163,16 @@ public static class NutritionTemplateEndpointExtensions
             Id = Guid.NewGuid(), NutritionTemplateId = templateId, Name = request.Name!.Trim(),
             Notes = request.Notes?.Trim() ?? "", Sequence = 1,
         };
-        meal.Foods.AddRange(request.Foods!.Select(x => x!).OrderBy(x => x.Sequence).Select((food, index) => new NutritionTemplateFood
+        meal.Foods.AddRange(request.Foods!.Select(x => x!).OrderBy(x => x.Sequence).Select((food, index) =>
         {
-            Id = Guid.NewGuid(), NutritionTemplateMealId = meal.Id, FoodName = food.FoodName!.Trim(),
-            Quantity = food.Quantity, Unit = food.Unit!.Trim(), Sequence = index + 1,
+            var entity = new NutritionTemplateFood { Id = Guid.NewGuid(), NutritionTemplateMealId = meal.Id, FoodName = food.FoodName!.Trim(),
+                Quantity = IsFree(food.Unit) ? 1 : food.Quantity, Unit = food.Unit!.Trim(), Sequence = index + 1 };
+            entity.Alternatives.AddRange(food.Alternatives?.Where(x => x is not null).Select(x => x!).OrderBy(x => x.Sequence).Select((alternative, alternativeIndex) => new NutritionTemplateFoodAlternative
+            {
+                Id = Guid.NewGuid(), NutritionTemplateFoodId = entity.Id, FoodName = alternative.FoodName!.Trim(), Quantity = IsFree(alternative.Unit) ? 1 : alternative.Quantity,
+                Unit = alternative.Unit!.Trim(), Sequence = alternativeIndex + 1, Notes = alternative.Notes?.Trim() ?? ""
+            }) ?? []);
+            return entity;
         }));
         return meal;
     }
@@ -178,10 +184,16 @@ public static class NutritionTemplateEndpointExtensions
             Id = Guid.NewGuid(), NutritionTemplateId = templateId, Name = source.Name,
             Notes = source.Notes, Sequence = 1,
         };
-        meal.Foods.AddRange(source.Foods.OrderBy(x => x.Sequence).Select((food, index) => new NutritionTemplateFood
+        meal.Foods.AddRange(source.Foods.OrderBy(x => x.Sequence).Select((food, index) =>
         {
-            Id = Guid.NewGuid(), NutritionTemplateMealId = meal.Id, FoodName = food.FoodName,
-            Quantity = food.Quantity, Unit = food.Unit, Sequence = index + 1,
+            var entity = new NutritionTemplateFood { Id = Guid.NewGuid(), NutritionTemplateMealId = meal.Id, FoodName = food.FoodName,
+                Quantity = food.Quantity, Unit = food.Unit, Sequence = index + 1 };
+            entity.Alternatives.AddRange(food.Alternatives.OrderBy(x => x.Sequence).Select((alternative, alternativeIndex) => new NutritionTemplateFoodAlternative
+            {
+                Id = Guid.NewGuid(), NutritionTemplateFoodId = entity.Id, FoodName = alternative.FoodName, Quantity = alternative.Quantity,
+                Unit = alternative.Unit, Sequence = alternativeIndex + 1, Notes = alternative.Notes
+            }));
+            return entity;
         }));
         return meal;
     }
@@ -193,10 +205,16 @@ public static class NutritionTemplateEndpointExtensions
             Id = Guid.NewGuid(), NutritionPlanId = planId, Name = source.Name,
             Notes = source.Notes, Sequence = sequence,
         };
-        meal.Foods.AddRange(source.Foods.OrderBy(x => x.Sequence).Select((food, index) => new MealFood
+        meal.Foods.AddRange(source.Foods.OrderBy(x => x.Sequence).Select((food, index) =>
         {
-            Id = Guid.NewGuid(), MealId = meal.Id, FoodName = food.FoodName,
-            Quantity = food.Quantity, Unit = food.Unit, Sequence = index + 1,
+            var entity = new MealFood { Id = Guid.NewGuid(), MealId = meal.Id, FoodName = food.FoodName,
+                Quantity = food.Quantity, Unit = food.Unit, Sequence = index + 1 };
+            entity.Alternatives.AddRange(food.Alternatives.OrderBy(x => x.Sequence).Select((alternative, alternativeIndex) => new MealFoodAlternative
+            {
+                Id = Guid.NewGuid(), MealFoodId = entity.Id, FoodName = alternative.FoodName, Quantity = alternative.Quantity,
+                Unit = alternative.Unit, Sequence = alternativeIndex + 1, Notes = alternative.Notes
+            }));
+            return entity;
         }));
         return meal;
     }
@@ -207,7 +225,8 @@ public static class NutritionTemplateEndpointExtensions
         return new NutritionMealTemplateResponse(
             template.Id, template.Name, template.Notes, template.CreatedAt, template.UpdatedAt,
             meal.Foods.OrderBy(x => x.Sequence).Select(food => new NutritionMealTemplateFoodResponse(
-                food.Id, food.FoodName, food.Quantity, food.Unit, food.Sequence)).ToArray());
+                food.Id, food.FoodName, food.Quantity, food.Unit, food.Sequence,
+                food.Alternatives.OrderBy(x => x.Sequence).Select(x => new MealFoodAlternativeResponse(x.Id, x.FoodName, x.Quantity, x.Unit, x.Sequence, x.Notes)).ToArray())).ToArray());
     }
 
     private static string? Validate(NutritionMealTemplateRequest? request)
@@ -222,6 +241,17 @@ public static class NutritionTemplateEndpointExtensions
         if (foods.Any(x => x.Quantity <= 0 || x.Quantity > 10000)) return "A quantidade de cada item deve ser maior que zero e menor ou igual a 10000.";
         if (foods.Any(x => string.IsNullOrWhiteSpace(x.Unit) || x.Unit.Length > 40)) return "Cada item deve ter uma unidade com até 40 caracteres.";
         if (foods.Any(x => x.Sequence <= 0) || foods.Select(x => x.Sequence).Distinct().Count() != foods.Length) return "As sequências dos itens devem ser positivas e distintas.";
+        if (foods.Any(x => x.Alternatives is { Count: > 10 })) return "Cada item pode ter no máximo 10 alternativas.";
+        foreach (var food in foods)
+        {
+            var alternatives = food.Alternatives?.Where(x => x is not null).Select(x => x!).ToArray() ?? [];
+            if (alternatives.Length != (food.Alternatives?.Count ?? 0)) return "Informe alternativas válidas para cada item.";
+            if (alternatives.Any(x => string.IsNullOrWhiteSpace(x.FoodName) || x.FoodName.Length > 200)) return "Cada alternativa deve ter nome com até 200 caracteres.";
+            if (alternatives.Any(x => x.Quantity <= 0 || x.Quantity > 10000)) return "A quantidade de cada alternativa deve ser maior que zero e menor ou igual a 10000.";
+            if (alternatives.Any(x => string.IsNullOrWhiteSpace(x.Unit) || x.Unit.Length > 40)) return "Cada alternativa deve ter uma unidade com até 40 caracteres.";
+            if (alternatives.Any(x => x.Notes?.Length > 1000)) return "As observações das alternativas devem ter até 1000 caracteres.";
+            if (alternatives.Any(x => x.Sequence <= 0) || alternatives.Select(x => x.Sequence).Distinct().Count() != alternatives.Length) return "As sequências das alternativas devem ser positivas e distintas.";
+        }
         return null;
     }
 
@@ -232,4 +262,6 @@ public static class NutritionTemplateEndpointExtensions
         const string suffix = " (cópia)";
         return $"{sourceName[..Math.Min(sourceName.Length, 200 - suffix.Length)]}{suffix}";
     }
+
+    private static bool IsFree(string? unit) => string.Equals(unit?.Trim(), "livre", StringComparison.OrdinalIgnoreCase);
 }

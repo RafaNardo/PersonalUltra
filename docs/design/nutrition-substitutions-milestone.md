@@ -1,6 +1,6 @@
 # Milestone proposta — substituições manuais de alimentos
 
-Status: planejada. Não iniciar automaticamente sem uma task explícita.
+Status: implementada em 2026-08-25.
 
 ## Objetivo
 

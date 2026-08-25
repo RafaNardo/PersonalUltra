@@ -1,6 +1,7 @@
 import { Redirect, router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
 import { Card, EmptyState, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
@@ -37,10 +38,16 @@ export function StudentNutritionScreen() {
         <Text style={styles.sequence}>REFEIÇÃO {meal.sequence}</Text>
         <Text style={styles.title}>{meal.name}</Text>
         {meal.notes ? <Text style={styles.copy}>{meal.notes}</Text> : null}
-        {foods.length ? <View style={styles.foodList}>{foods.map((food) => <View key={food.id} style={styles.foodRow}><Text style={styles.food}>{food.foodName}</Text><Text style={styles.quantity}>{formatNutritionQuantity(food.quantity, food.unit)}</Text></View>)}</View> : <EmptyState variant="inline" status="ITENS EM PREPARAÇÃO" title="Esta refeição ainda não tem itens." message="Seu personal pode completar os alimentos e quantidades na próxima atualização." />}
+        {foods.length ? <View style={styles.foodList}>{foods.map((food) => <StudentFoodRow key={food.id} food={food} />)}</View> : <EmptyState variant="inline" status="ITENS EM PREPARAÇÃO" title="Esta refeição ainda não tem itens." message="Seu personal pode completar os alimentos e quantidades na próxima atualização." />}
       </Card>;
     })}
   </Screen>;
+}
+
+function StudentFoodRow({ food }: { food: { id: string; foodName: string; quantity: number; unit: import('@/src/features/student/invite/api').NutritionQuantityUnit; alternatives?: Array<{ id: string; foodName: string; quantity: number; unit: import('@/src/features/student/invite/api').NutritionQuantityUnit; sequence: number; notes?: string }> } }) {
+  const [open, setOpen] = useState(false);
+  const alternatives = [...(food.alternatives ?? [])].sort((left, right) => left.sequence - right.sequence);
+  return <View style={styles.foodBlock}><View style={styles.foodRow}><Text style={styles.food}>{food.foodName}</Text><Text style={styles.quantity}>{formatNutritionQuantity(food.quantity, food.unit)}</Text></View>{alternatives.length ? <><Pressable accessibilityRole="button" accessibilityState={{ expanded: open }} onPress={() => setOpen((value) => !value)} style={styles.alternativesToggle}><Text style={styles.alternativesToggleText}>{open ? 'Ocultar alternativas' : 'Alternativas possíveis'} ({alternatives.length})</Text><Text style={styles.alternativesChevron}>{open ? '⌃' : '⌄'}</Text></Pressable>{open ? <View style={styles.alternatives}>{alternatives.map((alternative) => <View key={alternative.id} style={styles.alternative}><View style={styles.foodRow}><Text style={styles.alternativeName}>{alternative.foodName}</Text><Text style={styles.quantity}>{formatNutritionQuantity(alternative.quantity, alternative.unit)}</Text></View>{alternative.notes ? <Text style={styles.alternativeNotes}>{alternative.notes}</Text> : null}</View>)}</View> : null}</> : null}</View>;
 }
 
 function NutritionEmptyState() {
@@ -60,9 +67,17 @@ const styles = StyleSheet.create({
   updatedAt: { ...typography.caption, color: colors.textMuted },
   sequence: { ...typography.caption, color: colors.primary, letterSpacing: 1 },
   foodList: { gap: spacing.xs, marginTop: spacing.xs },
+  foodBlock: { gap: spacing.xs },
   foodRow: { flexDirection: 'row', alignItems: 'baseline', justifyContent: 'space-between', gap: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border },
   food: { ...typography.bodyLG, color: colors.textPrimary, flex: 1 },
   quantity: { ...typography.bodyMD, color: colors.titaniumLight, textAlign: 'right' },
+  alternativesToggle: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', paddingVertical: spacing.xs },
+  alternativesToggleText: { ...typography.caption, color: colors.primary },
+  alternativesChevron: { ...typography.bodyLG, color: colors.primary },
+  alternatives: { gap: spacing.xs, paddingLeft: spacing.md, borderLeftWidth: 2, borderLeftColor: colors.primary },
+  alternative: { gap: spacing.xxs, paddingVertical: spacing.xs },
+  alternativeName: { ...typography.bodyMD, color: colors.textPrimary, flex: 1 },
+  alternativeNotes: { ...typography.caption, color: colors.textSecondary },
   goalsCard: { gap: spacing.sm, borderColor: colors.primary },
   goalsCopy: { ...typography.bodyMD, color: colors.textSecondary },
   goalGrid: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm, marginTop: spacing.xs },

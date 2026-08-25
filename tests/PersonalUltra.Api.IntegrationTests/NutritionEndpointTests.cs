@@ -67,7 +67,7 @@ public sealed class NutritionEndpointTests
                 new
                 {
                     name = "  Almoço  ", sequence = 20, notes = "  Preparar antes  ",
-                    foods = new[]
+                    foods = new object[]
                     {
                         new { foodName = "  Frango  ", quantity = 1.5m, unit = "  filé  ", sequence = 9 },
                         new { foodName = "  Arroz  ", quantity = 120m, unit = "  g  ", sequence = 2 },
@@ -76,10 +76,10 @@ public sealed class NutritionEndpointTests
                 new
                 {
                     name = "  Café da manhã  ", sequence = 10, notes = "  Sem pressa  ",
-                    foods = new[]
+                    foods = new object[]
                     {
                         new { foodName = "  Café  ", quantity = 1m, unit = "  xícara  ", sequence = 3 },
-                        new { foodName = "  Banana  ", quantity = 1m, unit = "  unidade  ", sequence = 1 },
+                        new { foodName = "  Banana  ", quantity = 1m, unit = "  unidade  ", sequence = 1, alternatives = new[] { new { foodName = "  Peixe  ", quantity = 200m, unit = "  g  ", sequence = 1, notes = "  Grelhado  " } } },
                     },
                 },
             },
@@ -102,6 +102,10 @@ public sealed class NutritionEndpointTests
         Assert.Equal([1, 2], trainerPlan.Meals[0].Foods.Select(x => x.Sequence));
         Assert.Equal(["Banana", "Café"], trainerPlan.Meals[0].Foods.Select(x => x.FoodName));
         Assert.Equal(["unidade", "xícara"], trainerPlan.Meals[0].Foods.Select(x => x.Unit));
+        var alternative = Assert.Single(trainerPlan.Meals[0].Foods[0].Alternatives);
+        Assert.Equal("Peixe", alternative.FoodName);
+        Assert.Equal(200m, alternative.Quantity);
+        Assert.Equal("Grelhado", alternative.Notes);
         Assert.All(trainerPlan.Meals.SelectMany(x => x.Foods), x => Assert.NotEqual(Guid.Empty, x.Id));
 
         var studentResponse = await student.GetAsync("/api/v1/nutrition");
@@ -189,6 +193,7 @@ public sealed class NutritionEndpointTests
             new { name = "Plano", notes = "", meals = new[] { new { name = "Refeição", sequence = 1, notes = "", foods = new[] { new { foodName = "Arroz", quantity = 1m, unit = " ", sequence = 1 } } } } },
             new { name = "Plano", notes = "", meals = new[] { new { name = "Refeição", sequence = 1, notes = "", foods = new[] { new { foodName = "Arroz", quantity = 1m, unit = new string('x', 41), sequence = 1 } } } } },
             new { name = "Plano", notes = "", meals = new[] { new { name = "Refeição", sequence = 1, notes = "", foods = new[] { new { foodName = "A", quantity = 1m, unit = "g", sequence = 1 }, new { foodName = "B", quantity = 1m, unit = "g", sequence = 1 } } } } },
+            new { name = "Plano", notes = "", meals = new[] { new { name = "Refeição", sequence = 1, notes = "", foods = new[] { new { foodName = "Arroz", quantity = 1m, unit = "g", sequence = 1, alternatives = new[] { new { foodName = "Peixe", quantity = 0m, unit = "g", sequence = 1 } } } } } } },
         };
 
         foreach (var payload in invalidPayloads)
@@ -226,7 +231,8 @@ public sealed class NutritionEndpointTests
     private sealed record NutritionResponse(Guid Id, string Name, string Notes, DateTimeOffset UpdatedAt, string ResponsibleTrainerName, IReadOnlyList<MealResponse> Meals, DailyGoalsResponse? DailyGoals = null);
     private sealed record DailyGoalsResponse(decimal? Calories, decimal? ProteinGrams, decimal? CarbohydratesGrams, decimal? FatGrams);
     private sealed record MealResponse(Guid Id, string Name, int Sequence, string Notes, IReadOnlyList<FoodResponse> Foods);
-    private sealed record FoodResponse(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence);
+    private sealed record FoodResponse(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence, IReadOnlyList<AlternativeResponse> Alternatives);
+    private sealed record AlternativeResponse(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence, string Notes);
 }
 
 internal sealed class NutritionTestEnvironment : IAsyncDisposable

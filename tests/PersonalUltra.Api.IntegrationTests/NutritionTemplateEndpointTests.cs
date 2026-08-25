@@ -23,7 +23,7 @@ public sealed class NutritionTemplateEndpointTests
         await using var environment = new NutritionTestEnvironment();
         var client = Authorized(environment);
 
-        var createdResponse = await client.PostAsJsonAsync("/api/v1/nutrition/templates", Request("  Café com ovos  ", twoFoods: true));
+        var createdResponse = await client.PostAsJsonAsync("/api/v1/nutrition/templates", Request("  Café com ovos  ", twoFoods: true, includeAlternative: true));
         Assert.Equal(HttpStatusCode.Created, createdResponse.StatusCode);
         var created = await createdResponse.Content.ReadFromJsonAsync<TemplateResponse>();
         Assert.NotNull(created);
@@ -31,6 +31,9 @@ public sealed class NutritionTemplateEndpointTests
         Assert.Equal([1, 2], created.Foods.Select(x => x.Sequence));
         Assert.Equal(["Ovos", "Banana"], created.Foods.Select(x => x.FoodName));
         Assert.Equal("livre", created.Foods[1].Unit);
+        var alternative = Assert.Single(created.Foods[1].Alternatives);
+        Assert.Equal("Peixe", alternative.FoodName);
+        Assert.Equal(200m, alternative.Quantity);
 
         var summaries = await client.GetFromJsonAsync<List<TemplateSummary>>("/api/v1/nutrition/templates");
         var summary = Assert.Single(summaries!);
@@ -116,7 +119,7 @@ public sealed class NutritionTemplateEndpointTests
     {
         await using var environment = new NutritionTestEnvironment();
         var client = Authorized(environment);
-        var template = await (await client.PostAsJsonAsync("/api/v1/nutrition/templates", Request("Café com ovos", twoFoods: true))).Content.ReadFromJsonAsync<TemplateResponse>();
+        var template = await (await client.PostAsJsonAsync("/api/v1/nutrition/templates", Request("Café com ovos", twoFoods: true, includeAlternative: true))).Content.ReadFromJsonAsync<TemplateResponse>();
         await RemovePlan(environment);
 
         var apply = await client.PostAsync($"/api/v1/students/{DemoIds.StudentId}/nutrition/meals/from-template/{template!.Id}", null);
@@ -127,6 +130,7 @@ public sealed class NutritionTemplateEndpointTests
         var originalPlan = await client.GetFromJsonAsync<NutritionResponse>($"/api/v1/students/{DemoIds.StudentId}/nutrition");
         Assert.Equal("Alimentação de Rafa", originalPlan!.Name);
         Assert.NotEqual(template.Foods[0].Id, originalPlan.Meals[0].Foods[0].Id);
+        Assert.Equal("Peixe", Assert.Single(originalPlan.Meals[0].Foods[1].Alternatives).FoodName);
 
         Assert.Equal(HttpStatusCode.OK, (await client.PutAsJsonAsync($"/api/v1/nutrition/templates/{template.Id}", Request("Café alterado"))).StatusCode);
         var unchangedPlan = await client.GetFromJsonAsync<NutritionResponse>($"/api/v1/students/{DemoIds.StudentId}/nutrition");
@@ -182,14 +186,16 @@ public sealed class NutritionTemplateEndpointTests
         await db.SaveChangesAsync();
     }
 
-    private static object Request(string name, bool twoFoods = false) => new
+    private static object Request(string name, bool twoFoods = false, bool includeAlternative = false) => new
     {
         name,
         notes = "  Opção prática  ",
         foods = twoFoods
             ? new object[]
             {
-                new { foodName = "  Banana  ", quantity = 1m, unit = "livre", sequence = 8 },
+                includeAlternative
+                    ? new { foodName = "  Banana  ", quantity = 1m, unit = "livre", sequence = 8, alternatives = new object[] { new { foodName = "Peixe", quantity = 200m, unit = "g", sequence = 1, notes = "Grelhado" } } }
+                    : new { foodName = "  Banana  ", quantity = 1m, unit = "livre", sequence = 8 },
                 new { foodName = "  Ovos  ", quantity = 2m, unit = "unidade", sequence = 2 },
             }
             : new object[] { new { foodName = "Item", quantity = 1m, unit = "unidade", sequence = 1 } },
@@ -201,5 +207,6 @@ public sealed class NutritionTemplateEndpointTests
     private sealed record AppliedResponse(Guid PlanId, Guid StudentId, Guid MealId, string MealName, DateTimeOffset UpdatedAt, int MealCount);
     private sealed record NutritionResponse(Guid Id, string Name, string Notes, DateTimeOffset UpdatedAt, string ResponsibleTrainerName, IReadOnlyList<MealResponse> Meals);
     private sealed record MealResponse(Guid Id, string Name, int Sequence, string Notes, IReadOnlyList<FoodResponse> Foods);
-    private sealed record FoodResponse(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence);
+    private sealed record FoodResponse(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence, IReadOnlyList<AlternativeResponse> Alternatives);
+    private sealed record AlternativeResponse(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence, string Notes);
 }

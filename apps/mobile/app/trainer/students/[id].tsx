@@ -142,7 +142,7 @@ function NutritionMealCard({ meal, index, count, busy, onMove, onEdit }: { meal:
   return <Card style={styles.mealItem}>
     <Pressable accessibilityRole="button" accessibilityLabel={`Editar refeição ${meal.name}`} accessibilityHint="Toque para alterar os alimentos, quantidades e observações desta refeição" onPress={onEdit} style={({ pressed }) => [styles.mealPressable, pressed && styles.pressed]}>
       <Text style={styles.eyebrow}>REFEIÇÃO {index + 1}</Text><Text style={styles.cardTitle}>{meal.name}</Text>{meal.notes ? <Text style={styles.copy}>{meal.notes}</Text> : null}
-      {[...meal.foods].sort((a, b) => a.sequence - b.sequence).map((food) => <View key={food.id} style={styles.foodRow}><Text style={styles.foodName}>{food.foodName}</Text><Text style={styles.foodQuantity}>{formatNutritionQuantity(food.quantity, food.unit)}</Text></View>)}
+      {[...meal.foods].sort((a, b) => a.sequence - b.sequence).map((food) => <View key={food.id} style={styles.foodRow}><Text style={styles.foodName}>{food.foodName}{food.alternatives?.length ? ` · ${food.alternatives.length} alternativa${food.alternatives.length === 1 ? '' : 's'}` : ''}</Text><Text style={styles.foodQuantity}>{formatNutritionQuantity(food.quantity, food.unit)}</Text></View>)}
       <Text style={styles.mealEditHint}>Toque para editar esta refeição →</Text>
     </Pressable>
     <View style={styles.orderActions}><Pressable disabled={busy || index === 0} accessibilityRole="button" accessibilityLabel={`Mover ${meal.name} para cima`} accessibilityState={{ disabled: busy || index === 0 }} onPress={() => onMove(index - 1)} style={[styles.orderButton, (busy || index === 0) && styles.disabled]}><Text style={styles.orderText}>↑</Text></Pressable><Pressable disabled={busy || index === count - 1} accessibilityRole="button" accessibilityLabel={`Mover ${meal.name} para baixo`} accessibilityState={{ disabled: busy || index === count - 1 }} onPress={() => onMove(index + 1)} style={[styles.orderButton, (busy || index === count - 1) && styles.disabled]}><Text style={styles.orderText}>↓</Text></Pressable></View>
@@ -150,7 +150,7 @@ function NutritionMealCard({ meal, index, count, busy, onMove, onEdit }: { meal:
 }
 
 function nutritionPlanInput(plan: TrainerNutrition, meals: TrainerNutritionMeal[]) {
-  return { name: plan.name, notes: plan.notes, dailyGoals: plan.dailyGoals, meals: meals.map((meal, mealIndex) => ({ name: meal.name, notes: meal.notes, sequence: mealIndex + 1, foods: [...meal.foods].sort((a, b) => a.sequence - b.sequence).map((food, foodIndex) => ({ foodName: food.foodName, quantity: food.quantity, unit: food.unit, sequence: foodIndex + 1 })) })) };
+  return { name: plan.name, notes: plan.notes, dailyGoals: plan.dailyGoals, meals: meals.map((meal, mealIndex) => ({ name: meal.name, notes: meal.notes, sequence: mealIndex + 1, foods: [...meal.foods].sort((a, b) => a.sequence - b.sequence).map((food, foodIndex) => ({ foodName: food.foodName, quantity: food.quantity, unit: food.unit, sequence: foodIndex + 1, alternatives: (food.alternatives ?? []).map((alternative, alternativeIndex) => ({ foodName: alternative.foodName, quantity: alternative.quantity, unit: alternative.unit, sequence: alternativeIndex + 1, notes: alternative.notes || undefined })) })) })) };
 }
 
 function dailyGoalsSummary(plan: TrainerNutrition) {

@@ -240,6 +240,11 @@ plano original pelo Student.
 alternativa `Peixe — 200 g`; Student a visualiza com clareza, sem o sistema
 afirmar equivalência nutricional ou modificar a prescrição.
 
+**Status M4N (2026-08-25): concluído.** As alternativas manuais são ordenadas,
+validadas e copiadas tanto ao duplicar presets quanto ao aplicá-los no plano do
+Student. O Trainer as edita por alimento; o Student apenas consulta a seção
+expansível quando houver conteúdo.
+
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
 
