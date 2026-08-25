@@ -43,6 +43,8 @@ export type TrainerNutritionFood = { id: string; foodName: string; quantity: num
 export type TrainerNutritionMeal = { id: string; name: string; sequence: number; notes: string; foods: TrainerNutritionFood[] };
 export type TrainerNutrition = { id: string; name: string; notes: string; updatedAt: string; responsibleTrainerName: string; meals: TrainerNutritionMeal[] };
 export type TrainerNutritionInput = { name: string; notes?: string; meals: Array<{ name: string; sequence: number; notes?: string; foods: Array<{ foodName: string; quantity: number; unit: NutritionQuantityUnit; sequence: number }> }> };
+export type NutritionTemplate = { id: string; name: string; notes: string; createdAt: string; updatedAt: string; mealCount?: number; foodCount?: number; meals?: TrainerNutritionMeal[] };
+export type AppliedNutritionTemplate = { id: string; studentId: string; name: string; updatedAt: string; mealCount: number };
 export type TrainerPrescriptionSettings = { sets: number; repetitionsMin: number; repetitionsMax: number; restSeconds: number; isCustomized: boolean };
 
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
@@ -104,6 +106,13 @@ export const trainerClient = {
   trainingHistory: (studentId: string) => request<{ sessions: Array<{ sessionId: string; workoutName: string; status: string; startedAt: string; completedAt?: string; completedSets: number; exercises: Array<{ name: string; sequence: number; trackingMode: ExerciseTrackingMode; confirmedWithoutDetails: boolean; sets: Array<{ setNumber: number; weightKg?: number; repetitions?: number; durationSeconds?: number; completedAt: string }> }> }> }>(`/students/${studentId}/training-history`),
   nutrition: async (studentId: string) => (await request<TrainerNutrition | null>(`/students/${studentId}/nutrition`)) ?? null,
   saveNutrition: (studentId: string, input: TrainerNutritionInput) => request<TrainerNutrition>(`/students/${studentId}/nutrition`, { method: 'PUT', body: JSON.stringify(input) }),
+  nutritionTemplates: () => request<NutritionTemplate[]>('/nutrition/templates'),
+  nutritionTemplate: (id: string) => request<NutritionTemplate>(`/nutrition/templates/${id}`),
+  createNutritionTemplate: (input: TrainerNutritionInput) => request<NutritionTemplate>('/nutrition/templates', { method: 'POST', body: JSON.stringify(input) }),
+  updateNutritionTemplate: (id: string, input: TrainerNutritionInput) => request<NutritionTemplate>(`/nutrition/templates/${id}`, { method: 'PUT', body: JSON.stringify(input) }),
+  deleteNutritionTemplate: (id: string) => request<void>(`/nutrition/templates/${id}`, { method: 'DELETE' }),
+  duplicateNutritionTemplate: (id: string) => request<NutritionTemplate>(`/nutrition/templates/${id}/duplicate`, { method: 'POST' }),
+  applyNutritionTemplate: (studentId: string, templateId: string, replaceExisting = false) => request<AppliedNutritionTemplate>(`/students/${studentId}/nutrition/from-template/${templateId}?replaceExisting=${replaceExisting}`, { method: 'POST' }),
   weight: (studentId: string) => request<Array<{ id: string; weightKg: number; recordedAt: string }>>(`/students/${studentId}/progress/weight`),
   prescriptionSettings: () => request<TrainerPrescriptionSettings>('/settings/prescription'),
   updatePrescriptionSettings: (input: Omit<TrainerPrescriptionSettings, 'isCustomized'>) => request<TrainerPrescriptionSettings>('/settings/prescription', { method: 'PUT', body: JSON.stringify(input) }),

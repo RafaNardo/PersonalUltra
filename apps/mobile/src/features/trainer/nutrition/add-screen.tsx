@@ -1,0 +1,17 @@
+import Ionicons from '@expo/vector-icons/Ionicons';
+import { router, useLocalSearchParams } from 'expo-router';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { ErrorView, LoadingView } from '@/src/components/ui';
+import { Screen, TopBar } from '@/src/components/layout';
+import { colors, radius, spacing, typography } from '@/src/design/tokens';
+import { useTrainerStudent } from '@/src/features/trainer/students/hooks';
+
+export function AddStudentNutritionScreen() {
+  const { studentId = '' } = useLocalSearchParams<{ studentId: string }>(); const student = useTrainerStudent(studentId);
+  if (!studentId) return <ErrorView message="Não foi possível identificar o aluno." />;
+  if (student.isLoading) return <LoadingView message="Preparando as opções…" />;
+  if (student.isError) return <ErrorView message={student.error.message} onRetry={() => student.refetch()} />;
+  return <Screen withinTabs style={styles.page}><TopBar eyebrow={`NOVA ALIMENTAÇÃO · ${student.data!.firstName}`} title="Como você quer começar?" onBack={() => router.back()} /><Text style={styles.intro}>Escolha um ponto de partida. Você poderá revisar todo o conteúdo antes de disponibilizar.</Text><View style={styles.options}><Option icon="copy-outline" eyebrow="PONTO DE PARTIDA RÁPIDO" title="Usar um preset" description="Escolha refeições prontas da sua biblioteca e copie para este aluno." onPress={() => router.push({ pathname: '/trainer/students/[studentId]/nutrition/from-template', params: { studentId } })} /><Option icon="create-outline" eyebrow="PLANO EXCLUSIVO" title="Criar do zero" description="Monte as refeições e os itens desde o início." onPress={() => router.push({ pathname: '/trainer/students/nutrition/[id]', params: { id: studentId } })} /></View><Text style={styles.note}>O plano aplicado é uma cópia independente e pode ser editado sem alterar o preset.</Text></Screen>;
+}
+function Option({ icon, eyebrow, title, description, onPress }: { icon: keyof typeof Ionicons.glyphMap; eyebrow: string; title: string; description: string; onPress: () => void }) { return <Pressable onPress={onPress} style={({ pressed }) => [styles.option, pressed && styles.pressed]}><View style={styles.icon}><Ionicons name={icon} size={28} color={colors.primary} /></View><View style={styles.identity}><Text style={styles.eyebrow}>{eyebrow}</Text><Text style={styles.title}>{title}</Text><Text style={styles.description}>{description}</Text><Text style={styles.action}>Começar →</Text></View></Pressable>; }
+const styles = StyleSheet.create({ page: { paddingVertical: spacing.xl, gap: spacing.lg }, intro: { ...typography.bodyLG, color: colors.textSecondary, lineHeight: 25 }, options: { gap: spacing.md }, option: { flexDirection: 'row', gap: spacing.md, padding: spacing.lg, borderRadius: radius.lg, borderWidth: 1, borderColor: colors.border, backgroundColor: colors.surface }, pressed: { opacity: .76 }, icon: { width: 56, height: 56, alignItems: 'center', justifyContent: 'center', borderRadius: radius.md, backgroundColor: '#3A1D0C' }, identity: { flex: 1, gap: spacing.xs }, eyebrow: { ...typography.caption, color: colors.primary }, title: { ...typography.headingLG, color: colors.textPrimary }, description: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, action: { ...typography.caption, color: colors.primary, marginTop: spacing.xs }, note: { ...typography.caption, color: colors.textMuted, textAlign: 'center', lineHeight: 18 } });
