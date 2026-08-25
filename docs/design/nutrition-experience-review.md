@@ -43,12 +43,15 @@ não conhece.
   fluxo de treinos;
 - adicionar cada refeição escolhendo entre `Usar preset de refeição` e
   `Criar manualmente`;
+- editar cada card de refeição isoladamente e reorganizá-los com ações de subir
+  e descer, mantendo a edição completa apenas como alternativa;
 - manter o aluno identificado no cabeçalho;
 - editar nome e observações gerais sem perder o conteúdo persistido;
 - adicionar, editar, remover e reordenar várias refeições;
 - adicionar, editar, remover e reordenar vários itens em cada refeição;
 - aceitar unidades simples (`g`, `ml`, `unidade`, `fatia`, `colher`, `dose` e
-  `porção`) sem introduzir catálogo nutricional;
+  `porção`) e a opção `livre` para itens sem quantidade fixa, sem introduzir
+  catálogo nutricional;
 - revisar toda a estrutura na mesma tela antes de salvar;
 - explicar que salvar disponibiliza a atualização ao Student;
 - preservar o draft local quando validação ou rede falhar.
@@ -61,6 +64,16 @@ tapioca`. Aplicar um preset acrescenta uma cópia independente ao plano: não
 substitui as outras refeições e mudanças posteriores no preset não afetam o
 Student. Se ainda não existe plano, a primeira refeição cria sua estrutura
 inicial; as seguintes são acrescentadas na ordem atual.
+
+A biblioteca mostra até quatro alimentos em bullets por card e resume o
+excedente, privilegiando leitura rápida sobre a contagem abstrata de itens. Um
+novo preset sempre abre com formulário vazio. Retornos de escolha, biblioteca e
+edição preservam explicitamente o contexto do aluno ou da área `Alimentação`,
+sem depender do histórico da tab navigator.
+
+A bottom nav Trainer usa a mesma escala de ícones, tipografia e destaque em
+forma de cápsula da navegação Student, sem importar componentes entre features
+de atores.
 
 ## Experiência Student
 

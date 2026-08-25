@@ -100,6 +100,11 @@ Student, portanto não remove refeições existentes e edições futuras no pres
 não alteram cópias já aplicadas. Se ainda não existe plano, a primeira refeição
 cria a estrutura inicial automaticamente.
 
+A listagem de presets inclui os nomes ordenados dos alimentos para que a
+biblioteca mostre o conteúdo real, não apenas uma contagem. A unidade textual
+`livre` usa quantidade técnica `1` no contrato e é apresentada sem número no
+mobile; as demais unidades continuam exigindo quantidade positiva.
+
 As APIs compartilham Domain/Application/Infrastructure e banco, mas não devem compartilhar controllers/endpoints específicos dos atores.
 
 ## Error contract

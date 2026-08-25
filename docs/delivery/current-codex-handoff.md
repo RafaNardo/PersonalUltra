@@ -8,9 +8,9 @@ concluídas a partir da conversa antiga.
 ## Estado do repositório
 
 - Repositório: `C:\git\PresonalUltra`; branch publicada: `main`.
-- Últimos commits funcionais: `cd1866a` (presets corrigidos para refeições
-  individuais), `3978c54` (fundação dos presets no domínio/API) e `e70e946`
-  (workspace de alimentação Trainer).
+- Últimos commits funcionais: `1a865e9` (edição/reordenação por refeição e
+  refinamentos de UX), `cd1866a` (presets corrigidos para refeições individuais)
+  e `e70e946` (workspace de alimentação Trainer).
 - Stack: .NET 10, EF Core/PostgreSQL, Expo/React Native/Expo Router, TypeScript,
   TanStack Query, Zustand e SQLite offline.
 - APIs públicas:
@@ -68,6 +68,10 @@ concluídas a partir da conversa antiga.
 - Presets Trainer-owned representam uma única refeição e são acrescentados ao
   plano por snapshot, sem remover as refeições existentes. A bottom nav e o
   detalhe do aluno expõem `Alimentação`. Correção semântica: `cd1866a`.
+- No refinamento seguinte, o Trainer passou a editar/reordenar refeições por
+  card, usar medida `livre`, visualizar alimentos na biblioteca e retornar ao
+  contexto correto; a bottom nav foi alinhada visualmente à Student. Commit:
+  `1a865e9`.
 - Telas Student sem sessão usam `Redirect` declarativo; não chamar
   `router.replace` durante render. Correção `19b2d32`.
 
@@ -117,6 +121,8 @@ nunca devem ser lidos ou impressos.
 - `MealFood` é um item textual ordenado, sem catálogo global, macros ou geração.
 - `NutritionTemplate` representa tecnicamente um preset de uma única refeição;
   aplicar acrescenta um snapshot independente ao plano existente.
+- `livre` é uma unidade válida de exibição sem quantidade fixa; internamente usa
+  quantidade `1` para manter o contrato relacional atual.
 - Atribuição identifica o Trainer responsável sem alegar credencial clínica.
 - A revisão jurídica/produto continua obrigatória antes de produção, conforme
   `docs/product/nutrition-note.md`.

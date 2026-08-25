@@ -54,7 +54,8 @@ The gate covers:
   ordered meals/items with units, attribution, full replacement and validation
   failures that preserve the previous plan;
 - meal-preset CRUD/duplication, Trainer ownership, independent snapshot
-  application and append without losing existing content or original authorship.
+  application and append without losing existing content or original authorship;
+- ordered food-name previews and the `livre` unit in meal presets.
 
 Weight endpoints currently have no dedicated integration tests and remain an
 explicit gap. Nutrition presets add five dedicated scenarios, bringing the gate

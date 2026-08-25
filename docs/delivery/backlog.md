@@ -204,6 +204,12 @@ independente sem apagar o conteúdo existente. O Trainer ganhou uma superfície
 `Alimentação` na navegação inferior; no detalhe do aluno, `Evolução` foi
 substituída por `Alimentação` e o peso permanece disponível em `Resumo`.
 
+**Refinamento de alimentação (2026-08-25): concluído.** Cards do Trainer editam
+e reordenam refeições individualmente, `livre` cobre itens sem quantidade fixa,
+novos presets não reaproveitam o formulário anterior, a biblioteca antecipa os
+alimentos e as rotas de retorno preservam o contexto de origem. A bottom nav
+Trainer recebeu a mesma escala e o mesmo destaque ativo da Student.
+
 Antes de considerar a demo comercialmente fechada, o refactor `M3R` acima tem prioridade sobre novos refinamentos de M4, pois montagem/prescrição de treino é uma superfície central do produto.
 
 **DoD M4:** demo comercial completa, incluindo branding dinâmico por Trainer.

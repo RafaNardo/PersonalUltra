@@ -133,6 +133,10 @@ modifica alunos nem remove refeições existentes. O container técnico
 `NutritionTemplate` permanece compatível com a migration já publicada, mas sua
 invariante de aplicação é uma única `NutritionTemplateMeal`.
 
+`MealFood.Unit = "livre"` representa porção sem quantidade fixa, como salada à
+vontade. O valor decimal continua preenchido com `1` para preservar o schema e
+as validações existentes, mas não é exibido ao usuário nessa modalidade.
+
 ## Progress
 - `WeightEntry` apenas na V1.
 
