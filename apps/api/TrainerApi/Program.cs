@@ -33,6 +33,7 @@ app.MapStudentApi();
 app.MapStudentInviteApi();
 app.MapTrainingApi();
 app.MapNutritionProgressApi();
+app.MapNutritionTemplateApi();
 app.MapDemoResetApi();
 app.MapBrandingApi();
 app.MapTrainerSettingsApi();

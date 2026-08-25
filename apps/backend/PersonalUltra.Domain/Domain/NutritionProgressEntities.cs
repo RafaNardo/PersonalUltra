@@ -36,6 +36,37 @@ public sealed class MealFood
     public int Sequence { get; set; }
     public Meal Meal { get; set; } = null!;
 }
+public sealed class NutritionTemplate
+{
+    public Guid Id { get; set; }
+    public Guid TrainerId { get; set; }
+    public string Name { get; set; } = null!;
+    public string Notes { get; set; } = "";
+    public DateTimeOffset CreatedAt { get; set; }
+    public DateTimeOffset UpdatedAt { get; set; }
+    public Trainer Trainer { get; set; } = null!;
+    public List<NutritionTemplateMeal> Meals { get; } = [];
+}
+public sealed class NutritionTemplateMeal
+{
+    public Guid Id { get; set; }
+    public Guid NutritionTemplateId { get; set; }
+    public string Name { get; set; } = null!;
+    public int Sequence { get; set; }
+    public string Notes { get; set; } = "";
+    public NutritionTemplate NutritionTemplate { get; set; } = null!;
+    public List<NutritionTemplateFood> Foods { get; } = [];
+}
+public sealed class NutritionTemplateFood
+{
+    public Guid Id { get; set; }
+    public Guid NutritionTemplateMealId { get; set; }
+    public string FoodName { get; set; } = null!;
+    public decimal Quantity { get; set; }
+    public string Unit { get; set; } = null!;
+    public int Sequence { get; set; }
+    public NutritionTemplateMeal Meal { get; set; } = null!;
+}
 public sealed class WeightEntry
 {
     public Guid Id { get; set; }

@@ -6,3 +6,8 @@ public sealed record NutritionPlanResponse(Guid Id, string Name, string Notes, D
 public sealed record MealResponse(Guid Id, string Name, int Sequence, string Notes, IReadOnlyList<MealFoodResponse> Foods);
 public sealed record MealFoodResponse(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence);
 public sealed record WeightResponse(Guid Id, decimal WeightKg, DateTimeOffset RecordedAt);
+public sealed record NutritionTemplateSummary(Guid Id, string Name, string Notes, int MealCount, int FoodCount, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+public sealed record NutritionTemplateResponse(Guid Id, string Name, string Notes, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyList<NutritionTemplateMealResponse> Meals);
+public sealed record NutritionTemplateMealResponse(Guid Id, string Name, int Sequence, string Notes, IReadOnlyList<NutritionTemplateFoodResponse> Foods);
+public sealed record NutritionTemplateFoodResponse(Guid Id, string FoodName, decimal Quantity, string Unit, int Sequence);
+public sealed record ApplyNutritionTemplateResponse(Guid Id, Guid StudentId, string Name, DateTimeOffset UpdatedAt, int MealCount);
