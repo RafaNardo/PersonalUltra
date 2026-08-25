@@ -78,6 +78,9 @@ concluídas a partir da conversa antiga.
   são opcionais, persistidas no mesmo `NutritionPlan` e exibidas ao Student
   somente como referência informativa. Não existe cálculo automático. A
   migration correspondente é `20260825125052_AddNutritionDailyGoals`.
+- O resumo nutricional do detalhe Trainer é editável separadamente (nome,
+  orientações e metas) e preserva as refeições. Cada card de refeição explicita
+  a ação de toque para edição individual.
 
 ## Validação padrão
 

@@ -49,6 +49,9 @@ não conhece.
 - editar nome e observações gerais sem perder o conteúdo persistido;
 - registrar, sem cálculo automático, calorias e macronutrientes diários que o
   Trainer decidir informar;
+- abrir o resumo do plano como uma edição leve para nome, orientações e metas,
+  preservando todas as refeições; os cards de refeição declaram visualmente que
+  um toque abre sua edição individual;
 - adicionar, editar, remover e reordenar várias refeições;
 - adicionar, editar, remover e reordenar vários itens em cada refeição;
 - aceitar unidades simples (`g`, `ml`, `unidade`, `fatia`, `colher`, `dose` e
