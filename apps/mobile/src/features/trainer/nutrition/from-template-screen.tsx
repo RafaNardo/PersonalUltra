@@ -1,5 +1,5 @@
 import { router, useLocalSearchParams } from 'expo-router';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { Alert, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, ListItem, LoadingView, SearchField, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
@@ -10,7 +10,7 @@ import { formatNutritionQuantity } from '@/src/shared/nutrition';
 import { useApplyNutritionTemplate, useNutritionTemplate, useNutritionTemplates } from './hooks';
 
 export function ApplyNutritionTemplateScreen() {
-  const { studentId = '' } = useLocalSearchParams<{ studentId: string }>();
+  const { studentId = '', selectionKey = 'initial' } = useLocalSearchParams<{ studentId: string; selectionKey?: string }>();
   const [selected, setSelected] = useState<string>();
   const [search, setSearch] = useState('');
   const student = useTrainerStudent(studentId);
@@ -21,6 +21,7 @@ export function ApplyNutritionTemplateScreen() {
     const term = search.trim().toLocaleLowerCase('pt-BR');
     return (templates.data ?? []).filter((item) => !term || `${item.name} ${item.notes}`.toLocaleLowerCase('pt-BR').includes(term));
   }, [search, templates.data]);
+  useEffect(() => { setSelected(undefined); setSearch(''); }, [selectionKey]);
 
   if (!studentId) return <ErrorView message="Não foi possível identificar o aluno." />;
   if (student.isLoading || templates.isLoading) return <LoadingView message="Preparando os presets de refeição…" />;
