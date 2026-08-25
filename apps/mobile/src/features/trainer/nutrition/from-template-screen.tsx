@@ -6,6 +6,7 @@ import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
 import { feedback } from '@/src/platform/feedback';
 import { useTrainerStudent } from '@/src/features/trainer/students/hooks';
+import { formatNutritionQuantity } from '@/src/shared/nutrition';
 import { useApplyNutritionTemplate, useNutritionTemplate, useNutritionTemplates } from './hooks';
 
 export function ApplyNutritionTemplateScreen() {
@@ -44,7 +45,7 @@ export function ApplyNutritionTemplateScreen() {
       <Text style={styles.label}>PRESET DE REFEIÇÃO</Text>
       <Text style={styles.title}>{detail.data.name}</Text>
       {detail.data.notes ? <Text style={styles.copy}>{detail.data.notes}</Text> : null}
-      {(detail.data.foods ?? []).map((food) => <View key={food.id} style={styles.food}><Text style={styles.foodName}>{food.foodName}</Text><Text style={styles.quantity}>{food.quantity} {food.unit}</Text></View>)}
+      {(detail.data.foods ?? []).map((food) => <View key={food.id} style={styles.food}><Text style={styles.foodName}>{food.foodName}</Text><Text style={styles.quantity}>{formatNutritionQuantity(food.quantity, food.unit)}</Text></View>)}
     </Card>
     {apply.error ? <Card style={styles.warning}><Text accessibilityRole="alert" style={styles.warningTitle}>Não foi possível adicionar a refeição</Text><Text style={styles.copy}>{apply.error.message}</Text></Card> : null}
     <Button loading={apply.isPending} disabled={!detail.data.foods?.length} onPress={applyNow}>Adicionar esta refeição</Button>
@@ -52,10 +53,10 @@ export function ApplyNutritionTemplateScreen() {
   </Screen>;
 
   return <Screen withinTabs style={styles.page}>
-    <TopBar eyebrow="ETAPA 1 DE 2 · ESCOLHER" title="Preset de refeição" onBack={() => router.back()} />
+    <TopBar eyebrow="ETAPA 1 DE 2 · ESCOLHER" title="Preset de refeição" onBack={() => router.replace({ pathname: '/trainer/students/[id]', params: { id: studentId, section: 'nutrition' } })} />
     <Card style={styles.context}><Text style={styles.label}>ADICIONAR PARA</Text><Text style={styles.title}>{student.data!.firstName} {student.data!.lastName}</Text><Text style={styles.copy}>Escolha uma refeição e revise os itens antes de copiar.</Text></Card>
     {templates.data!.length ? <SearchField value={search} onChangeText={setSearch} placeholder="Buscar refeição…" accessibilityLabel="Buscar preset de refeição para o aluno" /> : null}
-    {!templates.data!.length ? <EmptyState status="SEM PRESETS DISPONÍVEIS" symbol="+" title="Crie um preset de refeição primeiro." message="Exemplos: Café com ovos, Café com tapioca ou Lanche rápido." actionLabel="Abrir biblioteca" onAction={() => router.push('/trainer/nutrition/templates')} /> : !filtered.length ? <EmptyState variant="inline" status="NENHUM RESULTADO" symbol="⌕" title="Não encontramos essa refeição." message="Tente outro nome." actionLabel="Limpar busca" onAction={() => setSearch('')} /> : <View style={styles.list}>{filtered.map((item) => <ListItem key={item.id} title={item.name} metadata={`${item.itemCount ?? 0} ${item.itemCount === 1 ? 'item' : 'itens'}`} description={item.notes || undefined} actionLabel="Revisar" disabled={!item.itemCount} onPress={() => setSelected(item.id)} />)}</View>}
+    {!templates.data!.length ? <EmptyState status="SEM PRESETS DISPONÍVEIS" symbol="+" title="Crie um preset de refeição primeiro." message="Exemplos: Café com ovos, Café com tapioca ou Lanche rápido." actionLabel="Abrir biblioteca" onAction={() => router.push({ pathname: '/trainer/nutrition/templates', params: { returnStudentId: studentId } })} /> : !filtered.length ? <EmptyState variant="inline" status="NENHUM RESULTADO" symbol="⌕" title="Não encontramos essa refeição." message="Tente outro nome." actionLabel="Limpar busca" onAction={() => setSearch('')} /> : <View style={styles.list}>{filtered.map((item) => <ListItem key={item.id} title={item.name} metadata={(item.foodNames ?? []).slice(0, 3).join(' · ') || `${item.itemCount ?? 0} itens`} description={item.notes || undefined} actionLabel="Revisar" disabled={!item.itemCount} onPress={() => setSelected(item.id)} />)}</View>}
   </Screen>;
 }
 

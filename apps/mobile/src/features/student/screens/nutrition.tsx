@@ -6,18 +6,12 @@ import { Screen, TopBar } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
 import { inviteApi } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
+import { formatNutritionQuantity } from '@/src/shared/nutrition';
 
 function formatUpdatedAt(value: string) {
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return 'Atualização recente';
   return `Atualizado em ${new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(date)}`;
-}
-
-function formatQuantity(quantity: number, unit: string) {
-  const formatted = new Intl.NumberFormat('pt-BR', { maximumFractionDigits: 2 }).format(quantity);
-  if (quantity === 1 || unit === 'g' || unit === 'ml') return `${formatted} ${unit}`;
-  const plurals: Record<string, string> = { unidade: 'unidades', fatia: 'fatias', colher: 'colheres', dose: 'doses', porção: 'porções' };
-  return `${formatted} ${plurals[unit] ?? unit}`;
 }
 
 export function StudentNutritionScreen() {
@@ -38,7 +32,7 @@ export function StudentNutritionScreen() {
         <Text style={styles.sequence}>REFEIÇÃO {meal.sequence}</Text>
         <Text style={styles.title}>{meal.name}</Text>
         {meal.notes ? <Text style={styles.copy}>{meal.notes}</Text> : null}
-        {foods.length ? <View style={styles.foodList}>{foods.map((food) => <View key={food.id} style={styles.foodRow}><Text style={styles.food}>{food.foodName}</Text><Text style={styles.quantity}>{formatQuantity(food.quantity, food.unit)}</Text></View>)}</View> : <EmptyState variant="inline" status="ITENS EM PREPARAÇÃO" title="Esta refeição ainda não tem itens." message="Seu personal pode completar os alimentos e quantidades na próxima atualização." />}
+        {foods.length ? <View style={styles.foodList}>{foods.map((food) => <View key={food.id} style={styles.foodRow}><Text style={styles.food}>{food.foodName}</Text><Text style={styles.quantity}>{formatNutritionQuantity(food.quantity, food.unit)}</Text></View>)}</View> : <EmptyState variant="inline" status="ITENS EM PREPARAÇÃO" title="Esta refeição ainda não tem itens." message="Seu personal pode completar os alimentos e quantidades na próxima atualização." />}
       </Card>;
     })}
   </Screen>;

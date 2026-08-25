@@ -30,10 +30,12 @@ public sealed class NutritionTemplateEndpointTests
         Assert.Equal("Café com ovos", created!.Name);
         Assert.Equal([1, 2], created.Foods.Select(x => x.Sequence));
         Assert.Equal(["Ovos", "Banana"], created.Foods.Select(x => x.FoodName));
+        Assert.Equal("livre", created.Foods[1].Unit);
 
         var summaries = await client.GetFromJsonAsync<List<TemplateSummary>>("/api/v1/nutrition/templates");
         var summary = Assert.Single(summaries!);
         Assert.Equal(2, summary.ItemCount);
+        Assert.Equal(["Ovos", "Banana"], summary.FoodNames);
 
         var update = await client.PutAsJsonAsync($"/api/v1/nutrition/templates/{created.Id}", Request("Café com tapioca"));
         Assert.True(update.StatusCode == HttpStatusCode.OK, await update.Content.ReadAsStringAsync());
@@ -187,14 +189,14 @@ public sealed class NutritionTemplateEndpointTests
         foods = twoFoods
             ? new object[]
             {
-                new { foodName = "  Banana  ", quantity = 1m, unit = "unidade", sequence = 8 },
+                new { foodName = "  Banana  ", quantity = 1m, unit = "livre", sequence = 8 },
                 new { foodName = "  Ovos  ", quantity = 2m, unit = "unidade", sequence = 2 },
             }
             : new object[] { new { foodName = "Item", quantity = 1m, unit = "unidade", sequence = 1 } },
     };
 
     private sealed record ErrorResponse(string Code, string Message, JsonElement Details, string TraceId);
-    private sealed record TemplateSummary(Guid Id, string Name, string Notes, int ItemCount, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
+    private sealed record TemplateSummary(Guid Id, string Name, string Notes, int ItemCount, IReadOnlyList<string> FoodNames, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt);
     private sealed record TemplateResponse(Guid Id, string Name, string Notes, DateTimeOffset CreatedAt, DateTimeOffset UpdatedAt, IReadOnlyList<FoodResponse> Foods);
     private sealed record AppliedResponse(Guid PlanId, Guid StudentId, Guid MealId, string MealName, DateTimeOffset UpdatedAt, int MealCount);
     private sealed record NutritionResponse(Guid Id, string Name, string Notes, DateTimeOffset UpdatedAt, string ResponsibleTrainerName, IReadOnlyList<MealResponse> Meals);

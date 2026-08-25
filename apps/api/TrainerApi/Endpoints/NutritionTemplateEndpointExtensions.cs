@@ -15,12 +15,14 @@ public static class NutritionTemplateEndpointExtensions
         templates.MapGet("/", async (PersonalUltraDbContext db, ClaimsPrincipal user, CancellationToken ct) =>
         {
             var trainerId = Id(user);
-            return Results.Ok(await db.NutritionTemplates.AsNoTracking()
+            var items = await Query(db).AsNoTracking()
                 .Where(x => x.TrainerId == trainerId)
                 .OrderBy(x => x.Name).ThenBy(x => x.Id)
-                .Select(x => new NutritionMealTemplateSummary(
-                    x.Id, x.Name, x.Notes, x.Meals.SelectMany(meal => meal.Foods).Count(), x.CreatedAt, x.UpdatedAt))
-                .ToListAsync(ct));
+                .ToListAsync(ct);
+            return Results.Ok(items.Select(x => new NutritionMealTemplateSummary(
+                x.Id, x.Name, x.Notes, x.Meals.SelectMany(meal => meal.Foods).Count(),
+                x.Meals.SelectMany(meal => meal.Foods).OrderBy(food => food.Sequence).Select(food => food.FoodName).ToArray(),
+                x.CreatedAt, x.UpdatedAt)).ToArray());
         });
 
         templates.MapGet("/{id:guid}", async (Guid id, PersonalUltraDbContext db, ClaimsPrincipal user, HttpContext context, CancellationToken ct) =>

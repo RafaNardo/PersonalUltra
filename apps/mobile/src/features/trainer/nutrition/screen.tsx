@@ -20,8 +20,9 @@ export function TrainerNutritionScreen() {
   if (nutrition.isError) return <ErrorView message={nutrition.error.message} onRetry={() => nutrition.refetch()} />;
   if (student.isError) return <ErrorView message={student.error.message} onRetry={() => student.refetch()} />;
   const firstName = student.data!.firstName;
+  const returnToNutrition = () => router.replace({ pathname: '/trainer/students/[id]', params: { id, section: 'nutrition' } });
   return <Screen withinTabs style={styles.page}>
-    <TopBar eyebrow="ALIMENTAÇÃO" title={`${firstName} ${student.data!.lastName}`} onBack={() => dirty ? Alert.alert('Descartar alterações?', 'O plano continuará como estava antes desta edição.', [{ text: 'Continuar editando', style: 'cancel' }, { text: 'Descartar', style: 'destructive', onPress: () => router.back() }]) : router.back()} />
+    <TopBar eyebrow="ALIMENTAÇÃO" title={`${firstName} ${student.data!.lastName}`} onBack={() => dirty ? Alert.alert('Descartar alterações?', 'O plano continuará como estava antes desta edição.', [{ text: 'Continuar editando', style: 'cancel' }, { text: 'Descartar', style: 'destructive', onPress: returnToNutrition }]) : returnToNutrition()} />
     <Text style={styles.copy}>Monte o plano completo. Ao salvar, ele fica disponível para o aluno no aplicativo.</Text>
     <NutritionEditor key={nutrition.data?.id ?? 'new'} initialValue={initial} pending={save.isPending} error={save.error?.message} submitLabel={nutrition.data ? 'Atualizar plano' : 'Salvar e disponibilizar'} onDirtyChange={handleDirtyChange} onSubmit={(input) => Alert.alert(nutrition.data ? 'Atualizar plano?' : 'Salvar e disponibilizar?', `${firstName} verá este plano assim que você salvar.`, [{ text: 'Cancelar', style: 'cancel' }, { text: 'Confirmar', onPress: () => save.mutate(input, { onSuccess: () => { Alert.alert('Plano salvo', `A alimentação de ${firstName} foi atualizada.`); router.replace({ pathname: '/trainer/students/[id]', params: { id, section: 'nutrition' } }); } }) }])} />
   </Screen>;
