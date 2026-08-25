@@ -8,8 +8,9 @@ concluídas a partir da conversa antiga.
 ## Estado do repositório
 
 - Repositório: `C:\git\PresonalUltra`; branch publicada: `main`.
-- Últimos commits funcionais: `2a1ef83` (domínio/API/testes de nutrição) e
-  `23e5b4c` (fluxo mobile Trainer/Student).
+- Últimos commits funcionais: `2a1ef83` (domínio/API/testes de nutrição),
+  `23e5b4c` (fluxo mobile Trainer/Student) e `19b2d32` (guards declarativos de
+  sessão Student).
 - Stack: .NET 10, EF Core/PostgreSQL, Expo/React Native/Expo Router, TypeScript,
   TanStack Query, Zustand e SQLite offline.
 - APIs públicas:
@@ -64,6 +65,8 @@ concluídas a partir da conversa antiga.
   unidade, ordem persistida, autoria/atualização, validação atômica, editor
   Trainer completo e leitura Student read-only. Commits `2a1ef83` e `23e5b4c`;
   direção em `docs/design/nutrition-experience-review.md`.
+- Telas Student sem sessão usam `Redirect` declarativo; não chamar
+  `router.replace` durante render. Correção `19b2d32`.
 
 ## Validação padrão
 
