@@ -21,7 +21,7 @@ export function TrainerNutritionOverviewScreen() {
   return <Screen withinTabs style={styles.page}>
     <TopBar eyebrow="PRESCRIÇÃO" title="Alimentação dos alunos" />
     <Text style={styles.copy}>Consulte o plano atual de cada aluno ou comece uma nova alimentação.</Text>
-    <Button variant="secondary" onPress={() => router.push('/trainer/nutrition/templates')}>Biblioteca de presets</Button>
+    <Button variant="secondary" onPress={() => router.push('/trainer/nutrition/templates')}>Presets de refeição</Button>
     {students.data!.length ? <SearchField value={search} onChangeText={setSearch} placeholder="Buscar aluno…" accessibilityLabel="Buscar aluno para alimentação" /> : null}
     {!students.data!.length ? <EmptyState status="PRIMEIRO ALUNO" symbol="+" title="Comece pelo aluno." message="Convide um aluno para montar e acompanhar sua alimentação." actionLabel="Convidar aluno" onAction={() => router.push('/trainer/invite')} /> : !filtered.length ? <EmptyState variant="inline" status="BUSCA SEM RESULTADO" symbol="⌕" title="Não encontramos esse aluno." message="Tente outro nome ou e-mail." actionLabel="Limpar busca" onAction={() => setSearch('')} /> : <View style={styles.list}>{filtered.map(({ student, plan }) => <ListItem key={student.studentId} title={`${student.firstName} ${student.lastName}`} metadata={plan?.name ?? 'Nenhum plano alimentar'} badge={<Tag tone={plan ? 'success' : 'neutral'}>{plan ? 'COM PLANO' : 'SEM PLANO'}</Tag>} actionLabel="Abrir alimentação" onPress={() => router.push({ pathname: '/trainer/students/[id]', params: { id: student.studentId, section: 'nutrition' } })} />)}</View>}
   </Screen>;

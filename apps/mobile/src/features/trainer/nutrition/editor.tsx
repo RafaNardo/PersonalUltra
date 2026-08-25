@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card } from '@/src/components/ui';
 import { colors, radius, spacing, typography } from '@/src/design/tokens';
-import type { NutritionQuantityUnit, TrainerNutritionInput, TrainerNutritionMeal } from '@/src/api/trainer-client';
+import type { NutritionMealTemplate, NutritionQuantityUnit, TrainerNutritionInput, TrainerNutritionMeal } from '@/src/api/trainer-client';
 
 const units: NutritionQuantityUnit[] = ['g', 'ml', 'unidade', 'fatia', 'colher', 'dose', 'porção'];
 let counter = 0;
@@ -17,39 +17,46 @@ export function nutritionDraft(value?: { name: string; notes: string; meals?: Tr
   if (!value) return { name: '', notes: '', meals: [emptyMeal()] };
   return { name: value.name, notes: value.notes, meals: [...(value.meals ?? [])].sort((a, b) => a.sequence - b.sequence).map((meal) => ({ clientId: localId('meal'), name: meal.name, notes: meal.notes, foods: [...meal.foods].sort((a, b) => a.sequence - b.sequence).map((food) => ({ clientId: localId('food'), foodName: food.foodName, quantity: String(food.quantity), unit: food.unit })) })) };
 }
+export function nutritionMealTemplateDraft(value?: NutritionMealTemplate | null): NutritionDraft {
+  if (!value) return { name: '', notes: '', meals: [emptyMeal()] };
+  return { name: '', notes: '', meals: [{ clientId: localId('meal'), name: value.name, notes: value.notes, foods: [...(value.foods ?? [])].sort((a, b) => a.sequence - b.sequence).map((food) => ({ clientId: localId('food'), foodName: food.foodName, quantity: String(food.quantity), unit: food.unit })) }] };
+}
 const quantity = (value: string) => Number(value.replace(',', '.'));
-export function nutritionInput(draft: NutritionDraft): TrainerNutritionInput { return { name: draft.name.trim(), notes: draft.notes.trim(), meals: draft.meals.map((meal, index) => ({ name: meal.name.trim(), notes: meal.notes.trim(), sequence: index + 1, foods: meal.foods.map((food, foodIndex) => ({ foodName: food.foodName.trim(), quantity: quantity(food.quantity), unit: food.unit, sequence: foodIndex + 1 })) })) }; }
-function validate(draft: NutritionDraft) {
+export function nutritionInput(draft: NutritionDraft, mealTemplate = false): TrainerNutritionInput { const firstMeal = draft.meals[0]; return { name: (mealTemplate ? firstMeal?.name : draft.name)?.trim() ?? '', notes: (mealTemplate ? firstMeal?.notes : draft.notes)?.trim() ?? '', meals: draft.meals.map((meal, index) => ({ name: meal.name.trim(), notes: meal.notes.trim(), sequence: index + 1, foods: meal.foods.map((food, foodIndex) => ({ foodName: food.foodName.trim(), quantity: quantity(food.quantity), unit: food.unit, sequence: foodIndex + 1 })) })) }; }
+function validate(draft: NutritionDraft, mealTemplate: boolean) {
   const errors: string[] = [];
-  if (!draft.name.trim()) errors.push('Informe o nome.');
-  if (draft.name.length > 200) errors.push('O nome deve ter até 200 caracteres.');
-  if (draft.notes.length > 2000) errors.push('As orientações gerais devem ter até 2000 caracteres.');
+  if (!mealTemplate && !draft.name.trim()) errors.push('Informe o nome.');
+  if (!mealTemplate && draft.name.length > 200) errors.push('O nome deve ter até 200 caracteres.');
+  if (!mealTemplate && draft.notes.length > 2000) errors.push('As orientações gerais devem ter até 2000 caracteres.');
   if (!draft.meals.length) errors.push('Adicione ao menos uma refeição.');
   if (draft.meals.length > 20) errors.push('Use no máximo 20 refeições.');
   draft.meals.forEach((meal, mealIndex) => {
     const mealName = meal.name.trim() || `refeição ${mealIndex + 1}`;
     if (!meal.name.trim()) errors.push(`Informe o nome da refeição ${mealIndex + 1}.`);
+    if (meal.name.length > 200) errors.push(`O nome de ${mealName} deve ter até 200 caracteres.`);
+    if (meal.notes.length > 1000) errors.push(`As observações de ${mealName} devem ter até 1000 caracteres.`);
     if (!meal.foods.length) errors.push(`Adicione ao menos um item em ${mealName}.`);
     meal.foods.forEach((food, foodIndex) => {
       if (!food.foodName.trim()) errors.push(`Informe o alimento de ${mealName}, item ${foodIndex + 1}.`);
+      if (food.foodName.length > 200) errors.push(`O alimento de ${mealName}, item ${foodIndex + 1}, deve ter até 200 caracteres.`);
       if (!Number.isFinite(quantity(food.quantity)) || quantity(food.quantity) <= 0 || quantity(food.quantity) > 10000) errors.push(`Informe uma quantidade maior que zero e até 10000 em ${mealName}, item ${foodIndex + 1}.`);
     });
   });
   return errors;
 }
 
-export function NutritionEditor({ initialValue, submitLabel, pending, error, onSubmit, onDirtyChange }: { initialValue: NutritionDraft; submitLabel: string; pending: boolean; error?: string; onSubmit: (input: TrainerNutritionInput) => void; onDirtyChange?: (dirty: boolean) => void }) {
+export function NutritionEditor({ initialValue, submitLabel, pending, error, onSubmit, onDirtyChange, mealTemplate = false }: { initialValue: NutritionDraft; submitLabel: string; pending: boolean; error?: string; onSubmit: (input: TrainerNutritionInput) => void; onDirtyChange?: (dirty: boolean) => void; mealTemplate?: boolean }) {
   const [draft, setDraft] = useState(initialValue);
   const [errors, setErrors] = useState<string[]>([]);
-  const initialSignature = useMemo(() => JSON.stringify(nutritionInput(initialValue)), [initialValue]);
-  useEffect(() => onDirtyChange?.(JSON.stringify(nutritionInput(draft)) !== initialSignature), [draft, initialSignature, onDirtyChange]);
+  const initialSignature = useMemo(() => JSON.stringify(nutritionInput(initialValue, mealTemplate)), [initialValue, mealTemplate]);
+  useEffect(() => onDirtyChange?.(JSON.stringify(nutritionInput(draft, mealTemplate)) !== initialSignature), [draft, initialSignature, mealTemplate, onDirtyChange]);
   const updateMeal = (mealIndex: number, update: (meal: MealDraft) => MealDraft) => setDraft((current) => ({ ...current, meals: current.meals.map((meal, index) => index === mealIndex ? update(meal) : meal) }));
   const move = <T,>(items: T[], from: number, to: number) => { const result = [...items]; const [item] = result.splice(from, 1); result.splice(to, 0, item); return result; };
-  const submit = () => { const next = validate(draft); setErrors(next); if (!next.length) onSubmit(nutritionInput(draft)); };
+  const submit = () => { const next = validate(draft, mealTemplate); setErrors(next); if (!next.length) onSubmit(nutritionInput(draft, mealTemplate)); };
   return <>
-    <Card style={styles.card}><Text style={styles.title}>Identificação</Text><Field label="Nome" value={draft.name} onChange={(name) => setDraft((current) => ({ ...current, name }))} placeholder="Ex.: Alimentação para rotina de treinos" /><Field label="Orientações gerais (opcional)" value={draft.notes} onChange={(notes) => setDraft((current) => ({ ...current, notes }))} placeholder="Contexto e orientações" multiline /></Card>
+    {!mealTemplate ? <Card style={styles.card}><Text style={styles.title}>Identificação</Text><Field label="Nome" value={draft.name} onChange={(name) => setDraft((current) => ({ ...current, name }))} placeholder="Ex.: Alimentação para rotina de treinos" /><Field label="Orientações gerais (opcional)" value={draft.notes} onChange={(notes) => setDraft((current) => ({ ...current, notes }))} placeholder="Contexto e orientações" multiline /></Card> : null}
     {draft.meals.map((meal, mealIndex) => <Card key={meal.clientId} style={styles.card}>
-      <View style={styles.header}><View style={styles.identity}><Text style={styles.eyebrow}>REFEIÇÃO {mealIndex + 1}</Text><Text style={styles.title}>{meal.name.trim() || 'Nova refeição'}</Text></View><View style={styles.actions}><Action label="↑" disabled={!mealIndex} onPress={() => setDraft((c) => ({ ...c, meals: move(c.meals, mealIndex, mealIndex - 1) }))} /><Action label="↓" disabled={mealIndex === draft.meals.length - 1} onPress={() => setDraft((c) => ({ ...c, meals: move(c.meals, mealIndex, mealIndex + 1) }))} /><Action label="Remover" danger onPress={() => setDraft((c) => ({ ...c, meals: c.meals.filter((_, i) => i !== mealIndex) }))} /></View></View>
+      <View style={styles.header}><View style={styles.identity}><Text style={styles.eyebrow}>{mealTemplate ? 'PRESET DE REFEIÇÃO' : `REFEIÇÃO ${mealIndex + 1}`}</Text><Text style={styles.title}>{meal.name.trim() || 'Nova refeição'}</Text></View>{!mealTemplate ? <View style={styles.actions}><Action label="↑" disabled={!mealIndex} onPress={() => setDraft((c) => ({ ...c, meals: move(c.meals, mealIndex, mealIndex - 1) }))} /><Action label="↓" disabled={mealIndex === draft.meals.length - 1} onPress={() => setDraft((c) => ({ ...c, meals: move(c.meals, mealIndex, mealIndex + 1) }))} /><Action label="Remover" danger onPress={() => setDraft((c) => ({ ...c, meals: c.meals.filter((_, i) => i !== mealIndex) }))} /></View> : null}</View>
       <Field label="Nome da refeição" value={meal.name} onChange={(name) => updateMeal(mealIndex, (m) => ({ ...m, name }))} placeholder="Ex.: Café da manhã" /><Field label="Observações (opcional)" value={meal.notes} onChange={(notes) => updateMeal(mealIndex, (m) => ({ ...m, notes }))} placeholder="Horário, preparo ou orientação" multiline />
       {meal.foods.map((food, foodIndex) => <View key={food.clientId} style={styles.food}>
         <View style={styles.header}><Text style={styles.itemTitle}>Item {foodIndex + 1}</Text><View style={styles.actions}><Action label="↑" disabled={!foodIndex} onPress={() => updateMeal(mealIndex, (m) => ({ ...m, foods: move(m.foods, foodIndex, foodIndex - 1) }))} /><Action label="↓" disabled={foodIndex === meal.foods.length - 1} onPress={() => updateMeal(mealIndex, (m) => ({ ...m, foods: move(m.foods, foodIndex, foodIndex + 1) }))} /><Action label="Remover" danger onPress={() => updateMeal(mealIndex, (m) => ({ ...m, foods: m.foods.filter((_, i) => i !== foodIndex) }))} /></View></View>
@@ -58,7 +65,7 @@ export function NutritionEditor({ initialValue, submitLabel, pending, error, onS
       </View>)}
       <Button variant="secondary" disabled={meal.foods.length >= 30} onPress={() => updateMeal(mealIndex, (m) => ({ ...m, foods: [...m.foods, emptyFood()] }))}>+ Adicionar item</Button>
     </Card>)}
-    <Button variant="secondary" disabled={draft.meals.length >= 20} onPress={() => setDraft((c) => ({ ...c, meals: [...c.meals, emptyMeal()] }))}>+ Adicionar refeição</Button>
+    {!mealTemplate ? <Button variant="secondary" disabled={draft.meals.length >= 20} onPress={() => setDraft((c) => ({ ...c, meals: [...c.meals, emptyMeal()] }))}>+ Adicionar refeição</Button> : null}
     {errors.length || error ? <Card style={styles.error}><Text accessibilityRole="alert" style={styles.errorTitle}>Revise antes de salvar</Text>{errors.map((item) => <Text key={item} style={styles.errorText}>• {item}</Text>)}{error ? <Text style={styles.errorText}>{error}</Text> : null}</Card> : null}
     <Button loading={pending} onPress={submit}>{submitLabel}</Button>
   </>;
