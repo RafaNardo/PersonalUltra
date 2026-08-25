@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useState } from 'react';
 import { StyleSheet, Text, TextInput } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
@@ -12,7 +12,7 @@ export function StudentCoachScreen() {
   const session = useInviteSessionStore((state) => state.session);
   const [question, setQuestion] = useState('');
   const answer = useMutation({ mutationFn: () => inviteApi.coachAnswer(session!.accessToken, question) });
-  if (!session) { router.replace('/login'); return null; }
+  if (!session) return <Redirect href="/login" />;
   return <Screen style={styles.page}><TopBar eyebrow="COACH" title="Tire suas dúvidas" onBack={() => router.back()} /><Text style={styles.copy}>O Coach explica o que já está prescrito pelo seu personal. Ele não altera seu plano nem recomenda carga.</Text><TextInput value={question} onChangeText={setQuestion} multiline placeholder="Ex.: quais exercícios estão no meu treino?" placeholderTextColor={colors.textMuted} style={styles.input} /><Button loading={answer.isPending} disabled={!question.trim()} onPress={() => answer.mutate()}>Perguntar</Button>{answer.error && <ErrorView message={answer.error.message} onRetry={() => answer.mutate()} />}{answer.data && <Card style={styles.card}><Text style={styles.answer}>{answer.data.answer}</Text><Text style={styles.source}>Baseado no que já está registrado no seu acompanhamento.</Text></Card>}</Screen>;
 }
 

@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, AppState, StyleSheet, Text, View } from 'react-native';
 import { useMutation, useQueryClient } from '@tanstack/react-query';
@@ -104,7 +104,7 @@ export function StudentTrainingSessionScreen() {
     })().finally(() => setLoadingSnapshot(false));
   }, [authSession, id, activeSession, start, loadingSnapshot, snapshotAttempted]);
 
-  if (!authSession) { router.replace('/login'); return null; }
+  if (!authSession) return <Redirect href="/login" />;
   if (!activeSession && (startWorkout.isPending || loadingSnapshot)) return <LoadingView message="Preparando seu treino…" />;
   if (!activeSession && (startWorkout.isError || error)) return <ErrorView message={error ?? startWorkout.error?.message ?? 'Não foi possível abrir este treino.'} onRetry={() => { setError(undefined); startWorkout.reset(); if (start === '1') { automaticStartAttempt.current = `${authSession.studentId}:${id}`.toLowerCase(); startWorkout.mutate(); } else router.back(); }} />;
   if (!activeSession) return <LoadingView message="Preparando seu treino…" />;

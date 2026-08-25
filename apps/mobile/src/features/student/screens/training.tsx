@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, ListItem, LoadingView } from '@/src/components/ui';
@@ -19,7 +19,7 @@ export function StudentTrainingScreen({ withinTabs = false }: { withinTabs?: boo
     enabled: Boolean(session),
   });
 
-  if (!session) { router.replace('/login'); return null; }
+  if (!session) return <Redirect href="/login" />;
   if (training.isLoading) return <LoadingView message="Preparando seus treinos…" />;
   if (training.isError) return <ErrorView message={training.error.message} onRetry={() => training.refetch()} />;
 

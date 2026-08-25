@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
@@ -21,7 +21,7 @@ export function StudentTrainingSummaryScreen() {
     enabled: Boolean(authSession && sessionId),
   });
 
-  if (!authSession) { router.replace('/login'); return null; }
+  if (!authSession) return <Redirect href="/login" />;
   if (summary.isLoading) return <LoadingView message="Carregando resumo do treino…" />;
   if (summary.isError) return <ErrorView message={summary.error.message} onRetry={() => summary.refetch()} />;
   if (!summary.data) return <ErrorView message="Este resumo não está disponível." onRetry={() => summary.refetch()} />;

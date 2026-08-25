@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useState } from 'react';
 import { Alert, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useMutation } from '@tanstack/react-query';
@@ -20,7 +20,7 @@ export default function InviteAnamnesisScreen() {
   const [careAnswers, setCareAnswers] = useState({ health: undefined as boolean | undefined, movement: undefined as boolean | undefined, pain: undefined as boolean | undefined });
   const save = useMutation({ mutationFn: () => inviteApi.saveAnamnesis(session!.accessToken, form) });
   const complete = useMutation({ mutationFn: () => inviteApi.completeAnamnesis(session!.accessToken) });
-  if (!session) { router.replace('/login'); return null; }
+  if (!session) return <Redirect href="/login" />;
   const update = <K extends keyof AnamnesisAnswers>(key: K, value: AnamnesisAnswers[K]) => setForm((current) => ({ ...current, [key]: value }));
   const setCareAnswer = (kind: keyof typeof careAnswers, value: boolean, field: 'healthConditions' | 'movementRestrictions' | 'currentPainDescription') => { setCareAnswers((current) => ({ ...current, [kind]: value })); update(field, value ? '' : field === 'currentPainDescription' ? 'Sem dor' : 'Nenhuma'); };
   const valid = () => step === 1 ? Boolean(form.goal) : step === 2 ? Boolean(form.experienceLevel) : step === 3 ? form.trainingDaysPerWeek > 0 && form.sessionDurationMinutes > 0 : step === 4 ? Boolean(form.trainingLocation && form.equipmentNotes) : step === 5 ? form.heightCm > 0 && form.weightKg > 0 : step === 6 ? careAnswers.health !== undefined && careAnswers.movement !== undefined && careAnswers.pain !== undefined && Boolean(form.healthConditions && form.movementRestrictions && form.currentPainDescription) : Boolean(form.nutritionPreferences && form.nutritionRestrictions);

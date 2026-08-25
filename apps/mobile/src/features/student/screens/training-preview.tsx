@@ -1,4 +1,4 @@
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
@@ -13,7 +13,7 @@ export function StudentTrainingPreviewScreen() {
   const session = useInviteSessionStore((state) => state.session);
   const preview = useQuery({ queryKey: ['student', session?.studentId, 'training-preview', id], queryFn: () => inviteApi.trainingPreview(session!.accessToken, id!), enabled: Boolean(session && id) });
 
-  if (!session) { router.replace('/login'); return null; }
+  if (!session) return <Redirect href="/login" />;
   if (preview.isLoading) return <LoadingView message="Carregando detalhes do treino…" />;
   if (preview.isError) return <ErrorView message={preview.error.message} onRetry={() => preview.refetch()} />;
   if (!preview.data) return <ErrorView message="Este treino não está disponível." onRetry={() => preview.refetch()} />;

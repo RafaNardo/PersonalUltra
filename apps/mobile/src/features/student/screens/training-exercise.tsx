@@ -1,5 +1,5 @@
 import { useMutation, useQueryClient } from '@tanstack/react-query';
-import { router, useLocalSearchParams } from 'expo-router';
+import { Redirect, router, useLocalSearchParams } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { Alert, StyleSheet, Text, TextInput, View } from 'react-native';
 import { ApiError } from '@/src/api/shared-http';
@@ -28,9 +28,7 @@ export function StudentTrainingExerciseScreen() {
     if (!sessionId || !authSession) return;
     void hydrateSession(sessionId, authSession.accessToken, authSession.studentId, setSession).catch((loadError) => setError(loadError instanceof Error ? loadError.message : 'Não foi possível recuperar a sessão.')).finally(() => setLoading(false));
   }, [session?.sessionId, ownerStudentId, sessionId, authSession, setSession]);
-  useEffect(() => { if (!authSession) router.replace('/login'); }, [authSession]);
-
-  if (!authSession) return null;
+  if (!authSession) return <Redirect href="/login" />;
   if (loading) return <LoadingView message="Abrindo seu exercício…" />;
   if (error || !session || session.sessionId !== sessionId) return <ErrorView message={error ?? 'Sessão indisponível.'} onRetry={() => router.back()} />;
   const exercise = session.exercises.find((item) => item.id === exerciseId);

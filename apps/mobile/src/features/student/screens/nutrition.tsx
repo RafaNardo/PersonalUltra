@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useQuery } from '@tanstack/react-query';
 import { StyleSheet, Text, View } from 'react-native';
 import { Card, EmptyState, ErrorView, LoadingView } from '@/src/components/ui';
@@ -23,7 +23,7 @@ function formatQuantity(quantity: number, unit: string) {
 export function StudentNutritionScreen() {
   const session = useInviteSessionStore((state) => state.session);
   const query = useQuery({ queryKey: ['student', session?.studentId, 'nutrition'], queryFn: () => inviteApi.nutrition(session!.accessToken), enabled: Boolean(session) });
-  if (!session) { router.replace('/login'); return null; }
+  if (!session) return <Redirect href="/login" />;
   if (query.isLoading) return <LoadingView message="Carregando sua alimentação…" />;
   if (query.isError) return <ErrorView message={query.error.message} onRetry={() => query.refetch()} />;
   if (!query.data) return <NutritionEmptyState />;

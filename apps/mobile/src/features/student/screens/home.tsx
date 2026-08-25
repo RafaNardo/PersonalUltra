@@ -1,4 +1,4 @@
-import { router } from 'expo-router';
+import { Redirect, router } from 'expo-router';
 import { useMemo, useState } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
@@ -118,10 +118,7 @@ export function StudentHomeScreen() {
   const weight = useQuery({ queryKey: ['student', studentKey, 'weight'], queryFn: () => inviteApi.weight(session!.accessToken), enabled: Boolean(session) });
   const branding = useQuery({ queryKey: ['student', studentKey, 'branding'], queryFn: () => inviteApi.branding(session!.accessToken), enabled: Boolean(session) });
 
-  if (!session) {
-    router.replace('/login');
-    return null;
-  }
+  if (!session) return <Redirect href="/login" />;
 
   if (training.isLoading) return <LoadingView message="Abrindo seu dia…" />;
   if (training.isError) return <ErrorView message={training.error.message} onRetry={() => training.refetch()} />;
