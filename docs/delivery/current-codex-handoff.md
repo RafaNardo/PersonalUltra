@@ -57,7 +57,7 @@ concluídas a partir da conversa antiga.
 - Execução multimodal/fluida M3RX, migration, histórico factual e conclusão sem
   dados sintéticos. Commit `c7b949b`; design em
   `docs/design/training-execution-refinement.md`.
-- Gate de regressão API: comando `npm run test:api:regression`, atualmente 105
+- Gate de regressão API: comando `npm run test:api:regression`, atualmente 106
   testes. Commits-base `ab4c3d4` e `c41ae7b`; cobertura de nutrição em
   `2a1ef83`; detalhes em
   `docs/testing/api-regression.md`.
@@ -88,6 +88,11 @@ concluídas a partir da conversa antiga.
 - A bottom nav usa o inset inferior real e as telas densas do treino passam a
   quebrar/empilhar blocos de texto e métricas para suportar fonte Android
   ampliada sem sobrepor a navegação do sistema.
+- `M4S` foi concluída: após a anamnese o Student recebe boas-vindas sem atalhos
+  prematuros; peso ganhou gráfico e edição/exclusão; hidratação é um histórico
+  pessoal com ações rápidas na Home e gráfico no Progresso. A migration é
+  `20260831230832_AddHydrationProgress`; não há metas, cálculo ou recomendação
+  automática de água.
 
 ## Validação padrão
 
@@ -105,7 +110,7 @@ cd apps/mobile
 npx expo export --platform ios --output-dir .expo-export-validation
 ```
 
-O último gate conhecido passou com 105/105 testes de API, 136/136 testes da
+O último gate conhecido passou com 106/106 testes de API, 136/136 testes da
 Factory, build .NET sem warnings, typecheck e export iOS. As duas APIs públicas
 responderam health 200 e os contratos públicos retornaram `trackingMode`.
 
@@ -140,7 +145,8 @@ nunca devem ser lidos ou impressos.
 - Atribuição identifica o Trainer responsável sem alegar credencial clínica.
 - A revisão jurídica/produto continua obrigatória antes de produção, conforme
   `docs/product/nutrition-note.md`.
-- A lacuna explícita restante no gate é Weight API.
+- Peso e hidratação possuem CRUD, validação e ordenação cobertos no gate de
+  regressão.
 
 ## Arquivos locais do usuário
 

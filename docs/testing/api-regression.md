@@ -55,11 +55,11 @@ The gate covers:
   failures that preserve the previous plan;
 - meal-preset CRUD/duplication, Trainer ownership, independent snapshot
   application and append without losing existing content or original authorship;
-- ordered food-name previews and the `livre` unit in meal presets.
+- ordered food-name previews and the `livre` unit in meal presets;
+- weight and hydration CRUD, validação e ordenação cronológica.
 
-Weight endpoints currently have no dedicated integration tests and remain an
-explicit gap. Nutrition presets add five dedicated scenarios, bringing the gate
-to 105 tests.
+Os registros de peso e hidratação têm cenário dedicado de regressão. O gate
+possui atualmente 106 testes.
 
 ## What this gate does not prove
 

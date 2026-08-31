@@ -19,6 +19,7 @@ export type NutritionQuantityUnit = 'g' | 'ml' | 'unidade' | 'fatia' | 'colher' 
 export type StudentNutritionAlternative = { id: string; foodName: string; quantity: number; unit: NutritionQuantityUnit; sequence: number; notes?: string };
 export type StudentNutrition = { id: string; name: string; notes: string; updatedAt: string; responsibleTrainerName: string; dailyGoals?: { calories?: number; proteinGrams?: number; carbohydratesGrams?: number; fatGrams?: number }; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ id: string; foodName: string; quantity: number; unit: NutritionQuantityUnit; sequence: number; alternatives?: StudentNutritionAlternative[] }> }> };
 export type StudentWeight = { id: string; weightKg: number; recordedAt: string };
+export type StudentHydration = { id: string; amountMl: number; recordedAt: string };
 export type CoachAnswer = { answer: string; sources: string[] };
 export type StudentBranding = { displayName: string; primaryColor: string; logoUrl?: string };
 
@@ -68,6 +69,12 @@ export const inviteApi = {
   nutrition: (token: string) => requestNullable<StudentNutrition>('/nutrition', token),
   weight: (token: string) => request<StudentWeight[]>('/progress/weight', {}, token),
   addWeight: (token: string, weightKg: number) => request<StudentWeight>('/progress/weight', { method: 'POST', body: JSON.stringify({ weightKg }) }, token),
+  updateWeight: (token: string, entryId: string, weightKg: number, recordedAt?: string) => request<StudentWeight>(`/progress/weight/${entryId}`, { method: 'PUT', body: JSON.stringify({ weightKg, recordedAt }) }, token),
+  deleteWeight: (token: string, entryId: string) => request<void>(`/progress/weight/${entryId}`, { method: 'DELETE' }, token),
+  hydration: (token: string) => request<StudentHydration[]>('/progress/hydration', {}, token),
+  addHydration: (token: string, amountMl: number) => request<StudentHydration>('/progress/hydration', { method: 'POST', body: JSON.stringify({ amountMl }) }, token),
+  updateHydration: (token: string, entryId: string, amountMl: number, recordedAt?: string) => request<StudentHydration>(`/progress/hydration/${entryId}`, { method: 'PUT', body: JSON.stringify({ amountMl, recordedAt }) }, token),
+  deleteHydration: (token: string, entryId: string) => request<void>(`/progress/hydration/${entryId}`, { method: 'DELETE' }, token),
   coachAnswer: (token: string, question: string) => request<CoachAnswer>(`/coach/answer?question=${encodeURIComponent(question)}`, {}, token),
   branding: (token: string) => requestNullable<StudentBranding>('/branding', token),
 };

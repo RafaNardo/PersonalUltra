@@ -30,6 +30,7 @@ public sealed class PersonalUltraDbContext(DbContextOptions<PersonalUltraDbConte
     public DbSet<NutritionTemplateFood> NutritionTemplateFoods => Set<NutritionTemplateFood>();
     public DbSet<NutritionTemplateFoodAlternative> NutritionTemplateFoodAlternatives => Set<NutritionTemplateFoodAlternative>();
     public DbSet<WeightEntry> WeightEntries => Set<WeightEntry>();
+    public DbSet<HydrationEntry> HydrationEntries => Set<HydrationEntry>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -59,5 +60,6 @@ public sealed class PersonalUltraDbContext(DbContextOptions<PersonalUltraDbConte
         modelBuilder.Entity<NutritionTemplateFood>(entity => { entity.ToTable("nutrition_template_foods", "nutrition"); entity.HasKey(x => x.Id); entity.Property(x => x.FoodName).HasMaxLength(200); entity.Property(x => x.Quantity).HasPrecision(7, 2); entity.Property(x => x.Unit).HasMaxLength(40); entity.HasIndex(x => new { x.NutritionTemplateMealId, x.Sequence }).IsUnique(); entity.HasOne(x => x.Meal).WithMany(x => x.Foods).HasForeignKey(x => x.NutritionTemplateMealId); });
         modelBuilder.Entity<NutritionTemplateFoodAlternative>(entity => { entity.ToTable("nutrition_template_food_alternatives", "nutrition"); entity.HasKey(x => x.Id); entity.Property(x => x.FoodName).HasMaxLength(200); entity.Property(x => x.Quantity).HasPrecision(7, 2); entity.Property(x => x.Unit).HasMaxLength(40); entity.Property(x => x.Notes).HasMaxLength(1000); entity.HasIndex(x => new { x.NutritionTemplateFoodId, x.Sequence }).IsUnique(); entity.HasOne(x => x.Food).WithMany(x => x.Alternatives).HasForeignKey(x => x.NutritionTemplateFoodId).OnDelete(DeleteBehavior.Cascade); });
         modelBuilder.Entity<WeightEntry>(entity => { entity.ToTable("weight_entries", "progress"); entity.HasKey(x => x.Id); entity.Property(x => x.WeightKg).HasPrecision(6, 2); entity.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId); entity.HasIndex(x => new { x.StudentId, x.RecordedAt }); });
+        modelBuilder.Entity<HydrationEntry>(entity => { entity.ToTable("hydration_entries", "progress"); entity.HasKey(x => x.Id); entity.Property(x => x.AmountMl).IsRequired(); entity.HasOne(x => x.Student).WithMany().HasForeignKey(x => x.StudentId); entity.HasIndex(x => new { x.StudentId, x.RecordedAt }); });
     }
 }

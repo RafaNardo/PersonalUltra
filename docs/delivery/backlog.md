@@ -280,6 +280,11 @@ conteúdo indisponível; na Home registra hidratação em poucos toques; em
 Progresso consulta e corrige seu histórico real de peso e água por gráficos e
 listas legíveis.
 
+**Status M4S (2026-08-31): concluído.** A espera pós-anamnese virou uma
+boas-vindas com único CTA para o início; o Student registra, corrige e remove
+medidas de peso e hidratação. Os gráficos usam somente lançamentos persistidos;
+hidratação não possui meta, cálculo ou recomendação automática.
+
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
 

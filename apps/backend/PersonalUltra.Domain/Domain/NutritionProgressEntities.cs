@@ -103,3 +103,12 @@ public sealed class WeightEntry
     public DateTimeOffset RecordedAt { get; set; }
     public Student Student { get; set; } = null!;
 }
+
+public sealed class HydrationEntry
+{
+    public Guid Id { get; set; }
+    public Guid StudentId { get; set; }
+    public int AmountMl { get; set; }
+    public DateTimeOffset RecordedAt { get; set; }
+    public Student Student { get; set; } = null!;
+}

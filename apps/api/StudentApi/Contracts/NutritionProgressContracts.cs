@@ -6,4 +6,8 @@ public sealed record StudentNutritionDailyGoals(decimal? Calories, decimal? Prot
 public sealed record StudentNutrition(Guid Id, string Name, string Notes, DateTimeOffset UpdatedAt, string ResponsibleTrainerName, IReadOnlyList<StudentMeal> Meals, StudentNutritionDailyGoals? DailyGoals = null);
 public sealed record StudentWeight(Guid Id, decimal WeightKg, DateTimeOffset RecordedAt);
 public sealed record AddWeightRequest(decimal WeightKg, DateTimeOffset? RecordedAt);
+public sealed record UpdateWeightRequest(decimal WeightKg, DateTimeOffset? RecordedAt);
+public sealed record StudentHydration(Guid Id, int AmountMl, DateTimeOffset RecordedAt);
+public sealed record AddHydrationRequest(int AmountMl, DateTimeOffset? RecordedAt);
+public sealed record UpdateHydrationRequest(int AmountMl, DateTimeOffset? RecordedAt);
 public sealed record CoachAnswer(string Answer, IReadOnlyList<string> Sources);

@@ -211,6 +211,51 @@ public sealed class NutritionEndpointTests
         }
     }
 
+    [Fact]
+    public async Task Student_owns_weight_and_hydration_crud_and_hydration_is_chronological()
+    {
+        await using var environment = new NutritionTestEnvironment();
+        var student = environment.CreateStudentClient();
+        await LoginStudent(student);
+
+        var weight = await student.PostAsJsonAsync("/api/v1/progress/weight", new { weightKg = 81.2m, recordedAt = "2026-08-28T08:00:00Z" });
+        Assert.Equal(HttpStatusCode.OK, weight.StatusCode);
+        var weightEntry = await weight.Content.ReadFromJsonAsync<ProgressEntryResponse>();
+        Assert.NotNull(weightEntry);
+        Assert.Equal(81.2m, weightEntry!.WeightKg);
+        Assert.Equal(DateTimeOffset.Parse("2026-08-28T08:00:00Z"), weightEntry.RecordedAt);
+
+        var weightUpdate = await student.PutAsJsonAsync($"/api/v1/progress/weight/{weightEntry.Id}", new { weightKg = 80.8m, recordedAt = "2026-08-29T08:00:00-03:00" });
+        Assert.Equal(HttpStatusCode.OK, weightUpdate.StatusCode);
+        Assert.Equal(80.8m, (await weightUpdate.Content.ReadFromJsonAsync<ProgressEntryResponse>())!.WeightKg);
+        Assert.Equal(HttpStatusCode.NoContent, (await student.DeleteAsync($"/api/v1/progress/weight/{weightEntry.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await student.PutAsJsonAsync($"/api/v1/progress/weight/{weightEntry.Id}", new { weightKg = 80m })).StatusCode);
+
+        var first = await student.PostAsJsonAsync("/api/v1/progress/hydration", new { amountMl = 1000, recordedAt = "2026-08-30T12:00:00Z" });
+        var second = await student.PostAsJsonAsync("/api/v1/progress/hydration", new { amountMl = 500, recordedAt = "2026-08-30T08:00:00Z" });
+        Assert.Equal(HttpStatusCode.OK, first.StatusCode);
+        Assert.Equal(HttpStatusCode.OK, second.StatusCode);
+        var firstEntry = await first.Content.ReadFromJsonAsync<HydrationResponse>();
+        var secondEntry = await second.Content.ReadFromJsonAsync<HydrationResponse>();
+        Assert.NotNull(firstEntry);
+        Assert.NotNull(secondEntry);
+
+        var history = await student.GetFromJsonAsync<List<HydrationResponse>>("/api/v1/progress/hydration");
+        Assert.NotNull(history);
+        Assert.Equal([secondEntry!.Id, firstEntry!.Id], history!.TakeLast(2).Select(x => x.Id));
+
+        var update = await student.PutAsJsonAsync($"/api/v1/progress/hydration/{secondEntry.Id}", new { amountMl = 750 });
+        Assert.Equal(HttpStatusCode.OK, update.StatusCode);
+        var updated = await update.Content.ReadFromJsonAsync<HydrationResponse>();
+        Assert.Equal(750, updated!.AmountMl);
+        Assert.Equal(DateTimeOffset.UtcNow.Date, updated.RecordedAt.UtcDateTime.Date);
+        Assert.Equal(HttpStatusCode.NoContent, (await student.DeleteAsync($"/api/v1/progress/hydration/{secondEntry.Id}")).StatusCode);
+        Assert.Equal(HttpStatusCode.NotFound, (await student.PutAsJsonAsync("/api/v1/progress/hydration/00000000-0000-0000-0000-000000000001", new { amountMl = 500 })).StatusCode);
+
+        var invalid = await student.PostAsJsonAsync("/api/v1/progress/hydration", new { amountMl = 0 });
+        Assert.Equal(HttpStatusCode.BadRequest, invalid.StatusCode);
+    }
+
     private static object ValidRequest(string name) => new
     {
         name,
@@ -228,6 +273,8 @@ public sealed class NutritionEndpointTests
 
     private sealed record LoginResponse(string AccessToken);
     private sealed record ErrorResponse(string Code, string Message, JsonElement Details, string TraceId);
+    private sealed record ProgressEntryResponse(Guid Id, decimal? WeightKg, DateTimeOffset RecordedAt);
+    private sealed record HydrationResponse(Guid Id, int AmountMl, DateTimeOffset RecordedAt);
     private sealed record NutritionResponse(Guid Id, string Name, string Notes, DateTimeOffset UpdatedAt, string ResponsibleTrainerName, IReadOnlyList<MealResponse> Meals, DailyGoalsResponse? DailyGoals = null);
     private sealed record DailyGoalsResponse(decimal? Calories, decimal? ProteinGrams, decimal? CarbohydratesGrams, decimal? FatGrams);
     private sealed record MealResponse(Guid Id, string Name, int Sequence, string Notes, IReadOnlyList<FoodResponse> Foods);
