@@ -20,6 +20,7 @@ export type StudentNutritionAlternative = { id: string; foodName: string; quanti
 export type StudentNutrition = { id: string; name: string; notes: string; updatedAt: string; responsibleTrainerName: string; dailyGoals?: { calories?: number; proteinGrams?: number; carbohydratesGrams?: number; fatGrams?: number }; meals: Array<{ id: string; name: string; sequence: number; notes: string; foods: Array<{ id: string; foodName: string; quantity: number; unit: NutritionQuantityUnit; sequence: number; alternatives?: StudentNutritionAlternative[] }> }> };
 export type StudentWeight = { id: string; weightKg: number; recordedAt: string };
 export type StudentHydration = { id: string; amountMl: number; recordedAt: string };
+export type StudentProfile = { firstName: string; lastName: string; email?: string; phone?: string; preferredName?: string };
 export type CoachAnswer = { answer: string; sources: string[] };
 export type StudentBranding = { displayName: string; primaryColor: string; logoUrl?: string };
 
@@ -48,6 +49,8 @@ export const inviteApi = {
   accept: (token: string, input: { firstName: string; lastName: string; email?: string; phone: string }) => request<InviteSession>(`/invite/${token}/accept`, { method: 'POST', body: JSON.stringify(input) }),
   acceptCode: (code: string, input: { firstName: string; lastName: string; email?: string; phone: string }) => request<InviteSession>(`/invite/code/${code.replace(/\D/g, '')}/accept`, { method: 'POST', body: JSON.stringify(input) }),
   studentLogin: (email: string) => request<InviteSession>('/auth/student-login', { method: 'POST', body: JSON.stringify({ email }) }),
+  profile: (token: string) => request<StudentProfile>('/profile', {}, token),
+  updateProfile: (token: string, input: { preferredName?: string }) => request<StudentProfile>('/profile', { method: 'PUT', body: JSON.stringify(input) }, token),
   anamnesis: (token: string) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis', {}, token),
   saveAnamnesis: (token: string, answers: AnamnesisAnswers) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis', { method: 'PUT', body: JSON.stringify(answers) }, token),
   completeAnamnesis: (token: string) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis/complete', { method: 'POST' }, token),

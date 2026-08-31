@@ -111,13 +111,13 @@ function FactualCalendar({ history }: { history: TrainingHistoryItem[] }) {
 
 export function StudentHomeScreen() {
   const session = useInviteSessionStore((state) => state.session);
-  const clear = useInviteSessionStore((state) => state.clear);
   const studentKey = session?.studentId;
   const training = useQuery({ queryKey: ['student', studentKey, 'training'], queryFn: () => inviteApi.training(session!.accessToken), enabled: Boolean(session) });
   const message = useQuery({ queryKey: ['student', studentKey, 'trainer-message'], queryFn: () => inviteApi.activeTrainerMessage(session!.accessToken), enabled: Boolean(session) });
   const nutrition = useQuery({ queryKey: ['student', studentKey, 'nutrition'], queryFn: () => inviteApi.nutrition(session!.accessToken), enabled: Boolean(session) });
   const weight = useQuery({ queryKey: ['student', studentKey, 'weight'], queryFn: () => inviteApi.weight(session!.accessToken), enabled: Boolean(session) });
   const branding = useQuery({ queryKey: ['student', studentKey, 'branding'], queryFn: () => inviteApi.branding(session!.accessToken), enabled: Boolean(session) });
+  const profile = useQuery({ queryKey: ['student', studentKey, 'profile'], queryFn: () => inviteApi.profile(session!.accessToken), enabled: Boolean(session) });
 
   if (!session) return <Redirect href="/login" />;
 
@@ -139,11 +139,11 @@ export function StudentHomeScreen() {
       <View style={styles.header}>
         <View style={styles.headerCopy}>
           <Text style={styles.eyebrow}>PERSONAL ULTRA</Text>
-          <Text style={styles.title}>Olá, {session.firstName}.</Text>
+          <Text style={styles.title}>Olá, {profile.data?.preferredName || session.firstName}.</Text>
           <Text style={styles.copy}>{branding.data?.displayName ? `Seu acompanhamento com ${branding.data.displayName}.` : 'Seu dia de treino, alimentação e acompanhamento.'}</Text>
         </View>
-        <Pressable accessibilityRole="button" accessibilityLabel="Trocar contexto" onPress={() => { clear(); router.replace('/demo-role-switch'); }}>
-          <Text style={styles.contextAction}>Trocar contexto</Text>
+        <Pressable accessibilityRole="button" accessibilityLabel="Abrir meu perfil" accessibilityHint="Abre seu perfil e preferências" onPress={() => router.push('/student/profile')}>
+          <Ionicons name="person-circle-outline" size={34} color={colors.primary} />
         </Pressable>
       </View>
 
@@ -201,7 +201,6 @@ export function StudentHomeScreen() {
         </View>
       </View>
 
-      <Button variant="ghost" onPress={() => { clear(); router.replace('/login'); }}>Sair</Button>
     </Screen>
   );
 }
@@ -213,7 +212,6 @@ const styles = StyleSheet.create({
   eyebrow: { ...typography.caption, color: colors.primary, letterSpacing: 1.2 },
   title: { ...typography.displayLG, color: colors.textPrimary },
   copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 },
-  contextAction: { ...typography.caption, color: colors.primary, textAlign: 'right' },
   section: { gap: spacing.sm },
   sectionTitle: { ...typography.headingMD, color: colors.textPrimary },
   primaryCard: { gap: spacing.md, borderColor: colors.primary },

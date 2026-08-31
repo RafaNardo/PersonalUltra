@@ -285,6 +285,33 @@ boas-vindas com único CTA para o início; o Student registra, corrige e remove
 medidas de peso e hidratação. Os gráficos usam somente lançamentos persistidos;
 hidratação não possui meta, cálculo ou recomendação automática.
 
+### M4P — Perfil e preferências Student
+
+Oferecer ao Student um lugar claro para ações pessoais que não pertencem às
+tabs centrais de treino, alimentação e progresso.
+
+- `PU-M4P-001`: persistir nome de exibição opcional do Student, distinto do
+  nome cadastral e sem alterar a identificação vista pelo Trainer.
+- `PU-M4P-002`: expor consulta e atualização desse nome exclusivamente pela
+  `StudentApi`, com ownership da sessão e validação do texto.
+- `PU-M4P-003`: criar a rota interna `Meu perfil`, com nome de exibição, dados
+  de acesso somente para consulta e saída da sessão.
+- `PU-M4P-004`: trocar a ação textual de contexto demo na Home por acesso
+  explícito ao perfil; manter a troca de contexto somente como ação secundária
+  identificada como demo.
+
+**Non-goals M4P:** edição de nome legal, e-mail ou telefone, autenticação de
+produção, preferências fictícias, mudanças no Trainer, Coach ou anamnese.
+
+**DoD M4P:** o Student abre Meu perfil pela Home, escolhe como quer ser chamado
+no app, vê seus dados cadastrais sem editá-los e pode sair; o nome de exibição
+persiste entre sessões e não altera o cadastro do Trainer.
+
+**Status M4P (2026-08-31): concluído.** A Home passou a acessar Meu perfil;
+o nome de exibição é persistido e aparece na saudação Student, enquanto nome
+legal, e-mail e telefone continuam somente para consulta. A troca de contexto
+permanece explicitamente marcada como ação demo dentro do perfil.
+
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
 

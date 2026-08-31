@@ -22,6 +22,11 @@ Boas-vindas após a anamnese, evolução de peso com visualização e correção
 registros reais, e hidratação registrada pelo próprio aluno. Não encerra a V1:
 ajustes posteriores de anamnese e Coach permanecem planejáveis separadamente.
 
+## M4P — Student Profile & Preferences
+Perfil interno do aluno, com nome de exibição persistido, dados cadastrais para
+consulta e saída da sessão. Não altera nome legal, dados de acesso ou o
+contexto do Trainer.
+
 ## M5 — Production Foundation
 Somente após validação:
 - auth real;

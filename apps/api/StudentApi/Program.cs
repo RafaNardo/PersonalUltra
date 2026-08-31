@@ -61,6 +61,7 @@ app.MapStudentMessageApi();
 app.MapTrainingApi();
 app.MapNutritionProgressApi();
 app.MapBrandingApi();
+app.MapStudentProfileApi();
 app.MapGet("/api/v1/demo/identity", async (PersonalUltraDbContext db, CancellationToken cancellationToken) =>
 {
     var student = await db.Students.AsNoTracking().SingleAsync(x => x.Id == PersonalUltra.Domain.DemoIds.StudentId, cancellationToken);

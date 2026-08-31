@@ -57,9 +57,10 @@ The gate covers:
   application and append without losing existing content or original authorship;
 - ordered food-name previews and the `livre` unit in meal presets;
 - weight and hydration CRUD, validação e ordenação cronológica.
+- perfil Student, incluindo leitura, nome de exibição, limpeza e validação.
 
 Os registros de peso e hidratação têm cenário dedicado de regressão. O gate
-possui atualmente 106 testes.
+possui atualmente 107 testes.
 
 ## What this gate does not prove
 

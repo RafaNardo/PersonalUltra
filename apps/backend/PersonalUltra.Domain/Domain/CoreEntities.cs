@@ -41,6 +41,7 @@ public sealed class Student
     public string LastName { get; set; } = null!;
     public string? Email { get; set; }
     public string? Phone { get; set; }
+    public string? PreferredName { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public List<TrainerStudent> Trainers { get; } = [];
     public Anamnesis? Anamnesis { get; set; }

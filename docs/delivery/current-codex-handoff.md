@@ -57,7 +57,7 @@ concluídas a partir da conversa antiga.
 - Execução multimodal/fluida M3RX, migration, histórico factual e conclusão sem
   dados sintéticos. Commit `c7b949b`; design em
   `docs/design/training-execution-refinement.md`.
-- Gate de regressão API: comando `npm run test:api:regression`, atualmente 106
+- Gate de regressão API: comando `npm run test:api:regression`, atualmente 107
   testes. Commits-base `ab4c3d4` e `c41ae7b`; cobertura de nutrição em
   `2a1ef83`; detalhes em
   `docs/testing/api-regression.md`.
@@ -93,6 +93,9 @@ concluídas a partir da conversa antiga.
   pessoal com ações rápidas na Home e gráfico no Progresso. A migration é
   `20260831230832_AddHydrationProgress`; não há metas, cálculo ou recomendação
   automática de água.
+- `M4P` foi concluída: Meu perfil permite salvar nome de exibição sem alterar
+  o cadastro legal, consultar dados de acesso e sair; a Home usa esse nome na
+  saudação e a troca de contexto está identificada como demo.
 
 ## Validação padrão
 
@@ -110,7 +113,7 @@ cd apps/mobile
 npx expo export --platform ios --output-dir .expo-export-validation
 ```
 
-O último gate conhecido passou com 106/106 testes de API, 136/136 testes da
+O último gate conhecido passou com 107/107 testes de API, 136/136 testes da
 Factory, build .NET sem warnings, typecheck e export iOS. As duas APIs públicas
 responderam health 200 e os contratos públicos retornaram `trackingMode`.
 
