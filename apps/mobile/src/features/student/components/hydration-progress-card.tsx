@@ -10,7 +10,7 @@ import { ProgressBarChart } from './progress-bar-chart';
 
 const shortDate = new Intl.DateTimeFormat('pt-BR', { day: '2-digit', month: '2-digit' });
 const dayKey = (value: string | Date) => { const date = new Date(value); return `${date.getFullYear()}-${date.getMonth()}-${date.getDate()}`; };
-const ml = (value: number) => value >= 1000 ? `${(value / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} L` : `${value} ml`;
+const ml = (value: number) => value >= 1000 ? `${(value / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L` : `${value} ml`;
 
 export function HydrationProgressCard() {
   const session = useInviteSessionStore((state) => state.session); const client = useQueryClient(); const [customValue, setCustomValue] = useState('');

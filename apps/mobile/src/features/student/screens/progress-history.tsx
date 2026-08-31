@@ -10,7 +10,7 @@ import { useInviteSessionStore } from '@/src/features/student/invite/session-sto
 
 const date = new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium', timeStyle: 'short' });
 const number = (value: string) => Number(value.trim().replace(',', '.'));
-const ml = (value: number) => value >= 1000 ? `${(value / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} L` : `${value} ml`;
+const ml = (value: number) => value >= 1000 ? `${(value / 1000).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 })} L` : `${value} ml`;
 
 export function StudentWeightHistoryScreen() { return <StudentProgressHistory kind="weight" />; }
 export function StudentHydrationHistoryScreen() { return <StudentProgressHistory kind="hydration" />; }
