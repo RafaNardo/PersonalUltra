@@ -17,6 +17,11 @@ Alimentação, progresso somente de peso, Coach read-only, seed, demo comercial 
 
 A partir do refactor da M4, toda entrega que criar ou alterar telas deve tratar empty state como critério de aceite, usando as variantes compartilhadas e as regras de conteúdo de `docs/design/design-system.md`. A regra continua valendo para M5 e V2; tasks exclusivamente técnicas não precisam criar estados visuais artificiais.
 
+## M4S — Student Journey & Hydration Refinement
+Boas-vindas após a anamnese, evolução de peso com visualização e correção de
+registros reais, e hidratação registrada pelo próprio aluno. Não encerra a V1:
+ajustes posteriores de anamnese e Coach permanecem planejáveis separadamente.
+
 ## M5 — Production Foundation
 Somente após validação:
 - auth real;

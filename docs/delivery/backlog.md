@@ -245,6 +245,41 @@ validadas e copiadas tanto ao duplicar presets quanto ao aplicá-los no plano do
 Student. O Trainer as edita por alimento; o Student apenas consulta a seção
 expansível quando houver conteúdo.
 
+### M4S — Jornada inicial, progresso e hidratação Student
+
+Refinar a experiência do aluno após a anamnese e tornar o acompanhamento de
+progresso mais útil, sem alterar a prescrição do Trainer nem introduzir metas
+ou recomendações clínicas automáticas.
+
+- `PU-M4S-001`: substituir a tela de espera pós-anamnese por uma boas-vindas
+  motivadora, com contexto do personal e somente uma ação funcional para
+  seguir ao início; não oferecer atalhos para conteúdos ainda não publicados.
+- `PU-M4S-002`: evoluir o progresso de peso Student com gráfico baseado
+  exclusivamente nos registros reais, estado apropriado para zero/um registro
+  e edição ou exclusão segura dos lançamentos.
+- `PU-M4S-003`: criar registros de hidratação por Student, com quantidade em
+  mililitros e horário, persistidos no `DbContext` compartilhado e expostos
+  somente pela `StudentApi` na V1.
+- `PU-M4S-004`: incluir na Home um card de hidratação diária com ações rápidas
+  (`+500 ml`, `+1 L`) e entrada de outro valor, levando ao detalhe sem alegar
+  meta individual ou benefício clínico.
+- `PU-M4S-005`: ampliar a tela Progresso com total diário, histórico editável e
+  gráfico de hidratação derivado dos registros reais; manter peso e hidratação
+  claramente separados.
+- `PU-M4S-006`: validar ownership, datas/quantidades, edição/exclusão e
+  round-trip da hidratação; revisar loading/error/empty, fonte ampliada e
+  export do Expo nas telas alteradas.
+
+**Non-goals M4S:** meta automática de água, lembretes/push, cálculos de saúde,
+recomendações nutricionais, alteração de plano pelo Student, mudanças no
+formulário de anamnese ou expansão do Coach. Ajustes futuros de anamnese e do
+Coach serão milestones separadas, deliberadamente fora deste escopo.
+
+**DoD M4S:** após concluir a anamnese, o Student é acolhido sem promessas de
+conteúdo indisponível; na Home registra hidratação em poucos toques; em
+Progresso consulta e corrige seu histórico real de peso e água por gráficos e
+listas legíveis.
+
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
 
