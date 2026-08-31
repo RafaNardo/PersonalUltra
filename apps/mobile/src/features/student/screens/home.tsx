@@ -1,6 +1,6 @@
 import { Redirect, router } from 'expo-router';
 import { useMemo, useState } from 'react';
-import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
+import { useQuery } from '@tanstack/react-query';
 import Ionicons from '@expo/vector-icons/Ionicons';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView } from '@/src/components/ui';
@@ -8,6 +8,7 @@ import { Screen } from '@/src/components/layout';
 import { colors, spacing, typography } from '@/src/design/tokens';
 import { inviteApi } from '@/src/features/student/invite/api';
 import { useInviteSessionStore } from '@/src/features/student/invite/session-store';
+import { HydrationProgressCard } from '@/src/features/student/components/hydration-progress-card';
 
 function formatDate(value: string) {
   return new Intl.DateTimeFormat('pt-BR', { dateStyle: 'medium' }).format(new Date(value));
@@ -111,14 +112,11 @@ function FactualCalendar({ history }: { history: TrainingHistoryItem[] }) {
 export function StudentHomeScreen() {
   const session = useInviteSessionStore((state) => state.session);
   const clear = useInviteSessionStore((state) => state.clear);
-  const queryClient = useQueryClient();
   const studentKey = session?.studentId;
   const training = useQuery({ queryKey: ['student', studentKey, 'training'], queryFn: () => inviteApi.training(session!.accessToken), enabled: Boolean(session) });
   const message = useQuery({ queryKey: ['student', studentKey, 'trainer-message'], queryFn: () => inviteApi.activeTrainerMessage(session!.accessToken), enabled: Boolean(session) });
   const nutrition = useQuery({ queryKey: ['student', studentKey, 'nutrition'], queryFn: () => inviteApi.nutrition(session!.accessToken), enabled: Boolean(session) });
   const weight = useQuery({ queryKey: ['student', studentKey, 'weight'], queryFn: () => inviteApi.weight(session!.accessToken), enabled: Boolean(session) });
-  const hydration = useQuery({ queryKey: ['student', studentKey, 'hydration'], queryFn: () => inviteApi.hydration(session!.accessToken), enabled: Boolean(session) });
-  const addHydration = useMutation({ mutationFn: (amountMl: number) => inviteApi.addHydration(session!.accessToken, amountMl), onSuccess: () => void queryClient.invalidateQueries({ queryKey: ['student', studentKey, 'hydration'] }) });
   const branding = useQuery({ queryKey: ['student', studentKey, 'branding'], queryFn: () => inviteApi.branding(session!.accessToken), enabled: Boolean(session) });
 
   if (!session) return <Redirect href="/login" />;
@@ -135,7 +133,6 @@ export function StudentHomeScreen() {
     .filter((item) => item.status === 'Completed' && item.completedAt && !Number.isNaN(new Date(item.completedAt).getTime()) && localDateKey(item.completedAt) === todayKey)
     .sort((left, right) => new Date(right.completedAt!).getTime() - new Date(left.completedAt!).getTime())[0];
   const latestWeight = weight.data?.length ? weight.data[weight.data.length - 1] : undefined;
-  const todayHydration = hydration.data?.filter((entry) => localDateKey(entry.recordedAt) === todayKey).reduce((total, entry) => total + entry.amountMl, 0) ?? 0;
 
   return (
     <Screen style={styles.page}>
@@ -179,6 +176,8 @@ export function StudentHomeScreen() {
         </Card>
       </View>
 
+      <HydrationProgressCard />
+
       {history.length === 0 ? <Card style={styles.calendarEmpty}><Text style={styles.cardEyebrow}>SEUS TREINOS REALIZADOS</Text><EmptyState variant="inline" status="SEM SESSÕES AINDA" symbol="●" title="Seu histórico começa quando você treinar." message="Os dias sem sessão ficam neutros. Escolha qualquer treino quando estiver pronto." /></Card> : <FactualCalendar history={history} />}
 
       <View style={styles.section}>
@@ -198,11 +197,6 @@ export function StudentHomeScreen() {
             <Text style={styles.cardEyebrow}>PROGRESSO</Text>
             {weight.isLoading ? <Text style={styles.copy}>Carregando…</Text> : weight.isError ? <Text style={styles.copy}>Não foi possível carregar agora.</Text> : latestWeight ? <><Text style={styles.cardTitle}>{latestWeight.weightKg} kg</Text><Text style={styles.copy}>Último registro em {formatDate(latestWeight.recordedAt)}</Text><Text style={styles.detail}>{weight.data!.length} {weight.data!.length === 1 ? 'registro salvo' : 'registros salvos'}</Text></> : <EmptyState variant="inline" status="PRIMEIRO REGISTRO" symbol="+" title="Comece a acompanhar sua evolução." message="Registre seu peso para construir seu histórico ao longo do acompanhamento." />}
             <Button variant="ghost" onPress={() => router.push('/student/progress')}>Abrir progresso</Button>
-          </Card>
-          <Card style={styles.card}>
-            <Text style={styles.cardEyebrow}>HIDRATAÇÃO</Text>
-            {hydration.isLoading ? <Text style={styles.copy}>Carregando…</Text> : hydration.isError ? <Text style={styles.copy}>Não foi possível carregar agora.</Text> : <><Text style={styles.cardTitle}>{todayHydration >= 1000 ? `${(todayHydration / 1000).toLocaleString('pt-BR', { maximumFractionDigits: 1 })} L` : `${todayHydration} ml`}</Text><Text style={styles.copy}>Registrado hoje</Text><View style={styles.hydrationActions}><Button variant="secondary" style={styles.hydrationAction} disabled={addHydration.isPending} onPress={() => addHydration.mutate(50)}>+50 ml</Button><Button variant="secondary" style={styles.hydrationAction} disabled={addHydration.isPending} onPress={() => addHydration.mutate(250)}>+250 ml</Button><Button variant="secondary" style={styles.hydrationAction} disabled={addHydration.isPending} onPress={() => addHydration.mutate(500)}>+500 ml</Button><Button variant="secondary" style={styles.hydrationAction} disabled={addHydration.isPending} onPress={() => addHydration.mutate(1000)}>+1 L</Button></View></>}
-            <Button variant="ghost" onPress={() => router.push('/student/progress')}>Ver histórico de água</Button>
           </Card>
         </View>
       </View>
@@ -237,8 +231,6 @@ const styles = StyleSheet.create({
   detail: { ...typography.caption, color: colors.textMuted, lineHeight: 18 },
   message: { ...typography.bodyLG, color: colors.textPrimary, lineHeight: 24 },
   supportCards: { gap: spacing.sm },
-  hydrationActions: { flexDirection: 'row', flexWrap: 'wrap', gap: spacing.sm },
-  hydrationAction: { flexGrow: 1, flexBasis: 120, minHeight: 46, paddingHorizontal: spacing.md },
   calendarHeader: { flexDirection: 'row', alignItems: 'flex-start', justifyContent: 'space-between', gap: spacing.sm },
   calendarHeading: { flex: 1, gap: spacing.xxs },
   monthActions: { flexDirection: 'row', gap: spacing.xs },
