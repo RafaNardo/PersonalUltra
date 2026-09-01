@@ -14,9 +14,6 @@ Esta documentação substitui a documentação herdada do SVR Method como fonte 
 - `architecture/api.md`
 - `architecture/mobile.md`
 
-## IA
-- `ai/coach-v1.md`
-
 ## Design
 - `design/design-system.md`
 

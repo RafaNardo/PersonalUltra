@@ -150,9 +150,5 @@ as validações existentes, mas não é exibido ao usuário nessa modalidade.
 
 ## Engagement
 - `TrainerMessage`: TrainerId, StudentId, Message, StartsAt, ExpiresAt?, CreatedAt.
-
-## Coach
-- `Conversation`
-- `CoachMessage`
-
-Coach V1 é read-only.
+- `ChatMessage`: TrainerId, StudentId, Sender (`Student` ou `Trainer`), Content,
+  CreatedAt.

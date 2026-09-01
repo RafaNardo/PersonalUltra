@@ -1,6 +1,7 @@
 import { router, useLocalSearchParams } from 'expo-router';
+import { useIsFocused } from '@react-navigation/native';
 import { useEffect, useState } from 'react';
-import { useQuery } from '@tanstack/react-query';
+import { useMutation, useQuery } from '@tanstack/react-query';
 import { Alert, Linking, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, EmptyState, ErrorView, LoadingView, Tag } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
@@ -9,16 +10,18 @@ import { useCreateTrainerMessage, useTrainerAnamnesis, useTrainerStudent } from 
 import { useReorderTrainerStudentWorkouts, useTrainerStudentWorkouts } from '@/src/features/trainer/training/hooks';
 import { feedback } from '@/src/platform/feedback';
 import { trainerClient } from '@/src/api/trainer-client';
-import type { TrainerNutrition, TrainerNutritionMeal } from '@/src/api/trainer-client';
+import type { TrainerChatMessage, TrainerNutrition, TrainerNutritionMeal } from '@/src/api/trainer-client';
 import { useSaveTrainerNutrition, useTrainerNutrition } from '@/src/features/trainer/nutrition/hooks';
 import { formatNutritionQuantity } from '@/src/shared/nutrition';
 
-type StudentSection = 'summary' | 'training' | 'nutrition';
+type StudentSection = 'summary' | 'training' | 'nutrition' | 'chat';
 
 export default function TrainerStudentDetailScreen() {
   const { id, section: initialSection } = useLocalSearchParams<{ id: string; section?: StudentSection }>();
+  const isFocused = useIsFocused();
   const [section, setSection] = useState<StudentSection>(initialSection ?? 'summary');
   const [message, setMessage] = useState('');
+  const [chatContent, setChatContent] = useState('');
   const student = useTrainerStudent(id);
   const createMessage = useCreateTrainerMessage(id);
   const anamnesis = useTrainerAnamnesis(id, student.data?.anamnesisStatus === 'Completed');
@@ -28,6 +31,8 @@ export default function TrainerStudentDetailScreen() {
   const nutrition = useTrainerNutrition(id ?? '');
   const saveNutrition = useSaveTrainerNutrition(id ?? '');
   const weight = useQuery({ queryKey: ['trainer', 'students', id, 'weight'], queryFn: () => trainerClient.weight(id!), enabled: Boolean(id) });
+  const chat = useQuery({ queryKey: ['trainer', 'students', id, 'chat'], queryFn: () => trainerClient.chat(id!), enabled: Boolean(id) && section === 'chat' && isFocused, refetchInterval: section === 'chat' && isFocused ? 20_000 : false });
+  const sendChat = useMutation({ mutationFn: () => trainerClient.sendChatMessage(id!, chatContent.trim()), onSuccess: () => { setChatContent(''); void chat.refetch(); } });
 
   useEffect(() => { if (initialSection) setSection(initialSection); }, [initialSection]);
 
@@ -53,6 +58,7 @@ export default function TrainerStudentDetailScreen() {
       <StudentTab label="Resumo" selected={section === 'summary'} onPress={() => setSection('summary')} />
       <StudentTab label="Treinos" selected={section === 'training'} onPress={() => setSection('training')} />
       <StudentTab label="Alimentação" selected={section === 'nutrition'} onPress={() => setSection('nutrition')} />
+      <StudentTab label="Chat" selected={section === 'chat'} onPress={() => setSection('chat')} />
     </View>
 
     {section === 'summary' && <>
@@ -102,6 +108,12 @@ export default function TrainerStudentDetailScreen() {
       </Card>
     </>}
 
+    {section === 'chat' && <>
+      <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Chat com {data.firstName}</Text><Text style={styles.copy}>A conversa é atualizada enquanto esta seção estiver aberta.</Text></View></View>
+      {chat.isLoading ? <Card><Text style={styles.copy}>Carregando conversa…</Text></Card> : chat.isError ? <Card style={styles.card}><Text style={styles.errorText}>Não foi possível carregar o chat.</Text><Button variant="secondary" onPress={() => chat.refetch()}>Tentar novamente</Button></Card> : !chat.data?.length ? <EmptyState status="CONVERSA ABERTA" title="Ainda não há mensagens." message={`${data.firstName} poderá iniciar uma conversa pelo app, ou você pode enviar a primeira mensagem abaixo.`} /> : <View style={styles.chatMessages}>{chat.data.map((item) => <ChatMessageRow key={item.id} message={item} />)}</View>}
+      <Card style={styles.card}><TextInput value={chatContent} onChangeText={setChatContent} multiline maxLength={1000} placeholder={`Mensagem para ${data.firstName}`} placeholderTextColor={colors.textMuted} accessibilityLabel={`Mensagem para ${data.firstName}`} style={styles.input} /><Button loading={sendChat.isPending} disabled={!chatContent.trim()} onPress={() => sendChat.mutate()}>Enviar no chat</Button></Card>
+    </>}
+
     {section === 'nutrition' && <>
       <View style={styles.sectionHeader}><View><Text style={styles.sectionTitle}>Alimentação atual</Text><Text style={styles.copy}>Organize as refeições e disponibilize a versão mais recente para {data.firstName}.</Text></View></View>
       {nutrition.isLoading ? <Card><Text style={styles.copy}>Carregando alimentação…</Text></Card> : nutrition.isError ? <Card style={styles.card}><Text style={styles.errorText}>Não foi possível carregar a alimentação.</Text><Button variant="secondary" onPress={() => nutrition.refetch()}>Tentar novamente</Button></Card> : !nutrition.data ? <EmptyState status="ALIMENTAÇÃO PENDENTE" symbol="+" title="Prepare a primeira alimentação deste aluno." message="Escolha um preset ou comece do zero e revise tudo antes de disponibilizar." actionLabel="Adicionar alimentação" onAction={() => router.push({ pathname: '/trainer/students/[studentId]/nutrition/add', params: { studentId: id! } })} /> : <>
@@ -122,6 +134,8 @@ export default function TrainerStudentDetailScreen() {
 function StudentTab({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
   return <Pressable accessibilityRole="tab" accessibilityState={{ selected }} onPress={onPress} style={[styles.tab, selected && styles.tabSelected]}><Text style={[styles.tabText, selected && styles.tabTextSelected]}>{label}</Text></Pressable>;
 }
+
+function ChatMessageRow({ message }: { message: TrainerChatMessage }) { const mine = message.sender === 'Trainer'; return <View style={[styles.chatMessage, mine ? styles.chatMessageMine : styles.chatMessageStudent]}><Text style={styles.chatSender}>{mine ? 'VOCÊ' : 'ALUNO'}</Text><Text style={styles.chatContent}>{message.content}</Text><Text style={styles.chatDate}>{new Intl.DateTimeFormat('pt-BR', { dateStyle: 'short', timeStyle: 'short' }).format(new Date(message.createdAt))}</Text></View>; }
 
 function WorkoutOrderItem({ workout, index, count, busy, onMove, onPress }: { workout: { id: string; name: string; notes: string; exerciseCount: number }; index: number; count: number; busy: boolean; onMove: (to: number) => void; onPress: () => void }) {
   return <Card style={styles.workoutItem}>
@@ -173,5 +187,5 @@ function formatDuration(seconds?: number) { if (!seconds) return 'duração não
 function formatRepetitionPerformance(weightKg?: number, repetitions?: number) { return weightKg === undefined || repetitions === undefined ? 'detalhes não informados' : `${weightKg} kg × ${repetitions} reps`; }
 
 const styles = StyleSheet.create({
-  page: { paddingVertical: spacing.xl, gap: spacing.md }, identityCopy: { ...typography.bodyMD, color: colors.textSecondary, marginTop: -spacing.sm }, tabs: { flexDirection: 'row', padding: spacing.xxs, gap: spacing.xxs, borderRadius: radius.md, backgroundColor: colors.surface }, tab: { flex: 1, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.sm }, tabSelected: { backgroundColor: colors.surfaceElevated }, tabText: { ...typography.caption, color: colors.textMuted }, tabTextSelected: { color: colors.primary }, card: { gap: spacing.md }, summaryCard: { padding: 0, overflow: 'hidden' }, summaryPressable: { gap: spacing.sm, padding: spacing.lg }, cardTitle: { ...typography.headingMD, color: colors.textPrimary }, row: { gap: spacing.xxs }, label: { ...typography.caption, color: colors.textMuted }, value: { ...typography.bodyLG, color: colors.textPrimary }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, errorText: { ...typography.bodyMD, color: colors.danger }, anamnesis: { gap: spacing.sm }, detail: { gap: spacing.xxs }, detailValue: { ...typography.bodyMD, color: colors.textPrimary }, input: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 112, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md, textAlignVertical: 'top' }, sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.md }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, workoutItem: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm, padding: 0, overflow: 'hidden' }, workoutPressable: { flex: 1, gap: spacing.xxs, padding: spacing.md }, workoutTitle: { ...typography.headingMD, color: colors.textPrimary }, workoutMeta: { ...typography.caption, color: colors.primary }, openHint: { ...typography.caption, color: colors.titanium }, orderActions: { justifyContent: 'center', gap: spacing.xs, padding: spacing.sm, borderLeftWidth: 1, borderLeftColor: colors.border }, orderButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, disabled: { opacity: .3 }, pressed: { opacity: .75 }, historySession: { gap: spacing.xxs, paddingTop: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border }, historySet: { ...typography.caption, color: colors.titanium }, eyebrow: { ...typography.caption, color: colors.primary, letterSpacing: .8 }, planMeta: { ...typography.caption, color: colors.textMuted }, goalsSummary: { ...typography.bodyMD, color: colors.titaniumLight }, mealItem: { flexDirection: 'row', alignItems: 'stretch', gap: 0, padding: 0, overflow: 'hidden' }, mealPressable: { flex: 1, gap: spacing.sm, padding: spacing.lg }, mealEditHint: { ...typography.bodyMD, color: colors.primary, fontWeight: '700' }, foodRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }, foodName: { ...typography.bodyMD, color: colors.textPrimary, flex: 1 }, foodQuantity: { ...typography.caption, color: colors.primary },
+  page: { paddingVertical: spacing.xl, gap: spacing.md }, identityCopy: { ...typography.bodyMD, color: colors.textSecondary, marginTop: -spacing.sm }, tabs: { flexDirection: 'row', flexWrap: 'wrap', padding: spacing.xxs, gap: spacing.xxs, borderRadius: radius.md, backgroundColor: colors.surface }, tab: { flexGrow: 1, flexBasis: 130, alignItems: 'center', paddingVertical: spacing.sm, borderRadius: radius.sm }, tabSelected: { backgroundColor: colors.surfaceElevated }, tabText: { ...typography.caption, color: colors.textMuted }, tabTextSelected: { color: colors.primary }, card: { gap: spacing.md }, summaryCard: { padding: 0, overflow: 'hidden' }, summaryPressable: { gap: spacing.sm, padding: spacing.lg }, cardTitle: { ...typography.headingMD, color: colors.textPrimary }, row: { gap: spacing.xxs }, label: { ...typography.caption, color: colors.textMuted }, value: { ...typography.bodyLG, color: colors.textPrimary }, copy: { ...typography.bodyMD, color: colors.textSecondary, lineHeight: 21 }, errorText: { ...typography.bodyMD, color: colors.danger }, anamnesis: { gap: spacing.sm }, detail: { gap: spacing.xxs }, detailValue: { ...typography.bodyMD, color: colors.textPrimary }, input: { ...typography.bodyMD, color: colors.textPrimary, minHeight: 112, borderWidth: 1, borderColor: colors.border, borderRadius: radius.sm, padding: spacing.md, textAlignVertical: 'top' }, sectionHeader: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', gap: spacing.md }, sectionTitle: { ...typography.headingMD, color: colors.textPrimary }, chatMessages: { gap: spacing.sm }, chatMessage: { gap: spacing.xxs, padding: spacing.md, borderRadius: radius.md, maxWidth: '88%' }, chatMessageMine: { alignSelf: 'flex-end', backgroundColor: '#4D1520', borderWidth: 1, borderColor: colors.primary }, chatMessageStudent: { alignSelf: 'flex-start', backgroundColor: colors.surface, borderWidth: 1, borderColor: colors.border }, chatSender: { ...typography.caption, color: colors.primary, letterSpacing: .7 }, chatContent: { ...typography.bodyMD, color: colors.textPrimary, lineHeight: 21 }, chatDate: { ...typography.caption, color: colors.textMuted }, workoutItem: { flexDirection: 'row', alignItems: 'stretch', gap: spacing.sm, padding: 0, overflow: 'hidden' }, workoutPressable: { flex: 1, gap: spacing.xxs, padding: spacing.md }, workoutTitle: { ...typography.headingMD, color: colors.textPrimary }, workoutMeta: { ...typography.caption, color: colors.primary }, openHint: { ...typography.caption, color: colors.titanium }, orderActions: { justifyContent: 'center', gap: spacing.xs, padding: spacing.sm, borderLeftWidth: 1, borderLeftColor: colors.border }, orderButton: { width: 40, height: 40, alignItems: 'center', justifyContent: 'center', borderRadius: radius.sm, backgroundColor: colors.surfaceElevated }, orderText: { ...typography.headingMD, color: colors.titaniumLight }, disabled: { opacity: .3 }, pressed: { opacity: .75 }, historySession: { gap: spacing.xxs, paddingTop: spacing.xs, borderTopWidth: 1, borderTopColor: colors.border }, historySet: { ...typography.caption, color: colors.titanium }, eyebrow: { ...typography.caption, color: colors.primary, letterSpacing: .8 }, planMeta: { ...typography.caption, color: colors.textMuted }, goalsSummary: { ...typography.bodyMD, color: colors.titaniumLight }, mealItem: { flexDirection: 'row', alignItems: 'stretch', gap: 0, padding: 0, overflow: 'hidden' }, mealPressable: { flex: 1, gap: spacing.sm, padding: spacing.lg }, mealEditHint: { ...typography.bodyMD, color: colors.primary, fontWeight: '700' }, foodRow: { flexDirection: 'row', justifyContent: 'space-between', gap: spacing.md, paddingTop: spacing.sm, borderTopWidth: 1, borderTopColor: colors.border }, foodName: { ...typography.bodyMD, color: colors.textPrimary, flex: 1 }, foodQuantity: { ...typography.caption, color: colors.primary },
 });

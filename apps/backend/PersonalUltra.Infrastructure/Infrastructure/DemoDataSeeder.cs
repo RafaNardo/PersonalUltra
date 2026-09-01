@@ -13,13 +13,14 @@ public sealed class DemoDataSeeder(PersonalUltraDbContext dbContext, TimeProvide
         var trainer = await dbContext.Trainers.Include(x => x.Branding).SingleOrDefaultAsync(x => x.Id == DemoIds.TrainerId, cancellationToken);
         if (trainer is null)
         {
-            trainer = new Trainer { Id = DemoIds.TrainerId, Name = "Severo", CreatedAt = now };
+            trainer = new Trainer { Id = DemoIds.TrainerId, Name = "Severo", Phone = "+5511999999999", CreatedAt = now };
             dbContext.Add(trainer);
             dbContext.Add(new TrainerBranding { Id = Guid.NewGuid(), Trainer = trainer, DisplayName = "Severo", PrimaryColor = "#FF6B00" });
         }
         else
         {
             trainer.Name = "Severo";
+            trainer.Phone ??= "+5511999999999";
             if (trainer.Branding is not null) trainer.Branding.DisplayName = "Severo";
         }
 

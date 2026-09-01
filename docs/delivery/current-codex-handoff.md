@@ -1,6 +1,6 @@
 # Handoff atual — Personal Ultra
 
-Atualizado em 2026-08-24 para iniciar uma nova thread sem carregar o histórico
+Atualizado em 2026-08-31 para iniciar uma nova thread sem carregar o histórico
 completo. Depois de `AGENTS.md`, este é o primeiro documento a ler. Consulte
 somente os documentos citados pela tarefa seguinte; não reconstrua milestones já
 concluídas a partir da conversa antiga.
@@ -40,7 +40,8 @@ concluídas a partir da conversa antiga.
   cria carga, repetição, duração ou `SetPerformance` fictícia.
 - Imagens de exercício usam `contain`; precisão visual tem prioridade sobre
   preencher o frame.
-- Coach V1 é estritamente read-only.
+- Chat V1 é estritamente humano entre Trainer e Student; não usa IA, WebSocket,
+  push, anexos ou WhatsApp API.
 - Empty states seguem `docs/design/design-system.md` e devem ser acolhedores no
   Student e operacionais no Trainer.
 
@@ -57,7 +58,7 @@ concluídas a partir da conversa antiga.
 - Execução multimodal/fluida M3RX, migration, histórico factual e conclusão sem
   dados sintéticos. Commit `c7b949b`; design em
   `docs/design/training-execution-refinement.md`.
-- Gate de regressão API: comando `npm run test:api:regression`, atualmente 107
+- Gate de regressão API: comando `npm run test:api:regression`, atualmente 111
   testes. Commits-base `ab4c3d4` e `c41ae7b`; cobertura de nutrição em
   `2a1ef83`; detalhes em
   `docs/testing/api-regression.md`.
@@ -96,6 +97,12 @@ concluídas a partir da conversa antiga.
 - `M4P` foi concluída: Meu perfil permite salvar nome de exibição sem alterar
   o cadastro legal, consultar dados de acesso e sair; a Home usa esse nome na
   saudação e a troca de contexto está identificada como demo.
+- `M4C` foi concluída: o Coach explicativo foi removido e deu lugar a chat humano
+  persistido entre Student e Trainer. A conversa faz polling de 20 segundos
+  somente enquanto a tela/seção está aberta; cada envio atualiza a lista na hora.
+  O telefone opcional do Trainer é persistido no mesmo banco e, quando existir,
+  habilita o deep link de WhatsApp do Student. Migration:
+  `20260901015249_AddHumanChatAndTrainerPhone`.
 
 ## Validação padrão
 
@@ -113,7 +120,7 @@ cd apps/mobile
 npx expo export --platform ios --output-dir .expo-export-validation
 ```
 
-O último gate conhecido passou com 107/107 testes de API, 136/136 testes da
+O último gate conhecido passou com 111/111 testes de API, 136/136 testes da
 Factory, build .NET sem warnings, typecheck e export iOS. As duas APIs públicas
 responderam health 200 e os contratos públicos retornaram `trackingMode`.
 

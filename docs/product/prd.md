@@ -15,7 +15,7 @@ Demonstrar um fluxo B2B2C no qual o personal cadastra e acompanha alunos, prescr
 - mensagem motivacional exibida na Home do aluno;
 - WhatsApp via deep link;
 - progresso de peso;
-- branding: nome, foto, logo, cor primária, capa, metodologia e avatar Coach.
+- branding: nome, foto, logo, cor primária, capa e metodologia.
 
 ## Student V1
 - Home com branding e mensagem do personal;
@@ -25,7 +25,7 @@ Demonstrar um fluxo B2B2C no qual o personal cadastra e acompanha alunos, prescr
 - execução com peso, repetições, descanso e histórico;
 - alimentação;
 - progresso V1 somente de peso;
-- Coach para dúvidas read-only.
+- chat humano com o personal.
 
 ## Flexibilidade de treino
 O personal organiza uma ordem sugerida, sem impor dias ou frequência. O aluno escolhe qual treino disponível executar e pode adaptar a ordem dos exercícios durante a sessão.
@@ -46,4 +46,4 @@ Exemplos:
 - WhatsApp API;
 - billing;
 - full white-label builds;
-- Coach com actions/mutations.
+- respostas automáticas ou ações de IA.

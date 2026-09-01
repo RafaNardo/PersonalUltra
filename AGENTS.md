@@ -35,15 +35,14 @@ Regras:
 - manter estado de negócio específico dentro da feature do actor;
 - compartilhar primitives, não telas inteiras apenas para reduzir duplicação pequena.
 
-## Coach V1
-Read-only.
+## Chat V1
+Chat é estritamente humano entre Trainer e Student. Não é Coach nem IA.
 
 Não pode:
-- alterar treino;
-- alterar alimentação;
-- recomendar carga;
-- gerar plano;
-- executar mutation tools.
+- alterar treino ou alimentação;
+- recomendar carga ou gerar plano;
+- responder automaticamente;
+- usar push, WebSocket, anexos ou WhatsApp API.
 
 ## Não implementar sem task explícita
 - billing;

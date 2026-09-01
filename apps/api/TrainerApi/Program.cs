@@ -30,6 +30,7 @@ app.MapGet("/api/v1/demo/identity", async (PersonalUltraDbContext db, Cancellati
 }).RequireAuthorization();
 app.MapDashboardApi();
 app.MapStudentApi();
+app.MapChatApi();
 app.MapStudentInviteApi();
 app.MapTrainingApi();
 app.MapNutritionProgressApi();

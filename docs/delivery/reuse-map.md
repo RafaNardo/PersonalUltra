@@ -15,7 +15,7 @@
 - API conventions;
 - Postgres + EF;
 - dev seed/reset patterns;
-- Coach model abstraction;
+- human chat persistence;
 - generic UI primitives.
 
 ## Adapt
@@ -24,7 +24,7 @@
 - WorkoutTemplate -> Trainer template + Student copied workout;
 - Home -> actor-specific;
 - Progress -> weight only;
-- Coach -> read-only;
+- Chat -> conversa humana persistida;
 - Nutrition -> Trainer/Student surfaces.
 
 ## Remove from V1
@@ -33,7 +33,7 @@
 - StandardPlanProvisioner;
 - automatic progression;
 - recommended load;
-- CoachAction writes;
+- Coach e qualquer resposta automática;
 - automatic exercise substitution;
 - progress photos (removed in `PU-M0-006`).
 
@@ -46,6 +46,7 @@
 - Trainer dashboard;
 - workout template library/editor;
 - TrainerMessage;
+- ChatMessage;
 - WhatsApp deep link;
 - recommended schedule;
 - actor-specific API surfaces.

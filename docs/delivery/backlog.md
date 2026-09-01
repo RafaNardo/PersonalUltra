@@ -312,6 +312,40 @@ o nome de exibição é persistido e aparece na saudação Student, enquanto nom
 legal, e-mail e telefone continuam somente para consulta. A troca de contexto
 permanece explicitamente marcada como ação demo dentro do perfil.
 
+### M4C — Chat humano Student ↔ Trainer
+
+Substituir integralmente o Coach explicativo por uma conversa humana entre
+Student e Trainer, mantendo a demo sem IA, automação ou comunicação em tempo
+real. O telefone do Trainer é dado persistido, preparado para configuração e
+onboarding futuros, nunca mock de interface.
+
+- `PU-M4C-001`: remover rota, tela, contrato e endpoint ativos do Coach.
+- `PU-M4C-002`: persistir mensagens humanas ordenadas por vínculo
+  Trainer–Student, com autoria, conteúdo e data; validar ownership nas duas
+  APIs.
+- `PU-M4C-003`: criar Chat Student como última tab, com histórico, composição
+  e envio explícito; atualizar mensagens por polling de 20 segundos somente
+  enquanto a tela estiver aberta, sem IA, resposta inventada, anexo, push ou
+  realtime.
+- `PU-M4C-004`: expor Chat no detalhe do aluno para o Trainer consultar e
+  responder no mesmo vínculo.
+- `PU-M4C-005`: adicionar telefone opcional do Trainer ao domínio e expô-lo ao
+  Student apenas no contexto do Chat; abrir WhatsApp somente quando informado.
+- `PU-M4C-006`: cobrir round-trip, ownership, validação, estados vazios e
+  remoção das superfícies ativas do Coach.
+
+**Non-goals M4C:** IA, Coach automático, WebSocket, push, confirmação de
+leitura, anexos, edição/exclusão de mensagens, integração com WhatsApp API e
+configuração/onboarding do Trainer.
+
+**DoD M4C:** Student e Trainer trocam mensagens humanas persistidas no vínculo
+correto; Chat é a última tab Student e oferece WhatsApp apenas para telefone
+real do Trainer configurado posteriormente; não permanece nenhuma superfície
+ativa do Coach.
+
+**Status:** concluída em 2026-08-31. O polling é de 20 segundos apenas com a
+tela/seção de Chat em foco; o envio invalida a consulta imediatamente.
+
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
 

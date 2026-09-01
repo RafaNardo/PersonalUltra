@@ -4,12 +4,14 @@ public sealed class Trainer
 {
     public Guid Id { get; set; }
     public string Name { get; set; } = null!;
+    public string? Phone { get; set; }
     public DateTimeOffset CreatedAt { get; set; }
     public TrainerBranding? Branding { get; set; }
     public TrainerPrescriptionSettings? PrescriptionSettings { get; set; }
     public List<TrainerStudent> Students { get; } = [];
     public List<StudentInvite> Invites { get; } = [];
     public List<TrainerMessage> Messages { get; } = [];
+    public List<ChatMessage> ChatMessages { get; } = [];
 }
 
 public sealed class TrainerPrescriptionSettings
@@ -46,6 +48,7 @@ public sealed class Student
     public List<TrainerStudent> Trainers { get; } = [];
     public Anamnesis? Anamnesis { get; set; }
     public List<TrainerMessage> Messages { get; } = [];
+    public List<ChatMessage> ChatMessages { get; } = [];
 }
 
 public sealed class TrainerStudent
@@ -91,6 +94,24 @@ public sealed class TrainerMessage
     public string Message { get; set; } = null!;
     public DateTimeOffset StartsAt { get; set; }
     public DateTimeOffset? ExpiresAt { get; set; }
+    public DateTimeOffset CreatedAt { get; set; }
+    public Trainer Trainer { get; set; } = null!;
+    public Student Student { get; set; } = null!;
+}
+
+public enum ChatMessageSender
+{
+    Student,
+    Trainer,
+}
+
+public sealed class ChatMessage
+{
+    public Guid Id { get; set; }
+    public Guid TrainerId { get; set; }
+    public Guid StudentId { get; set; }
+    public ChatMessageSender Sender { get; set; }
+    public string Content { get; set; } = null!;
     public DateTimeOffset CreatedAt { get; set; }
     public Trainer Trainer { get; set; } = null!;
     public Student Student { get; set; } = null!;

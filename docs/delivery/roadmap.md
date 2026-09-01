@@ -27,6 +27,11 @@ Perfil interno do aluno, com nome de exibição persistido, dados cadastrais par
 consulta e saída da sessão. Não altera nome legal, dados de acesso ou o
 contexto do Trainer.
 
+## M4C — Human Chat
+Chat humano entre Student e Trainer, com WhatsApp opcional para telefone real
+do Trainer. Substitui o Coach explicativo; IA e comunicação em tempo real ficam
+fora da V1.
+
 ## M5 — Production Foundation
 Somente após validação:
 - auth real;

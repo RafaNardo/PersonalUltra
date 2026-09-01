@@ -58,9 +58,11 @@ The gate covers:
 - ordered food-name previews and the `livre` unit in meal presets;
 - weight and hydration CRUD, validação e ordenação cronológica.
 - perfil Student, incluindo leitura, nome de exibição, limpeza e validação.
+- chat humano Student–Trainer: round-trip, ordem, ownership, validação e telefone
+  opcional do Trainer no contexto Student.
 
 Os registros de peso e hidratação têm cenário dedicado de regressão. O gate
-possui atualmente 107 testes.
+possui atualmente 111 testes.
 
 ## What this gate does not prove
 

@@ -10,4 +10,3 @@ public sealed record UpdateWeightRequest(decimal WeightKg, DateTimeOffset? Recor
 public sealed record StudentHydration(Guid Id, int AmountMl, DateTimeOffset RecordedAt);
 public sealed record AddHydrationRequest(int AmountMl, DateTimeOffset? RecordedAt);
 public sealed record UpdateHydrationRequest(int AmountMl, DateTimeOffset? RecordedAt);
-public sealed record CoachAnswer(string Answer, IReadOnlyList<string> Sources);

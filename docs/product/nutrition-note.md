@@ -9,7 +9,7 @@ Antes de produção, o fluxo deve ser validado do ponto de vista jurídico/regul
 - manter rastreabilidade de quem criou/alterou o plano;
 - deixar o domínio preparado para representar profissional responsável no futuro;
 - IA não cria nem altera prescrição alimentar na V1;
-- Coach pode explicar e responder dúvidas sobre um plano já cadastrado.
+- dúvidas sobre o plano podem ser tratadas no chat humano com o Trainer.
 
 Revisão legal/produto é obrigatória antes do lançamento de produção.
 

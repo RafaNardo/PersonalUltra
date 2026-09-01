@@ -29,7 +29,6 @@ Customizável:
 - primary color;
 - cover image;
 - methodology name;
-- Coach avatar.
 
 Não permitir que branding substitua cores semânticas de erro/sucesso/acessibilidade.
 

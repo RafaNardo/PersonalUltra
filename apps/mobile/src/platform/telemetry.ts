@@ -7,12 +7,10 @@ export type AnalyticsEvent =
   | 'exercise_substitution_proposed'
   | 'meal_completed'
   | 'food_substitution_completed'
-  | 'coach_message_sent'
-  | 'coach_action_resolved'
   | 'pain_reported'
   | 'weight_logged';
 
-// Ponto único de integração: nenhum dado de saúde ou conteúdo do Coach é enviado.
+// Ponto único de integração: nenhum dado de saúde ou conteúdo do chat é enviado.
 // Um provedor (Sentry/analytics) pode ser conectado aqui quando houver credenciais de produção.
 export const telemetry = {
   event(name: AnalyticsEvent, properties: EventProperties = {}) { if (__DEV__) console.info(`[analytics] ${name}`, properties); },

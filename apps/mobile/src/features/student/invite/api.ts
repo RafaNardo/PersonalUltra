@@ -21,7 +21,8 @@ export type StudentNutrition = { id: string; name: string; notes: string; update
 export type StudentWeight = { id: string; weightKg: number; recordedAt: string };
 export type StudentHydration = { id: string; amountMl: number; recordedAt: string };
 export type StudentProfile = { firstName: string; lastName: string; email?: string; phone?: string; preferredName?: string };
-export type CoachAnswer = { answer: string; sources: string[] };
+export type StudentChatMessage = { id: string; sender: 'Student' | 'Trainer'; content: string; createdAt: string };
+export type StudentChat = { trainerPhone?: string; messages: StudentChatMessage[] };
 export type StudentBranding = { displayName: string; primaryColor: string; logoUrl?: string };
 
 async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
@@ -78,6 +79,7 @@ export const inviteApi = {
   addHydration: (token: string, amountMl: number) => request<StudentHydration>('/progress/hydration', { method: 'POST', body: JSON.stringify({ amountMl }) }, token),
   updateHydration: (token: string, entryId: string, amountMl: number, recordedAt?: string) => request<StudentHydration>(`/progress/hydration/${entryId}`, { method: 'PUT', body: JSON.stringify({ amountMl, recordedAt }) }, token),
   deleteHydration: (token: string, entryId: string) => request<void>(`/progress/hydration/${entryId}`, { method: 'DELETE' }, token),
-  coachAnswer: (token: string, question: string) => request<CoachAnswer>(`/coach/answer?question=${encodeURIComponent(question)}`, {}, token),
+  chat: (token: string) => request<StudentChat>('/chat', {}, token),
+  sendChatMessage: (token: string, content: string) => request<StudentChatMessage>('/chat', { method: 'POST', body: JSON.stringify({ content }) }, token),
   branding: (token: string) => requestNullable<StudentBranding>('/branding', token),
 };

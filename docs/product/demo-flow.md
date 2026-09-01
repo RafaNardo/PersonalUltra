@@ -19,7 +19,7 @@ Trocar para Student em controle dev/demo-only.
 3. Preencher a anamnese.
 4. Ver a mensagem ativa do personal e o estado de aguardando protocolo.
 
-Treinos, alimentação, peso e Coach entram nas milestones M3 e M4, quando
+Treinos, alimentação, peso e chat entram nas milestones M3 e M4, quando
 estiverem associados ao `Student` real.
 
 O role switch jamais deve ser fonte de autorização de negócio.
