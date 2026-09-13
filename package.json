@@ -9,6 +9,12 @@
     "api:build": "dotnet build apps/api/PersonalUltra.Api.csproj",
     "test:api:regression": "dotnet test tests/PersonalUltra.Api.IntegrationTests/PersonalUltra.Api.IntegrationTests.csproj --configuration Release",
     "mobile:start": "npm --workspace @personal-ultra/mobile run start",
-    "mobile:typecheck": "npm --workspace @personal-ultra/mobile run typecheck"
+    "mobile:typecheck": "npm --workspace @personal-ultra/mobile run typecheck",
+    "prepare": "husky"
+  },
+  "devDependencies": {
+    "husky": "^9.1.7",
+    "lint-staged": "^16.4.0",
+    "prettier": "^3.9.6"
   }
 }
