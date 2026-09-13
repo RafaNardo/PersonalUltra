@@ -8,11 +8,11 @@ import { StudentWaitingHome } from '@/src/features/student/invite/waiting-home';
 
 export default function StudentAccessScreen() {
   const session = useInviteSessionStore((state) => state.session);
-  const anamnesis = useQuery({ queryKey: ['student', 'anamnesis', session?.studentId], queryFn: () => inviteApi.anamnesis(session!.accessToken), enabled: Boolean(session?.accessToken) });
+  const anamnesis = useQuery({ queryKey: ['student', 'anamnesis', session?.studentId], queryFn: () => inviteApi.anamnesis(session!.accessToken), enabled: Boolean(session) });
 
   useEffect(() => {
-    if (!session) { router.replace('/login'); return; }
-    if (anamnesis.data && !anamnesis.data.isCompleted) router.replace('/invite/resume/anamnesis');
+    if (!session) { router.replace('/auth-choice'); return; }
+    if (anamnesis.data && !anamnesis.data.isCompleted) router.replace('/invite/onboarding/anamnesis');
     if (anamnesis.data?.isCompleted) router.replace('/student');
   }, [anamnesis.data, session]);
 

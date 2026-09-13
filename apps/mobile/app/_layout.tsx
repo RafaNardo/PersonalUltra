@@ -1,4 +1,6 @@
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
+import { ClerkProvider } from '@clerk/expo';
+import { tokenCache } from '@clerk/expo/token-cache';
 import { Stack } from 'expo-router';
 import { useEffect, useState } from 'react';
 import { StatusBar } from 'react-native';
@@ -7,9 +9,14 @@ import * as SplashScreen from 'expo-splash-screen';
 import { initializeTrainingDatabase } from '@/src/features/student/offline/training-db';
 import { telemetry } from '@/src/platform/telemetry';
 import { AppErrorBoundary } from '@/src/components/app-error-boundary';
+import { ClerkTokenBridge } from '@/src/auth/clerk-token-bridge';
 
 void SplashScreen.preventAutoHideAsync();
 SplashScreen.setOptions({ duration: 350, fade: true });
+
+const clerkPublishableKey = process.env.EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY;
+
+if (!clerkPublishableKey) throw new Error('Configure EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY para iniciar o app.');
 
 export default function RootLayout() {
   const [fontsLoaded, fontError] = useFonts({ MontserratRegular: require('../assets/brand/Montserrat-Regular.ttf'), MontserratMedium: require('../assets/brand/Montserrat-Medium.ttf'), MontserratSemiBold: require('../assets/brand/Montserrat-SemiBold.ttf'), MontserratBold: require('../assets/brand/Montserrat-Bold.ttf'), MontserratExtraBold: require('../assets/brand/Montserrat-ExtraBold.ttf') });
@@ -29,8 +36,8 @@ export default function RootLayout() {
 
   if (!databaseReady || (!fontsLoaded && !fontError)) return null;
 
-  return <AppErrorBoundary><QueryClientProvider client={queryClient}>
+  return <ClerkProvider publishableKey={clerkPublishableKey} tokenCache={tokenCache}><ClerkTokenBridge /><AppErrorBoundary><QueryClientProvider client={queryClient}>
     <StatusBar barStyle="light-content" />
     <Stack screenOptions={{ headerShown: false, animation: 'fade' }} />
-  </QueryClientProvider></AppErrorBoundary>;
+  </QueryClientProvider></AppErrorBoundary></ClerkProvider>;
 }

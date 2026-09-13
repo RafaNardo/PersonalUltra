@@ -68,8 +68,6 @@ entram nos contratos nem no app.
 - `GET /nutrition`
 - `GET /progress/weight`
 - `POST /progress/weight`
-- `GET /chat`
-- `POST /chat`
 
 As respostas de lista e preview de treino Student usam `suggestedOrder` e uma
 coleção neutra `workouts`. Não expõem dia recomendado, indicador de recomendação

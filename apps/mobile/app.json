@@ -12,7 +12,9 @@
       "supportsTablet": false,
       "infoPlist": {
         "CFBundleDevelopmentRegion": "pt-BR",
-        "CFBundleLocalizations": ["pt-BR"]
+        "CFBundleLocalizations": [
+          "pt-BR"
+        ]
       }
     },
     "android": {
@@ -26,9 +28,19 @@
     "plugins": [
       "expo-router",
       "expo-sqlite",
+      "expo-secure-store",
+      "@clerk/expo",
       [
         "expo-font",
-        { "fonts": ["./assets/brand/Montserrat-Regular.ttf", "./assets/brand/Montserrat-Medium.ttf", "./assets/brand/Montserrat-SemiBold.ttf", "./assets/brand/Montserrat-Bold.ttf", "./assets/brand/Montserrat-ExtraBold.ttf"] }
+        {
+          "fonts": [
+            "./assets/brand/Montserrat-Regular.ttf",
+            "./assets/brand/Montserrat-Medium.ttf",
+            "./assets/brand/Montserrat-SemiBold.ttf",
+            "./assets/brand/Montserrat-Bold.ttf",
+            "./assets/brand/Montserrat-ExtraBold.ttf"
+          ]
+        }
       ],
       [
         "expo-splash-screen",
@@ -37,7 +49,8 @@
           "image": "./assets/brand/personal-ultra-logo-horizontal.png",
           "imageWidth": 240
         }
-      ]
+      ],
+      "expo-web-browser"
     ],
     "locales": {
       "pt-BR": "./locales/pt-BR.json"

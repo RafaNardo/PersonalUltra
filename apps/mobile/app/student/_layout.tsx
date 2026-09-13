@@ -1,4 +1,5 @@
-import { Stack } from 'expo-router';
+import { useAuth } from '@clerk/expo';
+import { Redirect, Stack } from 'expo-router';
 
 /**
  * Student owns an independently extractable navigation tree.
@@ -6,6 +7,9 @@ import { Stack } from 'expo-router';
  * public navigation while a session is in progress.
  */
 export default function StudentLayout() {
+  const { isLoaded, isSignedIn } = useAuth();
+  if (!isLoaded) return null;
+  if (!isSignedIn) return <Redirect href="/login" />;
   return (
     <Stack screenOptions={{ headerShown: false, animation: 'fade' }}>
       <Stack.Screen name="(tabs)" options={{ headerShown: false }} />

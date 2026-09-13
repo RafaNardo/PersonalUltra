@@ -185,7 +185,9 @@ public sealed class TrainerApiFactory : WebApplicationFactory<trainerapi::Progra
 
     protected override void ConfigureWebHost(IWebHostBuilder builder)
     {
-        builder.UseEnvironment("Development");
+        builder.UseEnvironment("Testing");
+        builder.UseSetting("Clerk:IntegrationTestAuthentication", "true");
+        builder.UseSetting("DemoData:SeedOnStartup", "true");
         ConfigureExerciseMediaTestBucket(builder);
         builder.ConfigureServices(services =>
         {

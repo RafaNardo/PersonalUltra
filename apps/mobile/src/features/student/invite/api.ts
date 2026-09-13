@@ -1,9 +1,10 @@
 import { ApiError } from '@/src/api/shared-http';
+import { getClerkToken } from '@/src/auth/clerk-token';
 
 const baseUrl = (process.env.EXPO_PUBLIC_API_URL ?? 'https://student-api-production-a4fe.up.railway.app').replace(/\/$/, '');
 const apiUrl = `${baseUrl}/api/v1`;
 
-export type Invite = { trainerName: string; email?: string; expiresAt: string };
+/** @deprecated accessToken remains an empty compatibility field while all API calls obtain a Clerk JWT at request time. */
 export type InviteSession = { accessToken: string; studentId: string; firstName: string; lastName: string; email: string; phone: string; trainerId: string };
 export type AnamnesisAnswers = { goal: string; experienceLevel: string; trainingDaysPerWeek: number; sessionDurationMinutes: number; trainingLocation: string; equipmentNotes: string; heightCm: number; weightKg: number; healthConditions: string; movementRestrictions: string; currentPainDescription: string; nutritionPreferences: string; nutritionRestrictions: string };
 export type ActiveTrainerMessage = { id: string; message: string; startsAt: string; expiresAt?: string };
@@ -23,9 +24,9 @@ export type StudentHydration = { id: string; amountMl: number; recordedAt: strin
 export type StudentProfile = { firstName: string; lastName: string; email?: string; phone?: string; preferredName?: string };
 export type StudentBranding = { displayName: string; primaryColor: string; logoUrl?: string };
 
-async function request<T>(path: string, options: RequestInit = {}, token?: string): Promise<T> {
+async function request<T>(path: string, options: RequestInit = {}, _legacyToken?: string): Promise<T> {
   let response: Response;
-  try { response = await fetch(`${apiUrl}${path}`, { ...options, headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), ...(token ? { Authorization: `Bearer ${token}` } : {}), ...options.headers } }); }
+  try { response = await fetch(`${apiUrl}${path}`, { ...options, headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${await getClerkToken()}`, ...options.headers } }); }
   catch { throw new ApiError(0, 'Sem conexão com o servidor.'); }
   const payload = await response.text();
   let body: unknown;
@@ -43,11 +44,8 @@ async function requestNullable<T>(path: string, token: string): Promise<T | null
 }
 
 export const inviteApi = {
-  resolve: (token: string) => request<Invite>(`/invite/${token}`),
-  resolveCode: (code: string) => request<Invite>(`/invite/code/${code.replace(/\D/g, '')}`),
-  accept: (token: string, input: { firstName: string; lastName: string; email?: string; phone: string }) => request<InviteSession>(`/invite/${token}/accept`, { method: 'POST', body: JSON.stringify(input) }),
-  acceptCode: (code: string, input: { firstName: string; lastName: string; email?: string; phone: string }) => request<InviteSession>(`/invite/code/${code.replace(/\D/g, '')}/accept`, { method: 'POST', body: JSON.stringify(input) }),
-  studentLogin: (email: string) => request<InviteSession>('/auth/student-login', { method: 'POST', body: JSON.stringify({ email }) }),
+  bootstrap: () => request<{ isOnboarded: boolean; studentId?: string }>('/auth/bootstrap'),
+  claimInvite: (input: { code: string; firstName: string; lastName?: string }) => request<{ isOnboarded: boolean; studentId?: string }>('/auth/claim-invite', { method: 'POST', body: JSON.stringify(input) }),
   profile: (token: string) => request<StudentProfile>('/profile', {}, token),
   updateProfile: (token: string, input: { preferredName?: string }) => request<StudentProfile>('/profile', { method: 'PUT', body: JSON.stringify(input) }, token),
   anamnesis: (token: string) => request<AnamnesisAnswers & { isCompleted: boolean }>('/anamnesis', {}, token),

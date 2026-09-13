@@ -1,4 +1,3 @@
-using Microsoft.AspNetCore.Authentication;
 using Microsoft.EntityFrameworkCore;
 using Scalar.AspNetCore;
 using PersonalUltra.StudentApi.Endpoints;
@@ -8,12 +7,8 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddDbContext<PersonalUltraDbContext>(options => options.UseNpgsql(builder.Configuration.GetConnectionString("PersonalUltraDatabase")));
 builder.Services.AddSingleton(TimeProvider.System);
 builder.Services.AddExerciseMediaResolver(builder.Configuration);
-builder.Services.AddSingleton<DemoSessionTokenService>();
 builder.Services.AddScoped<DemoDataSeeder>();
-builder.Services.AddAuthentication(DevAuthenticationHandler.SchemeName)
-    .AddScheme<AuthenticationSchemeOptions, DevAuthenticationHandler>(DevAuthenticationHandler.SchemeName, _ => { })
-    .AddScheme<AuthenticationSchemeOptions, DemoActorAuthenticationHandler>(DemoActorAuthenticationHandler.StudentScheme, _ => { });
-builder.Services.AddAuthorization();
+builder.Services.AddClerkAuthentication(builder.Configuration, ClerkActor.Student);
 builder.Services.AddEndpointsApiExplorer();
 builder.Services.AddSwaggerGen();
 
@@ -55,18 +50,13 @@ if (app.Environment.IsDevelopment())
 }
 
 app.MapPersonalUltraApi();
-app.MapStudentInviteApi();
+app.MapStudentOnboardingApi();
 app.MapAnamnesisApi();
 app.MapStudentMessageApi();
 app.MapTrainingApi();
 app.MapNutritionProgressApi();
 app.MapBrandingApi();
 app.MapStudentProfileApi();
-app.MapGet("/api/v1/demo/identity", async (PersonalUltraDbContext db, CancellationToken cancellationToken) =>
-{
-    var student = await db.Students.AsNoTracking().SingleAsync(x => x.Id == PersonalUltra.Domain.DemoIds.StudentId, cancellationToken);
-    return Results.Ok(new { actor = "student", id = student.Id, name = $"{student.FirstName} {student.LastName}" });
-}).RequireAuthorization(new Microsoft.AspNetCore.Authorization.AuthorizeAttribute { AuthenticationSchemes = DemoActorAuthenticationHandler.StudentScheme });
 app.Run();
 
 public partial class Program;

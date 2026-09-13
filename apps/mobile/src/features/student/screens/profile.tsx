@@ -1,6 +1,7 @@
 import { Redirect, router } from 'expo-router';
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query';
 import { useEffect, useState } from 'react';
+import { useAuth } from '@clerk/expo';
 import { StyleSheet, Text, TextInput, View } from 'react-native';
 import { Button, Card, ErrorView, LoadingView } from '@/src/components/ui';
 import { Screen, TopBar } from '@/src/components/layout';
@@ -10,6 +11,7 @@ import { useInviteSessionStore } from '@/src/features/student/invite/session-sto
 
 export function StudentProfileScreen({ withinTabs = false }: { withinTabs?: boolean }) {
   const session = useInviteSessionStore((state) => state.session); const clear = useInviteSessionStore((state) => state.clear); const client = useQueryClient();
+  const { signOut } = useAuth();
   const [preferredName, setPreferredName] = useState('');
   const profile = useQuery({ queryKey: ['student', session?.studentId, 'profile'], queryFn: () => inviteApi.profile(session!.accessToken), enabled: Boolean(session) });
   useEffect(() => { if (profile.data) setPreferredName(profile.data.preferredName ?? ''); }, [profile.data]);
@@ -21,7 +23,7 @@ export function StudentProfileScreen({ withinTabs = false }: { withinTabs?: bool
   return <Screen withinTabs={withinTabs} style={styles.page}><TopBar eyebrow="MEU PERFIL" title="Meu perfil" onBack={withinTabs ? undefined : () => router.back()} />
     <Card style={styles.card}><Text style={styles.eyebrow}>COMO VOCÊ QUER SER CHAMADO(A)</Text><Text style={styles.title}>Nome no app</Text><Text style={styles.copy}>Usaremos este nome nas suas telas. Seu cadastro com o personal não é alterado.</Text><TextInput value={preferredName} onChangeText={setPreferredName} placeholder={data.firstName} placeholderTextColor={colors.textMuted} maxLength={100} style={styles.input} /><Button loading={save.isPending} onPress={() => save.mutate()}>Salvar nome</Button></Card>
     <Card style={styles.card}><Text style={styles.eyebrow}>DADOS CADASTRAIS</Text><ProfileField label="Nome cadastrado" value={`${data.firstName} ${data.lastName}`.trim()} /><ProfileField label="E-mail" value={data.email} /><ProfileField label="Telefone" value={data.phone} /></Card>
-    <View style={styles.actions}><Button variant="secondary" onPress={() => { clear(); router.replace('/demo-role-switch'); }}>Trocar contexto demo</Button><Button variant="ghost" onPress={() => { clear(); router.replace('/login'); }}>Sair</Button></View>
+    <View style={styles.actions}><Button variant="ghost" onPress={() => { clear(); void signOut(); router.replace('/login'); }}>Sair</Button></View>
   </Screen>;
 }
 

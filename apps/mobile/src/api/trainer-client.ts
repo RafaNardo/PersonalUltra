@@ -1,4 +1,5 @@
 import { ApiError } from './shared-http';
+import { getClerkToken } from '@/src/auth/clerk-token';
 
 const baseUrl = (process.env.EXPO_PUBLIC_TRAINER_API_URL ?? 'https://trainer-api-production-b0f7.up.railway.app').replace(/\/$/, '');
 const apiUrl = `${baseUrl}/api/v1`;
@@ -53,7 +54,7 @@ export type TrainerPrescriptionSettings = { sets: number; repetitionsMin: number
 async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
   let response: Response;
   try {
-    response = await fetch(`${apiUrl}${path}`, { ...options, headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: 'Bearer personal-ultra-demo-trainer', ...options.headers } });
+    response = await fetch(`${apiUrl}${path}`, { ...options, headers: { Accept: 'application/json', ...(options.body ? { 'Content-Type': 'application/json' } : {}), Authorization: `Bearer ${await getClerkToken()}`, ...options.headers } });
   } catch {
     throw new ApiError(0, 'Sem conexão com a API do Trainer.');
   }
@@ -68,11 +69,8 @@ async function request<T>(path: string, options: RequestInit = {}): Promise<T> {
 }
 
 export const trainerClient = {
-  demoIdentity: async () => {
-    const response = await fetch(`${baseUrl}/api/v1/demo/identity`, { headers: { Authorization: 'Bearer personal-ultra-demo-trainer' } });
-    if (!response.ok) throw new ApiError(response.status, 'Não foi possível carregar a identidade demo do Trainer.');
-    return response.json() as Promise<{ actor: 'trainer'; id: string; name: string }>;
-  },
+  bootstrap: () => request<{ isOnboarded: boolean; trainerId?: string; name?: string; displayName?: string }>('/auth/bootstrap'),
+  completeOnboarding: (input: { name: string; displayName: string }) => request<{ isOnboarded: boolean; trainerId?: string; name?: string; displayName?: string }>('/auth/onboarding', { method: 'POST', body: JSON.stringify(input) }),
   health: async () => {
     const response = await fetch(`${baseUrl}/health`);
     if (!response.ok) throw new ApiError(response.status, 'Não foi possível acessar a API do Trainer.');

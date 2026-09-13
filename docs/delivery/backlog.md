@@ -349,6 +349,22 @@ tela/seção de Chat em foco; o envio invalida a consulta imediatamente.
 ## M5 — Production Foundation (após validação)
 Auth real, LGPD, storage, billing, backups, monitoring, rate limiting, push real, legal review, App Store/Play Store e split físico em Trainer Mobile + Student Mobile.
 
+### M5A — Autenticação Clerk e onboarding por convite
+
+Direção e tarefas detalhadas em
+`docs/delivery/clerk-authentication-milestone.md`.
+
+- `PU-M5A-001`: preparação Clerk e configuração segura.
+- `PU-M5A-002`: identidade persistida e JWT/ownership nas duas APIs.
+- `PU-M5A-003`: onboarding do primeiro Trainer.
+- `PU-M5A-004`: sign-up Student seguido de reivindicação por código de convite.
+- `PU-M5A-005`: árvores de navegação autenticadas e remoção da autenticação demo.
+- `PU-M5A-006`: testes, deploy sequencial e corte.
+
+**DoD M5A:** Clerk identifica contas, mas as APIs resolvem o actor e ownership
+no banco compartilhado; Trainer novo cria seu perfil, Student novo só entra na
+carteira depois de um convite válido, e não resta autenticação demo ativa.
+
 Qualquer decomposição futura da M5 em tasks de interface herda obrigatoriamente o critério transversal de UI acima. O split físico deve extrair o mesmo primitive e preservar comportamento/copy dos empty states, sem duplicá-los de forma divergente entre os apps.
 
 ## V2 addendum

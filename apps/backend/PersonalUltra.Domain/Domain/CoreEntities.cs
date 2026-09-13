@@ -3,6 +3,7 @@ namespace PersonalUltra.Domain;
 public sealed class Trainer
 {
     public Guid Id { get; set; }
+    public string? ClerkUserId { get; set; }
     public string Name { get; set; } = null!;
     public DateTimeOffset CreatedAt { get; set; }
     public TrainerBranding? Branding { get; set; }
@@ -37,6 +38,7 @@ public sealed class TrainerBranding
 public sealed class Student
 {
     public Guid Id { get; set; }
+    public string? ClerkUserId { get; set; }
     public string FirstName { get; set; } = null!;
     public string LastName { get; set; } = null!;
     public string? Email { get; set; }
