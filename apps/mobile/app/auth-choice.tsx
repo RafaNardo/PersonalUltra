@@ -1,5 +1,5 @@
 import { useAuth, useUser } from "@clerk/expo";
-import { useQuery } from "@tanstack/react-query";
+import { useQuery, useQueryClient } from "@tanstack/react-query";
 import { router } from "expo-router";
 import { StyleSheet, Text, View } from "react-native";
 import { useEffect } from "react";
@@ -13,16 +13,17 @@ import { useInviteSessionStore } from "@/src/features/student/invite/session-sto
 export default function AuthChoiceScreen() {
   const { isSignedIn, signOut } = useAuth();
   const { user } = useUser();
+  const queryClient = useQueryClient();
   const saveStudent = useInviteSessionStore((state) => state.save);
   const trainer = useQuery({
-    queryKey: ["auth", "trainer-bootstrap"],
+    queryKey: ["auth", "trainer-bootstrap", user?.id],
     queryFn: trainerClient.bootstrap,
-    enabled: isSignedIn,
+    enabled: Boolean(isSignedIn && user?.id),
   });
   const student = useQuery({
-    queryKey: ["auth", "student-bootstrap"],
+    queryKey: ["auth", "student-bootstrap", user?.id],
     queryFn: inviteApi.bootstrap,
-    enabled: isSignedIn,
+    enabled: Boolean(isSignedIn && user?.id),
   });
   useEffect(() => {
     if (trainer.data?.isOnboarded) router.replace("/trainer");
@@ -64,6 +65,10 @@ export default function AuthChoiceScreen() {
     return <LoadingView message="Abrindo seu painel…" />;
   if (student.data?.isOnboarded)
     return <LoadingView message="Abrindo seu acompanhamento…" />;
+  const handleSignOut = async () => {
+    queryClient.clear();
+    await signOut();
+  };
   return (
     <Screen style={styles.page}>
       <View style={styles.hero}>
@@ -85,7 +90,7 @@ export default function AuthChoiceScreen() {
           Sou personal
         </Button>
       </Card>
-      <Button variant="ghost" onPress={() => void signOut()}>
+      <Button variant="ghost" onPress={() => void handleSignOut()}>
         Sair desta conta
       </Button>
     </Screen>

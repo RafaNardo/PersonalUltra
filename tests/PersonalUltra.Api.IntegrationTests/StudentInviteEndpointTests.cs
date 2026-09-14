@@ -49,6 +49,20 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
     }
 
     [Fact]
+    public async Task Authenticated_student_can_preview_the_trainer_before_claiming_an_invite_code()
+    {
+        const string code = "234567";
+        await SeedInviteAsync("preview-invite", DateTimeOffset.UtcNow.AddDays(1), inviteCode: code);
+        client.DefaultRequestHeaders.Authorization = new System.Net.Http.Headers.AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.StudentToken);
+
+        var response = await client.GetAsync($"/api/v1/auth/invite-preview?code={code[..3]}-{code[3..]}");
+
+        Assert.Equal(HttpStatusCode.OK, response.StatusCode);
+        var preview = await response.Content.ReadFromJsonAsync<InvitePreviewResponse>();
+        Assert.Equal("Severo", preview!.TrainerName);
+    }
+
+    [Fact]
     public async Task Invite_code_resolves_and_accepts_an_active_invite()
     {
         const string token = "invite-by-code";
@@ -146,6 +160,7 @@ public sealed class StudentInviteEndpointTests : IClassFixture<StudentApiFactory
     }
 
     private sealed record InviteResolutionResponse(string TrainerName, string? Email, DateTimeOffset ExpiresAt);
+    private sealed record InvitePreviewResponse(string TrainerName);
     private sealed record InviteAcceptanceResponse(string AccessToken, string TokenType, Guid StudentId, string FirstName, string LastName, string Email, string Phone, Guid TrainerId);
     private sealed record AnamnesisResponse(string Goal, string ExperienceLevel, int TrainingDaysPerWeek, int SessionDurationMinutes, string TrainingLocation, string EquipmentNotes, decimal HeightCm, decimal WeightKg, string HealthConditions, string MovementRestrictions, string CurrentPainDescription, string NutritionPreferences, string NutritionRestrictions, bool IsCompleted);
     private sealed record ActiveTrainerMessageResponse(Guid Id, string Message, DateTimeOffset StartsAt, DateTimeOffset? ExpiresAt);

@@ -18,10 +18,10 @@ unidirecional permanece fora do escopo de autenticação.
 2. Cria ou acessa sua conta pelo Clerk.
 3. Se o `sub` Clerk ainda não estiver vinculado a um `Student`, o app abre o
    onboarding de convite.
-4. Informa o código de seis dígitos recebido do personal, ou chega pelo deep
-   link de convite e confirma os mesmos dados.
-5. A Student API valida convite, expiração, vínculo e e-mail quando o convite
-   tiver e-mail; então vincula o `sub` Clerk ao `Student` criado/reivindicado.
+4. Informa o código de seis dígitos recebido do personal e confirma o nome do
+   personal responsável exibido pelo app.
+5. A Student API valida convite, expiração e vínculo; então vincula o `sub`
+   Clerk ao `Student` criado/reivindicado.
 6. Segue para anamnese pendente, boas-vindas ou tabs conforme o estado real.
 
 Um Student autenticado sem convite válido não vê dados, treinos ou telas do
@@ -137,8 +137,7 @@ essa capacidade for criada em task futura.
 - Um novo personal cria o próprio perfil e só acessa sua carteira.
 - Um novo aluno se cadastra no Clerk, informa código válido e vê apenas o
   vínculo daquele personal.
-- Código inválido, expirado ou de e-mail incompatível não cria nem vincula
-  Student.
+- Código inválido ou expirado não cria nem vincula Student.
 - Logout limpa acesso local e retorna ao início correto.
 - Não há bearer demo, sessão Student customizada ou role switch exercendo
   autorização.

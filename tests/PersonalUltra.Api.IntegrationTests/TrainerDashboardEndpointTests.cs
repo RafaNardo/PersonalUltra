@@ -136,37 +136,36 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
     }
 
     [Fact]
-    public async Task Trainer_can_create_a_secure_expiring_student_invite_link()
+    public async Task Trainer_can_create_a_secure_expiring_student_invite_link_without_an_email()
     {
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.TrainerToken);
 
-        var response = await client.PostAsJsonAsync("/api/v1/student-invites", new { email = "aluna@example.com" });
+        var response = await client.PostAsJsonAsync("/api/v1/student-invites", new { });
 
         Assert.Equal(HttpStatusCode.Created, response.StatusCode);
         var invite = await response.Content.ReadFromJsonAsync<StudentInviteResponse>();
-        Assert.Equal("aluna@example.com", invite!.Email);
+        Assert.NotEmpty(invite!.InviteCode);
         Assert.StartsWith("personalultra://invite/", invite.InviteUrl);
         Assert.True(invite.Token.Length >= 40);
         Assert.True(invite.ExpiresAt > DateTimeOffset.UtcNow.AddDays(6));
     }
 
     [Fact]
-    public async Task Trainer_replaces_a_pending_invite_when_using_the_same_email()
+    public async Task Trainer_can_create_multiple_active_invites()
     {
         client.DefaultRequestHeaders.Authorization = new AuthenticationHeaderValue("Bearer", DemoActorAuthenticationHandler.TrainerToken);
-        var email = $"renew-{Guid.NewGuid():N}@example.com";
-        var firstResponse = await client.PostAsJsonAsync("/api/v1/student-invites", new { email });
+        var firstResponse = await client.PostAsJsonAsync("/api/v1/student-invites", new { });
         var first = await firstResponse.Content.ReadFromJsonAsync<StudentInviteResponse>();
-        var secondResponse = await client.PostAsJsonAsync("/api/v1/student-invites", new { email });
+        var secondResponse = await client.PostAsJsonAsync("/api/v1/student-invites", new { });
         var second = await secondResponse.Content.ReadFromJsonAsync<StudentInviteResponse>();
 
         Assert.Equal(HttpStatusCode.Created, secondResponse.StatusCode);
-        Assert.True(second!.ReplacedPendingInvite);
+        Assert.NotNull(second);
         Assert.NotEqual(first!.InviteCode, second.InviteCode);
         using var scope = factory.Services.CreateScope();
         var db = scope.ServiceProvider.GetRequiredService<PersonalUltraDbContext>();
-        var expiredFirst = await db.StudentInvites.SingleAsync(item => item.Id == first.Id);
-        Assert.True(expiredFirst.ExpiresAt <= DateTimeOffset.UtcNow);
+        var activeFirst = await db.StudentInvites.SingleAsync(item => item.Id == first!.Id);
+        Assert.True(activeFirst.ExpiresAt > DateTimeOffset.UtcNow);
     }
 
     private sealed record DashboardResponse(string TrainerName, int ActiveStudents, int PendingAnamneses, int CompletedAnamneses, IReadOnlyList<DashboardStudentSummary> RecentStudents, IReadOnlyList<DashboardActivity> RecentActivities);
@@ -175,7 +174,7 @@ public sealed class TrainerDashboardEndpointTests : IClassFixture<TrainerApiFact
     private sealed record StudentListResponse(IReadOnlyList<DashboardStudentSummary> Students);
     private sealed record ErrorResponse(string Code, string Message, object? Details, string TraceId);
     private sealed record TrainerMessageResponse(Guid Id, Guid StudentId, string Message, DateTimeOffset StartsAt, DateTimeOffset? ExpiresAt, DateTimeOffset CreatedAt);
-    private sealed record StudentInviteResponse(Guid Id, string Token, string InviteCode, string InviteUrl, string? Email, DateTimeOffset ExpiresAt, bool ReplacedPendingInvite);
+    private sealed record StudentInviteResponse(Guid Id, string Token, string InviteCode, string InviteUrl, DateTimeOffset ExpiresAt);
     private sealed record TrainerAnamnesisResponse(string Goal, string ExperienceLevel, int TrainingDaysPerWeek, int SessionDurationMinutes, string TrainingLocation, string EquipmentNotes, decimal HeightCm, decimal WeightKg, string HealthConditions, string MovementRestrictions, string CurrentPainDescription, string NutritionPreferences, string NutritionRestrictions, DateTimeOffset CompletedAt);
 }
 

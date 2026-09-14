@@ -1,4 +1,3 @@
-using System.Net.Mail;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using Microsoft.EntityFrameworkCore;
@@ -15,25 +14,16 @@ public static class StudentInviteEndpointExtensions
     {
         var api = app.MapGroup("/api/v1/student-invites").RequireAuthorization();
 
-        api.MapPost("/", async (CreateStudentInviteRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, IConfiguration configuration, HttpContext context, CancellationToken cancellationToken) =>
+        api.MapPost("/", async (CreateStudentInviteRequest request, PersonalUltraDbContext db, ClaimsPrincipal user, TimeProvider clock, IConfiguration configuration, CancellationToken cancellationToken) =>
         {
-            var email = NormalizeEmail(request.Email);
-            if (request.Email is not null && email is null)
-                return context.ApiError("VALIDATION_ERROR", "Informe um e-mail válido ou deixe o campo em branco.", StatusCodes.Status400BadRequest);
-
             var now = clock.GetUtcNow();
             var trainerId = Guid.Parse(user.FindFirstValue(ClaimTypes.NameIdentifier)!);
-            var pendingInvites = email is null
-                ? []
-                : await db.StudentInvites.Where(item => item.TrainerId == trainerId && item.Email == email && item.AcceptedAt == null && item.ExpiresAt > now).ToListAsync(cancellationToken);
-            foreach (var pendingInvite in pendingInvites) pendingInvite.ExpiresAt = now;
             var invite = new StudentInvite
             {
                 Id = Guid.NewGuid(),
                 TrainerId = trainerId,
                 Token = WebEncoders.Base64UrlEncode(RandomNumberGenerator.GetBytes(32)),
                 InviteCode = await CreateInviteCodeAsync(db, cancellationToken),
-                Email = email,
                 CreatedAt = now,
                 ExpiresAt = now.AddDays(7),
             };
@@ -42,7 +32,7 @@ public static class StudentInviteEndpointExtensions
 
             var linkBase = (configuration["StudentInvite:LinkBaseUrl"] ?? "personalultra://invite").TrimEnd('/');
             return Results.Created($"/api/v1/student-invites/{invite.Id}", new StudentInviteResponse(
-                invite.Id, invite.Token, invite.InviteCode, $"{linkBase}/{invite.Token}", invite.Email, invite.ExpiresAt, pendingInvites.Count > 0));
+                invite.Id, invite.Token, invite.InviteCode, $"{linkBase}/{invite.Token}", invite.ExpiresAt));
         });
     }
 
@@ -54,18 +44,5 @@ public static class StudentInviteEndpointExtensions
             if (!await db.StudentInvites.AnyAsync(invite => invite.InviteCode == code, cancellationToken)) return code;
         }
         throw new InvalidOperationException("Não foi possível gerar um código de convite único.");
-    }
-
-    private static string? NormalizeEmail(string? input)
-    {
-        if (string.IsNullOrWhiteSpace(input)) return input is null ? null : "";
-        var email = input.Trim().ToLowerInvariant();
-        if (email.Length > 320) return null;
-        try
-        {
-            var parsed = new MailAddress(email);
-            return string.Equals(parsed.Address, email, StringComparison.OrdinalIgnoreCase) ? email : null;
-        }
-        catch (FormatException) { return null; }
     }
 }

@@ -1,12 +1,10 @@
 namespace PersonalUltra.TrainerApi.Contracts;
 
-public sealed record CreateStudentInviteRequest(string? Email);
+public sealed record CreateStudentInviteRequest;
 
 public sealed record StudentInviteResponse(
     Guid Id,
     string Token,
     string InviteCode,
     string InviteUrl,
-    string? Email,
-    DateTimeOffset ExpiresAt,
-    bool ReplacedPendingInvite);
+    DateTimeOffset ExpiresAt);

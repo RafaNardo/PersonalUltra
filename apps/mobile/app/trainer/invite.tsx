@@ -18,18 +18,15 @@ import { PhoneInput } from "@/src/shared/forms/phone-input";
 
 export default function TrainerInviteScreen() {
   const createInvite = useCreateStudentInvite();
-  const [email, setEmail] = useState("");
   const [phone, setPhone] = useState("");
   const [inviteCode, setInviteCode] = useState<string>();
-  const [replacedPendingInvite, setReplacedPendingInvite] = useState(false);
   const phoneDigits = phone.replace(/\D/g, "");
   const canSendWhatsApp = phoneDigits.length >= 8 && phoneDigits.length <= 15;
 
   const create = async () => {
     try {
-      const invite = await createInvite.mutateAsync(email);
+      const invite = await createInvite.mutateAsync();
       setInviteCode(formatInviteCode(invite.inviteCode));
-      setReplacedPendingInvite(invite.replacedPendingInvite);
     } catch (error) {
       Alert.alert(
         "Não foi possível criar o convite",
@@ -61,8 +58,10 @@ export default function TrainerInviteScreen() {
   const sendWhatsApp = async () => {
     if (!inviteCode || !canSendWhatsApp) return;
 
-    const whatsNumber = phoneDigits.startsWith("55") ? phoneDigits : `55${phoneDigits}`;
-    
+    const whatsNumber = phoneDigits.startsWith("55")
+      ? phoneDigits
+      : `55${phoneDigits}`;
+
     await Linking.openURL(
       `https://wa.me/${whatsNumber}?text=${encodeURIComponent(inviteMessage!)}`,
     );
@@ -81,20 +80,6 @@ export default function TrainerInviteScreen() {
       </Text>
       <Card style={styles.card}>
         <Text style={styles.label}>
-          E-mail do aluno <Text style={styles.optional}>(opcional)</Text>
-        </Text>
-        <TextInput
-          value={email}
-          onChangeText={setEmail}
-          autoCapitalize="none"
-          autoCorrect={false}
-          keyboardType="email-address"
-          placeholder="aluno@email.com"
-          placeholderTextColor={colors.textMuted}
-          accessibilityLabel="E-mail do aluno"
-          style={styles.input}
-        />
-        <Text style={styles.label}>
           Telefone para WhatsApp <Text style={styles.optional}>(opcional)</Text>
         </Text>
         <PhoneInput
@@ -111,13 +96,10 @@ export default function TrainerInviteScreen() {
       </Card>
       {inviteCode && (
         <Card style={styles.result}>
-          <Text style={styles.resultTitle}>
-            {replacedPendingInvite ? "Novo código gerado" : "Convite pronto"}
-          </Text>
+          <Text style={styles.resultTitle}>Convite pronto</Text>
           <Text style={styles.copy}>
-            {replacedPendingInvite
-              ? "O código anterior para este e-mail foi invalidado. Envie este novo código ao aluno."
-              : "O aluno instala o app, escolhe “Tenho um convite” e informa este código."}
+            O aluno instala o app, cria ou acessa sua conta e informa este
+            código.
           </Text>
           <TextInput
             value={inviteCode}
